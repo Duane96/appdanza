@@ -1,0 +1,130 @@
+{% extends "base_tenant.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold text-dark m-0">Gestor de Alumnos</h2>
+        <p class="text-muted m-0 small">Administración, vigencias y códigos QR.</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'planes_estudiantes:crear_estudiante' request.tenant.slug %}" class="btn btn-tenant-primary">
+        <i class="bi bi-person-plus me-1"></i> Nuevo Estudiante
+    </a>
+    <a href="{% url 'planes_estudiantes:crear_plan' request.tenant.slug %}" class="btn btn-outline-dark">
+        <i class="bi bi-tags me-1"></i> Crear Plan
+    </a>
+    <a href="{% url 'planes_estudiantes:asignar_plan' request.tenant.slug %}" class="btn btn-dark">
+        <i class="bi bi-ticket-perforated me-1"></i> Asignar Plan
+    </a>
+</div>
+</div>
+
+<div class="card border-0 shadow-sm bg-white p-3">
+    <div class="table-responsive style-scroll" style="max-height: 600px;">
+        <table id="tabla-estudiantes" class="table table-striped table-hover align-middle m-0 w-100">
+            <thead class="table-light">
+                <tr>
+                    <th>Estudiante / Username</th>
+                    <th>Estado</th>
+                    <th>Vigencia Plan</th>
+                    <th>Contacto</th>
+                    <th class="text-center">Código QR</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for est in estudiantes %}
+                <tr>
+                    <td>
+                        <strong class="text-dark d-block">{{ est.nombres }} {{ est.apellidos }}</strong>
+                        <span class="text-muted small font-monospace">@{{ est.nombres|slugify }}{% if est.apellidos %}{{ est.apellidos|slugify }}{% endif %}</span>
+                    </td>
+                    <td>
+                        {% if est.estado == 'ACTIVO' %}
+                            <span class="badge bg-success-subtle text-success border border-success-subtle">ACTIVO</span>
+                        {% else %}
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle">INACTIVO</span>
+                        {% endif %}
+                    </td>
+                    <td>
+    {% with ultima_ins=est.inscripciones.last %}
+        {% if ultima_ins %}
+            <span class="d-block small text-dark fw-semibold">
+                <i class="bi bi-calendar-check me-1 text-success"></i>Fin: {{ ultima_ins.fecha_fin|date:"d/m/Y" }}
+            </span>
+            <span class="badge bg-light text-dark border small">Clases: {{ ultima_ins.clases_restantes }}</span>
+            
+            {% if ultima_ins.saldo_pendiente > 0 %}
+                <span class="badge bg-warning-subtle text-warning border border-warning-subtle d-block mt-1 w-100 text-start">
+                    <i class="bi bi-cash me-1"></i>Debe: ${{ ultima_ins.saldo_pendiente|floatformat:0 }} COP
+                </span>
+            {% endif %}
+        {% else %}
+            <span class="text-muted small italic">Sin plan asignado</span>
+        {% endif %}
+    {% endwith %}
+</td>
+                    <td>
+                        <span class="d-block small text-dark"><i class="bi bi-telephone me-1"></i>{{ est.telefono|default:"--" }}</span>
+                    </td>
+                    <td class="text-center">
+                        {% if est.qr_code %}
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modalQR{{ est.id }}">
+                                <i class="bi bi-qr-code me-1"></i> Abrir QR
+                            </button>
+
+                            <div class="modal fade" id="modalQR{{ est.id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered modal-sm">
+                                    <div class="modal-content">
+                                        <div class="modal-header border-0 pb-0">
+                                            <button type="button" class="btn-close" data-bs-toggle="modal" data-bs-target="#modalQR{{ est.id }}"></button>
+                                        </div>
+                                        <div class="modal-body text-center pt-0">
+                                            <h5 class="fw-bold mb-3">{{ est.nombres }}</h5>
+                                            <img src="{{ est.qr_code.url }}" alt="QR" class="img-fluid rounded border p-2 mb-2 bg-white" style="max-width: 180px;">
+                                            <a href="{{ est.qr_code.url }}" download="QR_{{ est.identificacion }}.png" class="btn btn-sm btn-tenant-primary mt-3 w-100">
+                                                <i class="bi bi-download me-1"></i> Descargar QR
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% else %}
+                            <span class="text-muted small">Sin QR</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        $('#tabla-estudiantes').DataTable({
+            "pageLength": 10,        // Muestra máximo 10 registros por pestaña
+            "lengthChange": false,   // Oculta el menú pesado de cambiar a 25/50 registros
+            "ordering": true,        // Permite ordenar columnas al dar clic
+            "language": {            // Traduce el plugin al español de una
+                "search": "Buscar alumno:",
+                "zeroRecords": "No se encontraron alumnos con ese criterio",
+                "info": "Mostrando página _PAGE_ de _PAGES_",
+                "infoEmpty": "No hay registros disponibles",
+                "infoFiltered": "(filtrado de un total de _MAX_ estudiantes)",
+                "paginate": {
+                    "first": "Primero",
+                    "last": "Último",
+                    "next": "Siguiente",
+                    "previous": "Anterior"
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

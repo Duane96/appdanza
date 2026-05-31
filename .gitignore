@@ -1,0 +1,24 @@
+# Base de datos local (¡Nunca subir a producción!)
+db.sqlite3
+
+# Archivos multimedia subidos en desarrollo (imágenes, QRs, etc.)
+media/
+media/*
+
+# Archivos compilados de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Entornos virtuales (si tienes uno dentro de la carpeta)
+venv/
+env/
+ENV/
+
+# Archivos de entorno y variables secretas
+.env
+
+# Archivos estáticos recolectados (PythonAnywhere generará los suyos)
+staticfiles/
+
+client_secrets.json

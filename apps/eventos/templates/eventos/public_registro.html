@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inscripción - {{ evento.nombre }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root { --tenant-primary: #000000; }
+        body { background-color: #f8f9fa; font-family: system-ui, -apple-system, sans-serif; }
+        .card-evento { border-radius: 16px; border: none; }
+        .btn-pay { background-color: var(--tenant-primary) !important; color: white !important; border: none; }
+        .btn-pay:hover { filter: brightness(0.9); }
+        .extra-small { font-size: 0.75rem; }
+    </style>
+</head>
+<body>
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-7">
+            
+            <div class="text-center mb-4">
+                <h5 class="text-muted text-uppercase tracking-wider small fw-bold">{{ academia.nombre }}</h5>
+                <h1 class="fw-black text-dark">{{ evento.nombre }}</h1>
+                <p class="text-secondary small"><i class="bi bi-geo-alt me-1"></i> {{ evento.ubicacion }} | <i class="bi bi-calendar3 me-1"></i> {{ evento.fecha|date:"d M, Y - g:i a" }}</p>
+            </div>
+
+            <div class="card card-evento shadow-lg bg-white p-4 p-md-5 mb-4">
+                <form method="POST" enctype="multipart/form-data" class="needs-validation">
+                    {% csrf_token %}
+                    
+                    <h5 class="fw-bold text-dark mb-3"><i class="bi bi-person-vcard me-2"></i>1. Tus Datos de Contacto</h5>
+                    <div class="mb-3">
+                        <label class="form-label small text-secondary fw-semibold">Nombre Completo</label>
+                        {{ form.comprador_nombre }}
+                    </div>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label small text-secondary fw-semibold">Correo Electrónico</label>
+                            {{ form.comprador_correo }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small text-secondary fw-semibold">Teléfono Celular (WhatsApp)</label>
+                            {{ form.comprador_telefono }}
+                        </div>
+                    </div>
+
+                    <hr class="text-muted opacity-20 my-4">
+
+                    <h5 class="fw-bold text-dark mb-3"><i class="bi bi-ticket-detailed me-2"></i>2. Selección de Entradas</h5>
+                    <div class="row g-3 align-items-end mb-4">
+                        {% if evento.es_multidias %}
+                        <div class="col-md-4">
+                            <label class="form-label small text-secondary fw-semibold">Días a adquirir</label>
+                            <!-- 🎯 CORRECCIÓN: Agregamos name="tipo_pase" y valores DIA/FULL -->
+                            <select name="tipo_pase" id="id_dias_adquirir" class="form-select">
+                                <option value="DIA">1 Día (Individual)</option>
+                                <option value="FULL">Full Pass ({{ evento.cantidad_dias }} días)</option>
+                            </select>
+                        </div>
+                        {% endif %}
+
+                        <div class="{% if evento.es_multidias %}col-md-4{% else %}col-6{% endif %}">
+                            <label class="form-label small text-secondary fw-semibold">¿Cuántas boletas?</label>
+                            {{ form.cantidad_entradas }}
+                        </div>
+
+                        <div class="{% if evento.es_multidias %}col-md-4{% else %}col-6{% endif %}">
+                            <label class="form-label small text-secondary fw-semibold">Código de Descuento</label>
+                            <div class="input-group">
+                                {{ form.codigo_cupon }}
+                                <button class="btn btn-outline-dark btn-sm" type="button" id="btn_aplicar_cupon">Aplicar</button>
+                            </div>
+                            <div id="cupon_feedback" class="extra-small mt-1 fw-semibold"></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-light rounded p-3 mb-4 border-start border-3 border-dark">
+    <h6 class="fw-bold text-dark small mb-2"><i class="bi bi-bank me-1"></i> Información de Pago:</h6>
+    
+    {% if evento.acepta_nequi_daviplata %}
+        <div class="mb-2">
+            <span class="badge bg-dark">Nequi/Daviplata</span>
+            <p class="text-secondary small mb-1">Copia esta llave: <strong>{{ evento.numero_nequi_daviplata }}</strong></p>
+        </div>
+    {% endif %}
+
+    {% if evento.acepta_banco_manual %}
+        <div>
+            <span class="badge bg-dark">Transferencia Bancaria</span>
+            <p class="text-secondary small mb-0" style="white-space: pre-line;">{{ evento.datos_banco_manual }}</p>
+        </div>
+    {% endif %}
+    
+    {% if not evento.acepta_nequi_daviplata and not evento.acepta_banco_manual %}
+        <p class="text-muted small m-0">No hay métodos de pago habilitados en este momento.</p>
+    {% endif %}
+</div>
+
+                    <h5 class="fw-bold text-dark mb-3"><i class="bi bi-cloud-arrow-up me-2"></i>3. Soporte de Pago</h5>
+                    <div class="mb-4">
+                        {{ form.comprobante_pago }}
+                        <div class="form-text extra-small">Formatos permitidos: JPG, PNG. Máximo 5MB.</div>
+                    </div>
+
+                    <div class="bg-dark text-white rounded p-4 d-flex justify-content-between align-items-center mb-4 shadow-sm">
+                        <div>
+                            <span class="text-white-50 extra-small d-block font-monospace">RESUMEN DE COMPRA</span>
+                            <span class="small" id="display_desglose">Calculando...</span>
+                        </div>
+                        <div class="text-end">
+                            <h3 class="fw-bold text-warning m-0" id="display_total_pagar">$0 COP</h3>
+                        </div>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-pay btn-lg fw-bold rounded-pill shadow-sm py-2.5">
+                            <i class="bi bi-check-circle-fill me-2"></i> Finalizar Registro
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // Precios base inyectados desde Django
+        let precioIndividual = parseFloat("{{ evento.precio_por_dia }}") || 0;
+        let precioFull = parseFloat("{{ evento.precio_preventa }}") || 0;
+        let precioCupon = 0; // Se actualiza si aplican cupón
+
+        const selectDias = document.getElementById("id_dias_adquirir");
+        const inputCantidad = document.getElementById("id_cantidad_entradas");
+        const inputCupon = document.getElementById("id_codigo_cupon");
+        const btnCupon = document.getElementById("btn_aplicar_cupon");
+        const feedbackCupon = document.getElementById("cupon_feedback");
+
+        // 🎯 CORRECCIÓN JS: Ahora validamos si el value es "FULL" en lugar del número de días
+        function getPrecioBase() {
+            if (selectDias && selectDias.value === "FULL") return precioFull;
+            return precioIndividual;
+        }
+
+        function liquidarPrecios() {
+            let base = precioCupon > 0 ? precioCupon : getPrecioBase();
+            const cantidad = parseInt(inputCantidad.value) || 1;
+            const total = cantidad * base;
+            
+            document.getElementById("display_desglose").innerText = 
+                `${cantidad} Entrada(s) × $${base.toLocaleString('es-CO')}`;
+            document.getElementById("display_total_pagar").innerText = `$ ${total.toLocaleString('es-CO')} COP`;
+        }
+
+        btnCupon.addEventListener("click", function () {
+            const codigo = inputCupon.value.trim();
+            if (!codigo) return;
+
+            // Fetch API moderno para validar el cupón sin recargar la página
+            fetch(`/{% if request.tenant %}{{ request.tenant.slug }}{% else %}{{ academia.slug }}{% endif %}/eventos/{{ evento.slug }}/validar-cupon/?codigo=${codigo}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.valido) {
+                        precioCupon = data.precio_especial;
+                        feedbackCupon.className = "text-success extra-small mt-1 fw-semibold";
+                        feedbackCupon.innerHTML = `<i class="bi bi-patch-check-fill"></i> ¡Cupón aplicado!`;
+                    } else {
+                        precioCupon = 0;
+                        feedbackCupon.className = "text-danger extra-small mt-1 fw-semibold";
+                        feedbackCupon.innerHTML = `Cupón inválido.`;
+                    }
+                    liquidarPrecios();
+                });
+        });
+
+        // Listeners para recalcular en tiempo real
+        if(selectDias) selectDias.addEventListener("change", liquidarPrecios);
+        inputCantidad.addEventListener("input", liquidarPrecios);
+        
+        // Ejecución inicial al cargar la vista
+        liquidarPrecios();
+    });
+</script>
+</body>
+</html>

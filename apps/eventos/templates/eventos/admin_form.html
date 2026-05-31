@@ -1,0 +1,194 @@
+{% extends "base_tenant.html" %}
+
+{% block content %}
+<div class="container py-4">
+    
+    <div class="mb-4 text-center text-md-start">
+        <a href="{% url 'eventos:admin_lista' request.tenant.slug %}" class="btn btn-sm btn-light border small text-muted mb-2 shadow-sm">
+            <i class="bi bi-arrow-left me-1"></i> Volver al listado
+        </a>
+        <h2 class="fw-bold text-dark m-0">
+            {% if object %}Editar Evento: {{ object.nombre }}{% else %}Crear Nuevo Evento{% endif %}
+        </h2>
+        <p class="text-muted small">Registra o modifica los datos del taller, fiesta o competencia para actualizar tu ticketera automática.</p>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-xl-9 col-lg-10">
+            <div class="card border-0 shadow-sm bg-white p-4 p-md-5 rounded-4">
+                
+                {% if form.errors %}
+                    <div class="alert alert-danger rounded-3 small" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i> Por favor corrige los errores del formulario:
+                        <ul class="mb-0 mt-2">
+                            {% for field in form %}
+                                {% for error in field.errors %}
+                                    <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                            {% for error in form.non_field_errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+
+                <form method="POST" class="needs-validation" enctype="multipart/form-data" novalidate>
+                    {% csrf_token %}
+                    
+                    <div class="mb-4 p-3 bg-light rounded-3 border border-dashed text-center text-md-start">
+                        <label class="form-label fw-bold text-dark small d-block mb-2">
+                            <i class="bi bi-image text-tenant-primary me-1"></i> Afiche publicitario del Evento (Formato cuadrado 1:1 sugerido)
+                        </label>
+                        
+                        {% if object.imagen %}
+                            <div class="d-flex flex-column flex-md-row align-items-center gap-3 mb-3">
+                                <img src="{{ object.imagen.url }}" alt="Actual" class="rounded border shadow-sm object-fit-cover" style="width: 100px; height: 100px;">
+                                <div class="text-center text-md-start">
+                                    <span class="badge bg-success mb-1">Imagen Actual Activa</span>
+                                    <p class="text-muted small mb-0">Si seleccionas un archivo nuevo, se reemplazará este afiche de inmediato.</p>
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-cloud-arrow-up"></i></span>
+                            {{ form.imagen }}
+                        </div>
+                        {% if form.imagen.errors %}
+                            <div class="text-danger small mt-1">{{ form.imagen.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold text-secondary small">Nombre del Evento</label>
+                        {{ form.nombre }}
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-secondary small">Fecha y Hora de Inicio</label>
+                            {{ form.fecha }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-secondary small">Ubicación / Lugar</label>
+                            {{ form.ubicacion }}
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-4 bg-light p-3 rounded border">
+                        <div class="col-12 border-bottom pb-2 mb-2">
+                            <div class="form-check form-switch">
+                                {{ form.es_multidias }}
+                                <label class="form-check-label fw-bold text-dark">¿Es un evento de varios días (Ej: Congreso)?</label>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 d-none" id="cont_fecha_fin">
+                            <label class="form-label fw-semibold text-secondary small">Fecha y Hora de Fin</label>
+                            {{ form.fecha_fin }}
+                        </div>
+                        <div class="col-md-4 d-none" id="cont_multidias">
+                            <label class="form-label fw-semibold text-secondary small">Total de días</label>
+                            {{ form.cantidad_dias }}
+                        </div>
+                        <div class="col-md-4 d-none" id="cont_precio_dia">
+                            <label class="form-label fw-semibold text-secondary small">Precio por día</label>
+                            {{ form.precio_por_dia }}
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-secondary small">Precio de Preventa (Registro Web)</label>
+                            <div class="input-group">
+                                {{ form.precio_preventa }}
+                                <span class="input-group-text bg-light fw-bold text-muted">COP</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-secondary small">Precio Completo (En Puerta)</label>
+                            <div class="input-group">
+                                {{ form.precio_puerta }}
+                                <span class="input-group-text bg-light fw-bold text-muted">COP</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card bg-light border p-3 mb-4">
+                        <h6 class="fw-bold text-dark mb-3"><i class="bi bi-wallet2 me-2"></i>Configuración de Pagos</h6>
+                        
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <div class="form-check form-switch">
+                                    {{ form.acepta_nequi_daviplata }}
+                                    <label class="form-check-label fw-semibold">Habilitar Nequi / Daviplata</label>
+                                </div>
+                                <div class="mt-2">
+                                    {{ form.numero_nequi_daviplata }}
+                                </div>
+                            </div>
+
+                            <div class="col-12 mt-3">
+                                <div class="form-check form-switch">
+                                    {{ form.acepta_banco_manual }}
+                                    <label class="form-check-label fw-semibold">Habilitar Transferencia Bancaria</label>
+                                </div>
+                                <div class="mt-2">
+                                    {{ form.datos_banco_manual }}
+                                </div>
+                            </div>
+                            
+                            <div class="col-12 mt-3 border-top pt-3">
+                                <div class="form-check form-switch">
+                                    {{ form.acepta_tarjetas_online }}
+                                    <label class="form-check-label fw-semibold text-primary">Habilitar Pago con Tarjeta Online (Stripe/PayU)</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-5">
+                        <label class="form-label fw-semibold text-secondary small">Términos y Condiciones del Evento</label>
+                        {{ form.terminos_condiciones }}
+                    </div>
+
+                    <div class="d-flex gap-2 justify-content-end border-top pt-4">
+                        <a href="{% url 'eventos:admin_lista' request.tenant.slug %}" class="btn btn-light border px-4 rounded-pill">Cancelar</a>
+                        <button type="submit" class="btn btn-tenant-primary px-5 rounded-pill fw-semibold shadow-sm">
+                            {% if object %}<i class="bi bi-check-circle-fill me-1"></i> Actualizar Evento{% else %}<i class="bi bi-plus-circle-fill me-1"></i> Guardar Evento{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Obtenemos los elementos
+        const check = document.getElementById("id_es_multidias"); 
+        const divMultidias = document.getElementById("cont_multidias");
+        const divPrecioDia = document.getElementById("cont_precio_dia");
+        const divFechaFin = document.getElementById("cont_fecha_fin"); // NUEVO
+
+        function toggleMultidias() {
+            if(check && check.checked) {
+                divMultidias.classList.remove("d-none");
+                divPrecioDia.classList.remove("d-none");
+                divFechaFin.classList.remove("d-none");
+            } else if (check) {
+                divMultidias.classList.add("d-none");
+                divPrecioDia.classList.add("d-none");
+                divFechaFin.classList.add("d-none");
+            }
+        }
+
+        if (check) {
+            check.addEventListener("change", toggleMultidias);
+            toggleMultidias(); // Ejecutar al cargar la vista
+        }
+    });
+</script>
+{% endblock %}

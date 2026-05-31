@@ -1,0 +1,202 @@
+{% extends "base_tenant.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold text-dark m-0">Gestión de Eventos</h2>
+        <p class="text-muted small m-0">Crea, edita y controla los workshops, galas y eventos de <strong>{{ request.tenant.nombre }}</strong>.</p>
+    </div>
+    <button class="btn btn-tenant-primary fw-semibold" data-bs-toggle="modal" data-bs-target="#modalCrearEvento">
+        <i class="bi bi-calendar-plus me-1"></i> Crear Nuevo Evento
+    </button>
+</div>
+
+<div class="row g-3">
+    {% for evento in eventos %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card border-0 shadow-sm bg-white h-100 position-relative overflow-hidden d-flex flex-column">
+            
+            <div class="position-relative w-100" style="height: 180px; background-color: #0f172a;">
+                {% if evento.imagen %}
+                    <img src="{{ evento.imagen.url }}" alt="{{ evento.nombre }}" class="w-100 h-100 object-fit-cover opacity-75">
+                {% else %}
+                    <div class="w-100 h-100 d-flex align-items-center justify-content-center" 
+                         style="background: linear-gradient(135deg, {{ request.tenant.color_primario|default:'#6f42c1' }}, {{ request.tenant.color_secundario|default:'#e83e8c' }});">
+                        <i class="bi bi-image text-white opacity-25" style="font-size: 3rem;"></i>
+                    </div>
+                {% endif %}
+                
+                <div class="position-absolute top-0 start-0 m-3">
+                    <span class="badge 
+                        {% if evento.estado == 'REGISTRO_ONLINE' %}bg-success
+                        {% elif evento.estado == 'REGISTRO_PUERTA' %}bg-warning text-dark
+                        {% else %}bg-secondary{% endif %} text-uppercase small fw-bold shadow-sm">
+                        {{ evento.get_estado_display }}
+                    </span>
+                </div>
+            </div>
+            
+            <div class="card-body p-4 d-flex flex-column flex-grow-1">
+                <h4 class="fw-bold text-dark mb-1 text-truncate">{{ evento.nombre }}</h4>
+                <p class="text-muted small mb-3"><i class="bi bi-geo-alt me-1"></i> {{ evento.ubicacion }}</p>
+                
+                <div class="row g-2 bg-light rounded p-2 mb-3 text-center small mt-auto">
+                    <div class="col-6 border-end">
+                        <span class="text-muted d-block" style="font-size: 0.75rem;">PREVENTA WEB</span>
+                        <strong class="text-success">${{ evento.precio_preventa|floatformat:0 }}</strong>
+                    </div>
+                    <div class="col-6">
+                        <span class="text-muted d-block" style="font-size: 0.75rem;">TAQUILLA / PUERTA</span>
+                        <strong class="text-dark">${{ evento.precio_puerta|floatformat:0 }}</strong>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center text-secondary small mb-4">
+                    <i class="bi bi-calendar3 me-2" style="color: {{ request.tenant.color_primario }};"></i>
+                    <span>{{ evento.fecha|date:"d \d\e F, Y - g:i a" }}</span>
+                </div>
+
+                <div class="row g-2">
+                    <div class="col-7">
+                        <a href="{% url 'eventos:admin_detalle' request.tenant.slug evento.slug %}" class="btn btn-outline-dark btn-sm fw-semibold w-100 py-2">
+                            <i class="bi bi-sliders me-1"></i> Control
+                        </a>
+                    </div>
+                    <div class="col-5">
+                        <a href="{% url 'eventos:admin_editar' request.tenant.slug evento.slug %}" class="btn btn-light border btn-sm fw-semibold w-100 py-2 text-secondary">
+                            <i class="bi bi-pencil-square me-1"></i> Editar
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="bg-white p-5 rounded shadow-sm text-center">
+            <i class="bi bi-calendar-x display-1 text-muted opacity-50 mb-3"></i>
+            <h4 class="fw-bold text-dark">No hay eventos registrados</h4>
+            <p class="text-muted small mb-4">Aún no has creado ningún evento para esta academia.</p>
+            <button class="btn btn-tenant-primary" data-bs-toggle="modal" data-bs-target="#modalCrearEvento">
+                Crear tu primer evento ahora
+            </button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="modal fade" id="modalCrearEvento" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form action="{% url 'eventos:admin_crear' request.tenant.slug %}" method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title fw-bold">Registrar Nuevo Evento</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                
+                <div class="modal-body px-4 py-3">
+    {% if form.non_field_errors %}
+        <div class="alert alert-danger small">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="row g-3">
+        <div class="col-12">
+            <label class="small fw-semibold text-secondary">Nombre del Evento</label>
+            {{ form.nombre }}
+            {% if form.nombre.errors %}<div class="text-danger small">{{ form.nombre.errors.0 }}</div>{% endif %}
+        </div>
+
+        <div class="col-md-6">
+            <label class="small fw-semibold text-secondary">Fecha Inicio</label>
+            {{ form.fecha }}
+        </div>
+        <div class="col-md-6">
+            <label class="small fw-semibold text-secondary">Fecha Fin</label>
+            {{ form.fecha_fin }}
+        </div>
+
+        <div class="col-12">
+            <label class="small fw-semibold text-secondary">Ubicación</label>
+            {{ form.ubicacion }}
+        </div>
+
+        <div class="col-md-6">
+            <label class="small fw-semibold text-secondary">Precio Preventa (Online)</label>
+            {{ form.precio_preventa }}
+        </div>
+        <div class="col-md-6">
+            <label class="small fw-semibold text-secondary">Precio Puerta (Taquilla)</label>
+            {{ form.precio_puerta }}
+        </div>
+
+        <div class="col-12 bg-light p-3 rounded">
+            <div class="form-check form-switch">
+                {{ form.es_multidias }}
+                <label class="form-check-label fw-bold small">¿Es evento de varios días?</label>
+            </div>
+            <div class="row g-2 mt-2 d-none" id="div-multidias-campos">
+                <div class="col-6">
+                    <label class="small text-secondary">Cantidad días</label>
+                    {{ form.cantidad_dias }}
+                </div>
+                <div class="col-6">
+                    <label class="small text-secondary">Precio por día</label>
+                    {{ form.precio_por_dia }}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card p-3 border-light bg-light">
+                <p class="fw-bold small text-dark mb-2">Configuración de Pagos</p>
+                <div class="form-check form-switch mb-2">
+                    {{ form.acepta_nequi_daviplata }}
+                    <label class="form-check-label small">Habilitar Nequi/Daviplata</label>
+                </div>
+                {{ form.numero_nequi_daviplata }}
+                
+                <div class="form-check form-switch mt-3 mb-2">
+                    {{ form.acepta_banco_manual }}
+                    <label class="form-check-label small">Habilitar Transferencia Bancaria</label>
+                </div>
+                {{ form.datos_banco_manual }}
+            </div>
+        </div>
+
+        <div class="col-12">
+            <label class="small fw-semibold text-secondary">Términos y Condiciones</label>
+            {{ form.terminos_condiciones }}
+        </div>
+    </div>
+</div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-tenant-primary fw-bold">Guardar Evento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const check = document.getElementById("id_es_multidias");
+        const divCampos = document.getElementById("div-multidias-campos");
+
+        function toggleCampos() {
+            if(check.checked) divCampos.classList.remove("d-none");
+            else divCampos.classList.add("d-none");
+        }
+
+        check.addEventListener("change", toggleCampos);
+        toggleCampos(); // Ejecutar al cargar
+
+        // Si hay errores, forzamos abrir el modal
+        {% if form.errors %}
+            var myModal = new bootstrap.Modal(document.getElementById('modalCrearEvento'));
+            myModal.show();
+        {% endif %}
+    });
+</script>
+{% endblock %}

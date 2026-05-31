@@ -1,0 +1,276 @@
+{% extends "base_tenant.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="mb-4">
+        <h2 class="fw-bold text-dark m-0">Configuración de la Landing Pública</h2>
+        <p class="text-muted small">Personaliza los colores, imágenes del carrete, textos informativos y enlaces comerciales de tu sitio web.</p>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
+        {% csrf_token %}
+        
+        <div class="row g-4">
+            
+            <div class="col-lg-6">
+                
+                <div class="card border-0 shadow-sm bg-white p-4 rounded-4 mb-4">
+                    <h5 class="fw-bold text-dark mb-3"><i class="bi bi-palette text-primary me-2"></i>Identidad y Colores de Marca</h5>
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold text-secondary">Nombre Comercial</label>
+                            {{ form.nombre }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-secondary">Color Primario (Nav/Footer)</label>
+                            {{ form.color_primario }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-secondary">Color Secundario (Destacados)</label>
+                            {{ form.color_secundario }}
+                        </div>
+                        <div class="col-12 mt-2">
+                            <label class="form-label small fw-semibold text-secondary">Logo Oficial de la Academia</label>
+                            {{ form.logo }}
+                            {% if object.logo %}
+                                <div class="mt-2 text-start">
+                                    <img src="{{ object.logo.url }}" alt="Logo" class="rounded p-1 bg-light border" style="max-height: 50px; object-fit: contain;">
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-12 mt-3 pt-3 border-top">
+                            <label class="form-label small fw-semibold text-secondary">
+                                <i class="bi bi-window-sidebar text-purple me-1"></i> Imagen de Fondo para el Login (Efecto Envoltura)
+                            </label>
+                            {{ form.login_imagen }}
+                            {% if object.login_imagen %}
+                                <div class="mt-2 text-start">
+                                    <img src="{{ object.login_imagen.url }}" alt="Fondo Login" class="rounded border p-1 bg-light" style="max-height: 55px; max-width: 100px; object-fit: cover;">
+                                    <span class="d-block text-muted style-text small" style="font-size: 0.75rem;">Fondo actual en formato WebP optimizado</span>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card border-0 shadow-sm bg-white p-4 rounded-4 mb-4">
+                    <h5 class="fw-bold text-dark mb-3"><i class="bi bi-info-circle text-success me-2"></i>Sección Informativa (Nosotros)</h5>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-secondary">Título de la Sección</label>
+                        {{ form.info_titulo }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-secondary">Párrafo Introductorio</label>
+                        {{ form.info_descripcion_1 }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-secondary">Párrafo Complementario</label>
+                        {{ form.info_descripcion_2 }}
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label small fw-semibold text-secondary">Imagen Destacada Lateral (Sede / Equipo)</label>
+                        {{ form.info_imagen }}
+                        {% if object.info_imagen %}
+                            <div class="mt-2 text-start">
+                                <img src="{{ object.info_imagen.url }}" alt="Sede" class="rounded border p-1 bg-light" style="max-height: 80px; max-width: 120px; object-fit: cover;">
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="card border-0 shadow-sm bg-white p-4 rounded-4 mb-4">
+                    <h5 class="fw-bold text-dark mb-3"><i class="bi bi-grid-1x2-fill text-info me-2"></i>Cuadros Destacados de Características</h5>
+                    <p class="text-muted small mb-3">Configura hasta 4 cuadros. Si dejas el título de los cuadros 3 o 4 en blanco, la landing ocultará el bloque automáticamente adaptando el diseño.</p>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded-3 border h-100">
+                                <label class="form-label small fw-bold text-dark mb-2">Cuadro Destacado 1</label>
+                                <div class="mb-2">
+                                    <label class="form-label small text-secondary mb-1" style="font-size: 0.8rem;">Título Visual</label>
+                                    {{ form.bloque_1_titulo }}
+                                </div>
+                                <div>
+                                    <label class="form-label small text-secondary mb-1" style="font-size: 0.8rem;">Selecciona su Ícono</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-white text-primary" id="preview-box-1">
+                                            <i class="bi {{ object.bloque_1_icono|default:'bi-trophy-fill' }} fs-5"></i>
+                                        </span>
+                                        {{ form.bloque_1_icono }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded-3 border h-100">
+                                <label class="form-label small fw-bold text-dark mb-2">Cuadro Destacado 2</label>
+                                <div class="mb-2">
+                                    <label class="form-label small text-secondary mb-1" style="font-size: 0.8rem;">Título Visual</label>
+                                    {{ form.bloque_2_titulo }}
+                                </div>
+                                <div>
+                                    <label class="form-label small text-secondary mb-1" style="font-size: 0.8rem;">Selecciona su Ícono</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-white text-danger" id="preview-box-2">
+                                            <i class="bi {{ object.bloque_2_icono|default:'bi-heart-pulse-fill' }} fs-5"></i>
+                                        </span>
+                                        {{ form.bloque_2_icono }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded-3 border h-100">
+                                <label class="form-label small fw-bold text-dark mb-2">Cuadro Destacado 3 (Opcional)</label>
+                                <div class="mb-2">
+                                    <label class="form-label small text-secondary mb-1" style="font-size: 0.8rem;">Título Visual</label>
+                                    {{ form.bloque_3_titulo }}
+                                </div>
+                                <div>
+                                    <label class="form-label small text-secondary mb-1" style="font-size: 0.8rem;">Selecciona su Ícono</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-white text-warning" id="preview-box-3">
+                                            <i class="bi {{ object.bloque_3_icono|default:'bi-award-fill' }} fs-5"></i>
+                                        </span>
+                                        {{ form.bloque_3_icono }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded-3 border h-100">
+                                <label class="form-label small fw-bold text-dark mb-2">Cuadro Destacado 4 (Opcional)</label>
+                                <div class="mb-2">
+                                    <label class="form-label small text-secondary mb-1" style="font-size: 0.8rem;">Título Visual</label>
+                                    {{ form.bloque_4_titulo }}
+                                </div>
+                                <div>
+                                    <label class="form-label small text-secondary mb-1" style="font-size: 0.8rem;">Selecciona su Ícono</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-white text-info" id="preview-box-4">
+                                            <i class="bi {{ object.bloque_4_icono|default:'bi-qr-code-scan' }} fs-5"></i>
+                                        </span>
+                                        {{ form.bloque_4_icono }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div> <div class="col-lg-6">
+                
+                <div class="card border-0 shadow-sm bg-white p-4 rounded-4 mb-4">
+                    <h5 class="fw-bold text-dark mb-3"><i class="bi bi-images text-warning me-2"></i>Carrete Principal (Hero Slider)</h5>
+                    
+                    <div class="p-3 bg-light rounded-3 mb-3 border">
+                        <h6 class="fw-bold text-dark mb-2 small text-uppercase text-muted">Diapositiva 1 (Apertura)</h6>
+                        <div class="mb-2">
+                            <label class="form-label small text-secondary" style="font-size: 0.8rem;">Título Principal</label>
+                            {{ form.hero_titulo }}
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small text-secondary" style="font-size: 0.8rem;">Subtítulo / Eslogan</label>
+                            {{ form.hero_eslogan }}
+                        </div>
+                        <div>
+                            <label class="form-label small text-secondary" style="font-size: 0.8rem;">Imagen de Fondo</label>
+                            {{ form.hero_imagen_1 }}
+                            {% if object.hero_imagen_1 %}
+                                <div class="mt-2"><img src="{{ object.hero_imagen_1.url }}" class="rounded border" style="max-height: 45px;"></div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="p-3 bg-light rounded-3 border">
+                        <h6 class="fw-bold text-dark mb-2 small text-uppercase text-muted">Diapositiva 2 (Eventos/Comunidad)</h6>
+                        <div class="mb-2">
+                            <label class="form-label small text-secondary" style="font-size: 0.8rem;">Título Principal</label>
+                            {{ form.hero_titulo_2 }}
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small text-secondary" style="font-size: 0.8rem;">Subtítulo / Eslogan</label>
+                            {{ form.hero_eslogan_2 }}
+                        </div>
+                        <div>
+                            <label class="form-label small text-secondary" style="font-size: 0.8rem;">Imagen de Fondo</label>
+                            {{ form.hero_imagen_2 }}
+                            {% if object.hero_imagen_2 %}
+                                <div class="mt-2"><img src="{{ object.hero_imagen_2.url }}" class="rounded border" style="max-height: 45px;"></div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card border-0 shadow-sm bg-white p-4 rounded-4 mb-4">
+                    <h5 class="fw-bold text-dark mb-3"><i class="bi bi-geo-alt text-danger me-2"></i>Ubicación, Contacto y Redes</h5>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-secondary">NIT / Identificación Fiscal</label>
+                            {{ form.nit }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-secondary">Teléfono de Atención</label>
+                            {{ form.telefono }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold text-secondary">Dirección Exacta de la Sede</label>
+                            {{ form.direccion_sede }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold text-secondary">Horario Comercial Público</label>
+                            {{ form.horario_atencion }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-secondary"><i class="bi bi-instagram text-danger me-1"></i>URL Instagram</label>
+                            {{ form.instagram_url }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-secondary"><i class="bi bi-facebook text-primary me-1"></i>URL Facebook</label>
+                            {{ form.facebook_url }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold text-secondary"><i class="bi bi-tiktok text-dark me-1"></i>URL TikTok</label>
+                            {{ form.tiktok_url }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold text-secondary"><i class="bi bi-youtube text-danger me-1"></i>URL YouTube</label>
+                            {{ form.youtube_url }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold text-secondary"><i class="bi bi-whatsapp text-success me-1"></i>URL WhatsApp</label>
+                            {{ form.whatsapp_url }}
+                        </div>
+                    </div>
+                </div>
+
+            </div> </div> <div class="row mt-3">
+            <div class="col-12 text-end mb-5">
+                <button type="submit" class="btn btn-tenant-primary px-5 py-2.5 rounded-pill fw-bold shadow-sm">
+                    <i class="bi bi-cloud-check-fill me-2"></i>Guardar Cambios de la Plataforma
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        for (let i = 1; i <= 4; i++) {
+            const selectElement = document.getElementById(`select-icono-${i}`);
+            const previewElement = document.getElementById(`preview-box-${i}`);
+            
+            if (selectElement && previewElement) {
+                selectElement.addEventListener("change", function() {
+                    const iconoSeleccionado = selectElement.value;
+                    previewElement.innerHTML = `<i class="bi ${iconoSeleccionado} fs-5"></i>`;
+                });
+            }
+        }
+    });
+</script>
+{% endblock %}

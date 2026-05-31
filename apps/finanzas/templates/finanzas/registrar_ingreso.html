@@ -1,0 +1,54 @@
+{% extends "base_tenant.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6 mx-auto">
+        <div class="card border-0 shadow-sm p-4 bg-white">
+            <h4 class="fw-bold mb-1 text-dark"><i class="bi bi-plus-circle me-2 text-success"></i>Registrar Ingreso de Caja</h4>
+            <p class="text-muted small mb-4">Expide un Recibo de Caja oficial por ventas de la tienda, matrículas sueltas o eventos.</p>
+            
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="form-label small fw-bold text-secondary">Cédula / NIT Cliente</label>
+                        {{ form.cliente_nit }}
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="form-label small fw-bold text-secondary">Nombre Completo Cliente</label>
+                        {{ form.cliente_nombre }}
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="form-label small fw-bold text-secondary">Origen del Dinero</label>
+                        {{ form.tipo_ingreso }}
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="form-label small fw-bold text-secondary">Medio de Recaudo</label>
+                        {{ form.medio_pago }}
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-secondary">Concepto Detallado</label>
+                    {{ form.concepto }}
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-secondary">Valor Recibido ($ COP)</label>
+                    {{ form.monto }}
+                </div>
+
+                <hr class="my-4">
+                <div class="d-flex gap-2">
+                    <a href="{% url 'finanzas:panel_finanzas' request.tenant.slug %}" class="btn btn-light w-50 py-2">Cancelar</a>
+                    <button type="submit" class="btn btn-success w-50 py-2 fw-bold">Expedir Recibo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

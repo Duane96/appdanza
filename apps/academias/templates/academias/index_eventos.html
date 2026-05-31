@@ -1,0 +1,335 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cartelera de Eventos | {{ request.tenant.nombre }}</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary-dance: {{ request.tenant.color_primario|default:"#f59e0b" }}; /* Naranja ticket por defecto */
+            --secondary-dance: {{ request.tenant.color_secundario|default:"#ef4444" }}; /* Rojo urgencia */
+            --bg-dark-core: #030303;
+            --card-dark: rgba(255, 255, 255, 0.03);
+            --text-high-contrast: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-dark-core);
+            color: #ffffff;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+        }
+
+        h1, h2, h3, h4, h5, .font-heading {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .text-gradient {
+            background: linear-gradient(135deg, var(--primary-dance), var(--secondary-dance));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .btn-ticket {
+            background: linear-gradient(135deg, var(--primary-dance), var(--secondary-dance));
+            color: #ffffff;
+            border: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .btn-ticket:hover {
+            transform: scale(1.05) translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            color: white;
+            filter: brightness(1.1);
+        }
+
+        /* Hero Spotlight para Festivales */
+        .hero-spotlight {
+            position: relative;
+            height: 90vh;
+            min-height: 600px;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+        }
+        .hero-spotlight::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, var(--bg-dark-core) 0%, rgba(3,3,3,0.4) 100%);
+            z-index: 1;
+        }
+        .hero-spotlight img {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: saturate(1.2);
+            z-index: 0;
+            animation: zoomOut 20s infinite alternate;
+        }
+        @keyframes zoomOut {
+            from { transform: scale(1.1); }
+            to { transform: scale(1); }
+        }
+
+        /* Glass Cards tipo Ticketmaster */
+        .ticket-card {
+            background: var(--card-dark);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: all 0.4s ease;
+            position: relative;
+        }
+        .ticket-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 2px;
+            background: linear-gradient(90deg, var(--primary-dance), var(--secondary-dance));
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.4s ease;
+        }
+        .ticket-card:hover {
+            transform: translateY(-10px);
+            border-color: rgba(255,255,255,0.1);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        }
+        .ticket-card:hover::before { transform: scaleX(1); }
+
+        .navbar-event {
+            background: rgba(3, 3, 3, 0.9) !important;
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-event fixed-top py-3">
+        <div class="container">
+            <a class="navbar-brand fw-bold font-heading fs-4 d-flex align-items-center" href="#">
+                {% if request.tenant.logo %}
+                    <img src="{{ request.tenant.logo.url }}" alt="Logo" style="height: 40px;" class="me-2">
+                {% else %}
+                    <i class="bi bi-ticket-perforated-fill text-gradient me-2 fs-3"></i>
+                {% endif %}
+                {{ request.tenant.nombre }}
+            </a>
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+                <ul class="navbar-nav align-items-center gap-3">
+                    <li class="nav-item"><a class="nav-link text-white-50 hover-white px-3" href="#cartelera">Cartelera</a></li>
+                    <li class="nav-item"><a class="nav-link text-white-50 hover-white px-3" href="#info">Sobre el Productor</a></li>
+                    <li class="nav-item ms-lg-2 mt-3 mt-lg-0">
+                        <a href="#cartelera" class="btn btn-outline-light rounded-pill px-4 fw-bold">Comprar Entradas</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <header id="heroEventos" class="carousel slide carousel-fade hero-spotlight" data-bs-ride="carousel">
+        <div class="carousel-inner h-100">
+            {% for evento in eventos %}
+                <div class="carousel-item h-100 {% if forloop.first %}active{% endif %}">
+                    {% if evento.imagen %}
+                        <img src="{{ evento.imagen.url }}" alt="{{ evento.nombre }}" class="d-block w-100 h-100 object-fit-cover" style="filter: saturate(1.2); animation: zoomOut 20s infinite alternate;">
+                    {% else %}
+                        <div class="position-absolute w-100 h-100" style="background: linear-gradient(135deg, #111, var(--primary-dance)); z-index: 0;"></div>
+                    {% endif %}
+                    
+                    <div class="position-absolute w-100 h-100" style="background: linear-gradient(to top, var(--bg-dark-core) 0%, rgba(3,3,3,0.4) 100%); z-index: 1;"></div>
+                    
+                    <div class="carousel-caption d-flex flex-column justify-content-center h-100 text-start px-3 px-md-5" style="bottom: 0; z-index: 2; left: 0; right: 0;">
+                        <div class="container mt-auto mb-auto">
+                            <span class="badge text-white px-4 py-2 rounded-pill fw-bold mb-4 border" style="background: rgba(255,255,255,0.1); backdrop-filter: blur(5px); border-color: rgba(255,255,255,0.2) !important;">
+                                <i class="bi bi-fire text-danger me-1"></i> Próximo Gran Evento
+                            </span>
+                            <h1 class="display-2 font-heading fw-bold text-white mb-3" style="text-shadow: 0 4px 20px rgba(0,0,0,0.8);">{{ evento.nombre }}</h1>
+                            <p class="fs-4 text-white-50 mb-5 d-flex flex-wrap gap-4 align-items-center">
+                                <span><i class="bi bi-calendar-event me-2 text-gradient"></i>{{ evento.fecha|date:"d M, Y" }}</span>
+                                <span><i class="bi bi-geo-alt-fill me-2 text-gradient"></i>{{ evento.ubicacion }}</span>
+                            </p>
+                            <div class="d-flex gap-3 flex-wrap">
+                                {% if evento.estado == 'REGISTRO_ONLINE' %}
+                                    <a href="{% url 'eventos:registro_publico' request.tenant.slug evento.slug %}" class="btn btn-ticket btn-lg px-5 py-3 rounded-pill fw-bold">
+                                        <i class="bi bi-ticket-detailed-fill me-2"></i>Asegurar Entrada
+                                    </a>
+                                {% else %}
+                                    <button class="btn btn-outline-light btn-lg px-5 py-3 rounded-pill fw-bold" disabled>Venta en Taquilla</button>
+                                {% endif %}
+                                <a href="#cartelera" class="btn btn-outline-secondary btn-lg px-5 py-3 rounded-pill fw-bold text-white">Ver toda la cartelera</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="carousel-item active h-100">
+                    {% if request.tenant.hero_imagen_1 %}
+                        <img src="{{ request.tenant.hero_imagen_1.url }}" alt="Producción" class="d-block w-100 h-100 object-fit-cover" style="filter: saturate(1.2);">
+                    {% else %}
+                        <div class="position-absolute w-100 h-100" style="background: linear-gradient(135deg, #111, var(--primary-dance)); z-index: 0;"></div>
+                    {% endif %}
+                    <div class="position-absolute w-100 h-100" style="background: linear-gradient(to top, var(--bg-dark-core) 0%, rgba(3,3,3,0.4) 100%); z-index: 1;"></div>
+                    
+                    <div class="carousel-caption d-flex flex-column justify-content-center h-100 text-start px-3 px-md-5" style="bottom: 0; z-index: 2; left: 0; right: 0;">
+                        <div class="container mt-auto mb-auto">
+                            <span class="badge text-white px-4 py-2 rounded-pill fw-bold mb-4 border" style="background: rgba(255,255,255,0.1); backdrop-filter: blur(5px);">
+                                <i class="bi bi-star-fill text-warning me-1"></i> Productores Oficiales
+                            </span>
+                            <h1 class="display-2 font-heading fw-bold text-white mb-3">{{ request.tenant.hero_titulo }}</h1>
+                            <p class="fs-4 text-white-50 mb-5">{{ request.tenant.hero_eslogan }}</p>
+                            <a href="#cartelera" class="btn btn-ticket btn-lg px-5 py-3 rounded-pill fw-bold">Ver Cartelera</a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        
+        {% if eventos|length > 1 %}
+        <button class="carousel-control-prev" type="button" data-bs-target="#heroEventos" data-bs-slide="prev" style="width: 5%; z-index: 5;">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#heroEventos" data-bs-slide="next" style="width: 5%; z-index: 5;">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+        </button>
+        {% endif %}
+    </header>
+
+    <section id="cartelera" class="py-5">
+        <div class="container py-5">
+            <div class="d-flex justify-content-between align-items-end mb-5">
+                <div>
+                    <h2 class="font-heading fw-bold display-5 text-white m-0">Cartelera <span class="text-gradient">Activa</span></h2>
+                    <p class="text-white-50 mt-2 m-0 fs-5">Reserva tu lugar antes de que se agoten (Sold Out).</p>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                {% for evento in eventos %}
+                    <div class="col-md-6 col-xl-4">
+                        <div class="ticket-card h-100 d-flex flex-column">
+                            <div class="position-relative" style="aspect-ratio: 16/9; background: #111;">
+                                {% if evento.imagen %}
+                                    <img src="{{ evento.imagen.url }}" alt="{{ evento.nombre }}" class="w-100 h-100 object-fit-cover">
+                                {% else %}
+                                    <div class="w-100 h-100 d-flex align-items-center justify-content-center" style="background: rgba(255,255,255,0.02);">
+                                        <i class="bi bi-image text-white-50 fs-1"></i>
+                                    </div>
+                                {% endif %}
+                                <div class="position-absolute top-0 end-0 m-3">
+                                    <span class="badge bg-dark border border-secondary text-white rounded-pill px-3 py-2 shadow-sm">
+                                        <i class="bi bi-clock-history me-1 text-warning"></i> {{ evento.fecha|date:"h:i A" }}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div class="p-4 d-flex flex-column flex-grow-1">
+                                <span class="text-gradient fw-bold text-uppercase tracking-wider small mb-2 d-block">{{ evento.fecha|date:"d M, Y" }}</span>
+                                <h4 class="font-heading fw-bold text-white mb-3">{{ evento.nombre }}</h4>
+                                <p class="text-white-50 small mb-4"><i class="bi bi-geo-alt-fill text-danger me-2"></i>{{ evento.ubicacion }}</p>
+                                
+                                <div class="mt-auto">
+                                    <div class="d-flex justify-content-between align-items-end mb-4 px-3 py-2 rounded-3" style="background: rgba(255,255,255,0.03);">
+                                        <div>
+                                            <span class="d-block small text-white-50">Precio Preventa</span>
+                                            <strong class="fs-5 text-white">${{ evento.precio_preventa|floatformat:"0" }}</strong>
+                                        </div>
+                                        <div class="text-end">
+                                            <span class="d-block small text-white-50">Precio Taquilla</span>
+                                            <span class="text-white-50 text-decoration-line-through">${{ evento.precio_puerta|floatformat:"0" }}</span>
+                                        </div>
+                                    </div>
+
+                                    {% if evento.estado == 'REGISTRO_ONLINE' %}
+                                        <a href="{% url 'eventos:registro_publico' request.tenant.slug evento.slug %}" class="btn btn-ticket rounded-pill w-100 py-3 fw-bold">Comprar Ahora</a>
+                                    {% else %}
+                                        <button class="btn btn-outline-secondary rounded-pill w-100 py-3 fw-bold" disabled>Solo Taquilla Física</button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="col-12 text-center py-5">
+                        <div class="ticket-card p-5 d-inline-block border-0 bg-transparent">
+                            <i class="bi bi-ticket-perforated text-white-50 display-1 mb-3 d-block opacity-50"></i>
+                            <h3 class="font-heading text-white">Pronto anunciaremos nuevas fechas</h3>
+                            <p class="text-white-50">Sigue nuestras redes sociales para estar enterado de la próxima cartelera.</p>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <section id="info" class="py-5 border-top border-secondary border-opacity-25" style="background: rgba(255,255,255,0.01);">
+        <div class="container py-5">
+            <div class="row align-items-center g-5">
+                <div class="col-lg-6">
+                    <h2 class="font-heading fw-bold display-5 text-white mb-4">{{ request.tenant.info_titulo }}</h2>
+                    <p class="fs-5 text-white-50 mb-4" style="line-height: 1.8;">{{ request.tenant.info_descripcion_1 }}</p>
+                    <p class="text-white-50 mb-0">{{ request.tenant.info_descripcion_2 }}</p>
+                </div>
+                <div class="col-lg-6">
+                    {% if request.tenant.info_imagen %}
+                        <img src="{{ request.tenant.info_imagen.url }}" alt="Producción" class="img-fluid rounded-4 shadow-lg w-100" style="filter: contrast(1.1);">
+                    {% else %}
+                        <div class="rounded-4 w-100 d-flex align-items-center justify-content-center" style="aspect-ratio: 4/3; background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(0,0,0,0.5)); border: 1px solid rgba(255,255,255,0.1);">
+                            <i class="bi bi-camera-video text-white-50 display-1 opacity-25"></i>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="pt-5 pb-3 border-top" style="background-color: var(--bg-dark-core); border-color: rgba(255,255,255,0.05) !important;">
+        <div class="container">
+            <div class="row g-4 mb-4 justify-content-between">
+                <div class="col-lg-4 text-center text-lg-start">
+                    <h3 class="font-heading fw-bold text-white mb-3 d-flex align-items-center justify-content-center justify-content-lg-start">
+                        {% if request.tenant.logo %}
+                            <img src="{{ request.tenant.logo.url }}" alt="Logo" style="height: 30px;" class="me-2">
+                        {% else %}
+                            <i class="bi bi-ticket-perforated-fill text-gradient me-2"></i>
+                        {% endif %}
+                        {{ request.tenant.nombre }}
+                    </h3>
+                    <p class="text-white-50 small">Producción y organización de eventos de alto nivel.</p>
+                </div>
+                
+                <div class="col-lg-4 text-center text-lg-end">
+                    <div class="d-flex justify-content-center justify-content-lg-end gap-3 mb-3">
+                        {% if request.tenant.instagram_url %}<a href="{{ request.tenant.instagram_url }}" target="_blank" class="text-white-50 hover-white fs-5"><i class="bi bi-instagram"></i></a>{% endif %}
+                        {% if request.tenant.facebook_url %}<a href="{{ request.tenant.facebook_url }}" target="_blank" class="text-white-50 hover-white fs-5"><i class="bi bi-facebook"></i></a>{% endif %}
+                        {% if request.tenant.whatsapp_url %}<a href="{{ request.tenant.whatsapp_url }}" target="_blank" class="text-white-50 hover-white fs-5"><i class="bi bi-whatsapp"></i></a>{% endif %}
+                    </div>
+                    <span class="text-white-50 small d-block"><i class="bi bi-envelope me-1"></i> Contacto Producción</span>
+                    <span class="text-white fw-bold">{{ request.tenant.telefono|default:"No registrado" }}</span>
+                </div>
+            </div>
+            <div class="text-center pt-3 border-top border-secondary border-opacity-25">
+                <p class="small text-white-50 mb-0">&copy; 2026 {{ request.tenant.nombre }}. Taquilla gestionada por <a href="#" class="text-gradient fw-bold text-decoration-none">AppDanza</a></p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

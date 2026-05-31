@@ -1,0 +1,164 @@
+{% extends "base_tenant.html" %}
+{% load static %}
+
+{% block content %}
+<style>
+/* Contenedor responsivo profesional para evitar deformaciones del Iframe */
+#player-wrapper {
+    width: 100%;
+}
+.player-inner {
+    position: relative;
+    width: 100%;
+    padding-top: 56.25%; /* Relación de aspecto 16:9 exacta */
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+}
+#youtube-player {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+</style>
+
+<div class="container-fluid py-4">
+    <div class="mb-4">
+        <span class="badge bg-tenant-primary text-uppercase px-3 py-1.5 rounded-pill mb-2 small fw-bold">Aula Virtual</span>
+        <h2 class="fw-bold text-dark m-0">{{ modulo.titulo }}</h2>
+        <p class="text-muted small">{{ modulo.descripcion|default:"Explora el material audiovisual de este bloque interactivo." }}</p>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-xl-8 col-lg-7">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+                <div id="player-wrapper">
+                    <div class="player-inner">
+                        {% if primer_video %}
+                            <iframe id="youtube-player" 
+                                    src="" 
+                                    title="Reproductor de Video" 
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                    referrerpolicy="strict-origin-when-cross-origin"
+                                    allowfullscreen>
+                            </iframe>
+                        {% else %}
+                            <div class="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-dark text-white p-5">
+                                <i class="bi bi-camera-video-off display-3 text-muted mb-3"></i>
+                                <h5 class="fw-bold">No hay videos en este módulo</h5>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="p-4 border-top">
+                    <h4 class="fw-bold text-dark mb-2" id="clase-titulo-dinamico">
+                        {{ primer_video.titulo|default:"Selecciona una lección" }}
+                    </h4>
+                    <p class="text-secondary small mb-0" id="clase-desc-dinamica">
+                        {{ primer_video.descripcion|default:"Comienza tu entrenamiento interactivo dando clic en el listado de la derecha." }}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4 col-lg-5">
+            <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+                <h5 class="fw-bold text-dark mb-3 d-flex align-items-center">
+                    <i class="bi bi-list-stars text-tenant-primary me-2"></i> Índice de Lecciones
+                </h5>
+                
+                <div class="d-flex flex-column gap-2 overflow-y-auto" style="max-height: 480px;">
+                    {% for video in videos %}
+                        <button type="button" 
+                                class="btn text-start p-3 rounded-3 border item-playlist-video d-flex align-items-center gap-3"
+                                data-youtube-id="{{ video.youtube_id }}"
+                                data-titulo="{{ video.titulo }}"
+                                data-descripcion="{{ video.descripcion|escape|default:'' }}">
+                            
+                            <div class="rounded-circle bg-tenant-primary bg-opacity-10 text-center d-flex align-items-center justify-content-center" style="width: 35px; height: 35px; min-width: 35px;">
+                                <i class="bi bi-play-fill text-tenant-primary fs-5"></i>
+                            </div>
+                            <div class="text-truncate">
+                                <span class="d-block text-dark small fw-semibold text-truncate">{{ video.titulo }}</span>
+                                <span class="text-muted d-block" style="font-size: 0.75rem;">Lección {{ forloop.counter }}</span>
+                            </div>
+                        </button>
+                    {% empty %}
+                        <p class="text-muted text-center small my-4">Próximamente más contenido disponible.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Función centralizada para renderizar el video (Directo con ID, sin necesidad de expresiones de parseo de URL)
+function loadVideoById(youtubeId, titulo, descripcion, setAutoplay = false) {
+    if (!youtubeId) return;
+
+    var iframe = document.getElementById("youtube-player");
+    if (!iframe) return;
+
+    // Capturamos el origen del SaaS en tiempo real
+    var currentOrigin = window.location.origin;
+
+    // Construimos los parámetros requeridos por la API de Google
+    var urlParams = "?rel=0&modestbranding=1&playsinline=1&enablejsapi=1&origin=" + encodeURIComponent(currentOrigin);
+    if (setAutoplay) {
+        urlParams += "&autoplay=1";
+    }
+
+    // Inyectamos la URL final limpia
+    iframe.src = "https://www.youtube.com/embed/" + youtubeId + urlParams;
+
+    // Actualizamos textos del DOM
+    var contenedorTitulo = document.getElementById('clase-titulo-dinamico');
+    var contenedorDesc = document.getElementById('clase-desc-dinamica');
+    
+    if (contenedorTitulo) contenedorTitulo.innerText = titulo;
+    if (contenedorDesc) contenedorDesc.innerText = descripcion || "Sin descripción disponible para esta lección.";
+
+    // Manejo visual de la clase activa en la playlist
+    document.querySelectorAll(".item-playlist-video").forEach(function(item) {
+        item.classList.remove("bg-light", "border-primary", "fw-bold");
+    });
+
+    var activeBtn = document.querySelector('.item-playlist-video[data-youtube-id="' + youtubeId + '"]');
+    if (activeBtn) {
+        activeBtn.classList.add("bg-light", "border-primary", "fw-bold");
+    }
+}
+
+// Delegación de eventos para clicks en los elementos de la lista
+document.addEventListener("click", function(event) {
+    var button = event.target.closest(".item-playlist-video");
+    if (!button) return;
+
+    event.preventDefault();
+    var youtubeId = button.getAttribute("data-youtube-id");
+    var titulo = button.getAttribute("data-titulo");
+    var description = button.getAttribute("data-descripcion") || "";
+
+    // Al hacer click forzamos autoplay=true
+    loadVideoById(youtubeId, titulo, description, true);
+});
+
+// Carga inicial al montar el DOM
+document.addEventListener("DOMContentLoaded", function() {
+    var firstVideoBtn = document.querySelector(".item-playlist-video");
+    if (!firstVideoBtn) return;
+
+    var youtubeId = firstVideoBtn.getAttribute("data-youtube-id");
+    var titulo = firstVideoBtn.getAttribute("data-titulo");
+    var description = firstVideoBtn.getAttribute("data-descripcion") || "";
+
+    // Primera carga en frío: sin autoplay para cumplir políticas de bloqueo de audio del navegador
+    loadVideoById(youtubeId, titulo, description, false);
+});
+</script>
+{% endblock %}

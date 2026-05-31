@@ -1,0 +1,457 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bienvenidos a {{ request.tenant.nombre }}</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* ==========================================
+           VARIABLES DINÁMICAS DEL TENANT
+           ========================================== */
+        :root {
+            /* Django inyecta los colores de la academia aquí. Si no hay, usa por defecto los de AppDanza */
+            --primary-dance: {{ request.tenant.color_primario|default:"#3b82f6" }};
+            --secondary-dance: {{ request.tenant.color_secundario|default:"#ec4899" }};
+            
+            --bg-dark-core: #050505;
+            --card-dark: rgba(17, 24, 39, 0.6);
+            --text-high-contrast: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-dark-core);
+            color: #ffffff;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+        }
+
+        h1, h2, h3, h4, h5, h6, .font-heading {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        /* Texto con gradiente dinámico de la academia */
+        .text-gradient {
+            background: linear-gradient(135deg, var(--primary-dance), var(--secondary-dance));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Botones dinámicos de la academia */
+        .btn-dance {
+            background: linear-gradient(135deg, var(--primary-dance), var(--secondary-dance));
+            color: #ffffff;
+            border: none;
+            transition: all 0.3s ease;
+        }
+        .btn-dance:hover {
+            color: #ffffff;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            filter: brightness(1.1);
+        }
+
+        /* ==========================================
+           LUCES DE NEÓN DINÁMICAS (Absorben el color)
+           ========================================== */
+        .glow-bg, .glow-bg-left {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(120px);
+            z-index: 0;
+            pointer-events: none;
+            animation: pulseGlow 8s infinite alternate;
+            opacity: 0.25;
+        }
+        .glow-bg {
+            width: 500px; height: 500px;
+            background: var(--primary-dance);
+            top: 20%; right: -10%;
+        }
+        .glow-bg-left {
+            width: 600px; height: 600px;
+            background: var(--secondary-dance);
+            top: 60%; left: -15%;
+            animation-delay: -4s;
+        }
+        @keyframes pulseGlow {
+            0% { transform: scale(1); opacity: 0.15; }
+            100% { transform: scale(1.2); opacity: 0.3; }
+        }
+
+        /* ==========================================
+           COMPONENTES GLASSMORPHISM
+           ========================================== */
+        .navbar-tenant {
+            background: rgba(5, 5, 5, 0.85) !important;
+            backdrop-filter: blur(16px);
+            border-bottom: 2px solid var(--secondary-dance);
+        }
+
+        .brand-logo-container img {
+            max-height: 45px;
+            width: auto;
+            object-fit: contain;
+        }
+
+        .glass-card {
+            background: var(--card-dark);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+        .glass-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(255,255,255,0.15);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.4);
+        }
+
+        .info-img-wrapper {
+            aspect-ratio: 4 / 3;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            position: relative;
+        }
+        .info-img-wrapper::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 24px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* ==========================================
+           CONTROL DEL CAROUSEL
+           ========================================== */
+        #heroCarousel, .carousel-inner, .carousel-item {
+            height: 80vh;
+            min-height: 500px;
+            max-height: 700px;
+        }
+        .carousel-item .container {
+            height: 100%;
+            display: flex;
+            align-items: center;
+        }
+        .carousel-caption {
+            position: static;
+            text-align: left;
+        }
+
+        .text-readable-muted { color: var(--text-high-contrast) !important; font-weight: 400; }
+    </style>
+</head>
+<body>
+
+    <div class="glow-bg"></div>
+    <div class="glow-bg-left"></div>
+
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-tenant sticky-top py-3 shadow-lg">
+        <div class="container">
+            <a class="navbar-brand fw-bold font-heading fs-4 d-flex align-items-center brand-logo-container" href="#">
+                {% if request.tenant.logo %}
+                    <img src="{{ request.tenant.logo.url }}" alt="Logo {{ request.tenant.nombre }}" class="me-2">
+                {% else %}
+                    <div style="width: 35px; height: 35px; background: linear-gradient(135deg, var(--primary-dance), var(--secondary-dance)); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 10px;">
+                        <i class="bi bi-music-note-beamed text-white"></i>
+                    </div>
+                {% endif %}
+                {{ request.tenant.nombre }}
+            </a>
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+                <ul class="navbar-nav align-items-center gap-2">
+                    <li class="nav-item"><a class="nav-link text-white-50 hover-white px-3" href="#nosotros">Sede</a></li>
+                    <li class="nav-item"><a class="nav-link text-white-50 hover-white px-3" href="#precios">Planes</a></li>
+                    <li class="nav-item"><a class="nav-link text-white-50 hover-white px-3" href="#eventos">Eventos</a></li>
+                    <li class="nav-item ms-lg-3 mt-3 mt-lg-0 w-100 text-center">
+                        <a href="{% url 'academias:login' request.tenant.slug %}" class="btn btn-dance px-4 rounded-pill shadow-sm w-100 fw-bold">
+                            <i class="bi bi-person-fill me-1"></i> Portal Alumnos
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div id="heroCarousel" class="carousel slide carousel-fade" data-bs-ride="carousel">
+        <div class="carousel-indicators" style="z-index: 5;">
+            <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="0" class="active" aria-current="true"></button>
+            <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="1"></button>
+            {% for evento in eventos %}
+                <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="{{ forloop.counter|add:1 }}"></button>
+            {% endfor %}
+        </div>
+
+        <div class="carousel-inner">
+            <div class="carousel-item active" style="{% if request.tenant.hero_imagen_1 %}background: linear-gradient(to right, rgba(5,5,5,0.9) 0%, rgba(5,5,5,0.4) 100%), url('{{ request.tenant.hero_imagen_1.url }}') center/cover;{% else %}background: linear-gradient(45deg, #050505, var(--primary-dance));{% endif %}">
+                <div class="container">
+                    <div class="col-lg-8 px-3">
+                        <span class="badge rounded-pill px-3 py-2 mb-3 fw-bold text-uppercase tracking-wider" style="background-color: var(--primary-dance);">Inscripciones Abiertas</span>
+                        <h1 class="display-3 font-heading fw-bold text-white mb-3" style="line-height: 1.1;">{{ request.tenant.hero_titulo }}</h1>
+                        <p class="fs-5 text-readable-muted mb-4">{{ request.tenant.hero_eslogan }}</p>
+                        <a href="{% url 'academias:login' request.tenant.slug %}" class="btn btn-dance btn-lg px-5 py-3 rounded-pill shadow-lg fw-bold">
+                            Ingresar a clases <i class="bi bi-arrow-right ms-2"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="carousel-item" style="{% if request.tenant.hero_imagen_2 %}background: linear-gradient(to right, rgba(5,5,5,0.9) 0%, rgba(5,5,5,0.4) 100%), url('{{ request.tenant.hero_imagen_2.url }}') center/cover;{% else %}background: linear-gradient(135deg, #050505, var(--secondary-dance));{% endif %}">
+                <div class="container">
+                    <div class="col-lg-8 px-3">
+                        <span class="badge rounded-pill px-3 py-2 mb-3 fw-bold text-uppercase tracking-wider" style="background-color: var(--secondary-dance);">Comunidad Activa</span>
+                        <h2 class="display-3 font-heading fw-bold text-white mb-3" style="line-height: 1.1;">{{ request.tenant.hero_titulo_2 }}</h2>
+                        <p class="fs-5 text-readable-muted mb-4">{{ request.tenant.hero_eslogan_2 }}</p>
+                        <a href="#eventos" class="btn btn-outline-light btn-lg px-5 py-3 rounded-pill fw-bold">
+                            Ver Cronograma <i class="bi bi-calendar-event ms-2"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            {% for evento in eventos %}
+                <div class="carousel-item" style="{% if evento.imagen %}background: linear-gradient(to right, rgba(5,5,5,0.95) 0%, rgba(5,5,5,0.5) 100%), url('{{ evento.imagen.url }}') center/cover;{% else %}background: linear-gradient(135deg, #050505, var(--primary-dance));{% endif %}">
+                    <div class="container">
+                        <div class="col-lg-8 px-3">
+                            <span class="badge bg-warning text-dark rounded-pill px-3 py-2 mb-3 fw-bold text-uppercase">¡Evento Especial!</span>
+                            <h2 class="display-3 font-heading fw-bold text-white mb-3" style="line-height: 1.1;">{{ evento.nombre }}</h2>
+                            <p class="fs-5 text-readable-muted mb-4">
+                                <i class="bi bi-geo-alt-fill text-danger me-2"></i>{{ evento.ubicacion }} <br>
+                                <i class="bi bi-calendar3 text-primary me-2"></i>{{ evento.fecha|date:"d M - h:i A" }}
+                            </p>
+                            {% if evento.estado == 'REGISTRO_ONLINE' %}
+                                <a href="{% url 'eventos:registro_publico' request.tenant.slug evento.slug %}" class="btn btn-dance btn-lg px-5 py-3 rounded-pill fw-bold shadow-lg">
+                                    Reservar Preventa (${{ evento.precio_preventa|floatformat:"0" }})
+                                </a>
+                            {% else %}
+                                <a href="#eventos" class="btn btn-light btn-lg px-5 py-3 rounded-pill fw-bold text-dark">
+                                    Taquilla (${{ evento.precio_puerta|floatformat:"0" }})
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev" style="z-index: 6;">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next" style="z-index: 6;">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+        </button>
+    </div>
+
+    <section id="nosotros" class="py-5 position-relative" style="z-index: 2;">
+        <div class="container py-5">
+            <div class="row align-items-center g-5">
+                <div class="col-lg-5">
+                    <div class="info-img-wrapper h-100">
+                        {% if request.tenant.info_imagen %}
+                            <img src="{{ request.tenant.info_imagen.url }}" alt="Academia Sede" class="w-100 h-100 object-fit-cover">
+                        {% else %}
+                            <div class="w-100 h-100 d-flex align-items-center justify-content-center" style="background: linear-gradient(135deg, var(--primary-dance), var(--secondary-dance));">
+                                <i class="bi bi-building-fill text-white opacity-25 display-1"></i>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="col-lg-7">
+                    <h2 class="font-heading fw-bold display-6 mb-4 text-white">{{ request.tenant.info_titulo }}</h2>
+                    <p class="fs-5 text-readable-muted mb-3" style="line-height: 1.6;">{{ request.tenant.info_descripcion_1 }}</p>
+                    <p class="text-white-50 mb-5">{{ request.tenant.info_descripcion_2 }}</p>
+                    
+                    <div class="row g-4">
+                        {% if request.tenant.bloque_1_titulo %}
+                        <div class="col-sm-6">
+                            <div class="glass-card p-3 d-flex align-items-center h-100">
+                                <div class="p-2 rounded-3 me-3" style="background: rgba(255,255,255,0.05);"><i class="bi {{ request.tenant.bloque_1_icono|default:'bi-trophy-fill' }} fs-4 text-gradient"></i></div>
+                                <h6 class="fw-bold text-white mb-0">{{ request.tenant.bloque_1_titulo }}</h6>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if request.tenant.bloque_2_titulo %}
+                        <div class="col-sm-6">
+                            <div class="glass-card p-3 d-flex align-items-center h-100">
+                                <div class="p-2 rounded-3 me-3" style="background: rgba(255,255,255,0.05);"><i class="bi {{ request.tenant.bloque_2_icono|default:'bi-heart-pulse-fill' }} fs-4 text-gradient"></i></div>
+                                <h6 class="fw-bold text-white mb-0">{{ request.tenant.bloque_2_titulo }}</h6>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if request.tenant.bloque_3_titulo %}
+                        <div class="col-sm-6">
+                            <div class="glass-card p-3 d-flex align-items-center h-100">
+                                <div class="p-2 rounded-3 me-3" style="background: rgba(255,255,255,0.05);"><i class="bi {{ request.tenant.bloque_3_icono|default:'bi-award-fill' }} fs-4 text-gradient"></i></div>
+                                <h6 class="fw-bold text-white mb-0">{{ request.tenant.bloque_3_titulo }}</h6>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if request.tenant.bloque_4_titulo %}
+                        <div class="col-sm-6">
+                            <div class="glass-card p-3 d-flex align-items-center h-100">
+                                <div class="p-2 rounded-3 me-3" style="background: rgba(255,255,255,0.05);"><i class="bi {{ request.tenant.bloque_4_icono|default:'bi-qr-code-scan' }} fs-4 text-gradient"></i></div>
+                                <h6 class="fw-bold text-white mb-0">{{ request.tenant.bloque_4_titulo }}</h6>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="precios" class="py-5 position-relative" style="z-index: 2;">
+        <div class="container py-5">
+            <div class="text-center mb-5">
+                <h2 class="font-heading fw-bold display-5 text-white">Nuestros <span class="text-gradient">Planes</span></h2>
+                <p class="text-readable-muted">Inicia tu entrenamiento con el plan que mejor se adapte a ti.</p>
+            </div>
+            
+            <div class="row g-4 justify-content-center">
+                {% for plan in planes %}
+                    <div class="col-md-6 col-lg-4 d-flex">
+                        <div class="glass-card p-4 w-100 d-flex flex-column text-center">
+                            <h4 class="font-heading fw-bold text-white mb-3">{{ plan.nombre }}</h4>
+                            <div class="mb-4">
+                                <span class="display-5 font-heading fw-bold text-gradient">${{ plan.precio|floatformat:0 }}</span>
+                            </div>
+                            <hr style="border-color: rgba(255,255,255,0.1);">
+                            <p class="text-readable-muted small mb-4 flex-grow-1">
+                                Únete a nuestra academia y accede a todos los beneficios de este plan a través de tu portal de estudiante.
+                            </p>
+                            <a href="{% url 'academias:login' request.tenant.slug %}" class="btn btn-outline-light rounded-pill w-100 py-2.5 fw-bold mt-auto">Adquirir Plan</a>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="col-12 text-center py-4">
+                        <div class="glass-card p-5 d-inline-block">
+                            <i class="bi bi-tag text-white-50 display-4 mb-3 d-block"></i>
+                            <p class="text-readable-muted mb-0">Consulta en recepción los planes vigentes.</p>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <section id="eventos" class="py-5 position-relative" style="z-index: 2; background: rgba(255,255,255,0.02);">
+        <div class="container py-5">
+            <div class="text-center mb-5">
+                <h2 class="font-heading fw-bold display-5 text-white">Próximos <span class="text-gradient">Eventos</span></h2>
+                <p class="text-readable-muted">Talleres de técnica, galas y competencias exclusivas.</p>
+            </div>
+            <div class="row g-4 justify-content-center">
+                {% for evento in eventos %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="glass-card h-100 d-flex flex-column overflow-hidden p-0 border-0">
+                            <div class="position-relative w-100" style="aspect-ratio: 16/10; background-color: #050505;">
+                                {% if evento.imagen %}
+                                    <img src="{{ evento.imagen.url }}" alt="{{ evento.nombre }}" class="w-100 h-100 object-fit-cover">
+                                {% else %}
+                                    <div class="w-100 h-100 d-flex align-items-center justify-content-center" style="background: linear-gradient(135deg, var(--primary-dance), var(--secondary-dance)); opacity: 0.5;">
+                                        <i class="bi bi-music-note-beamed text-white" style="font-size: 3rem;"></i>
+                                    </div>
+                                {% endif %}
+                                <div class="position-absolute bottom-0 start-0 m-3">
+                                    <span class="badge bg-dark text-white px-3 py-2 rounded-pill fw-bold border border-secondary"><i class="bi bi-calendar3 text-danger me-1"></i> {{ evento.fecha|date:"d M, Y" }}</span>
+                                </div>
+                            </div>
+                            <div class="p-4 d-flex flex-column flex-grow-1">
+                                <h5 class="fw-bold text-white mb-3">{{ evento.nombre }}</h5>
+                                <div class="mb-4 text-readable-muted small">
+                                    <p class="mb-2"><i class="bi bi-clock me-2 text-white-50"></i>{{ evento.fecha|date:"h:i A" }}</p>
+                                    <p class="mb-0 text-truncate"><i class="bi bi-geo-alt-fill text-danger me-2"></i>{{ evento.ubicacion }}</p>
+                                </div>
+                                <div class="row g-2 text-center mb-4 mt-auto rounded-3 p-2" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);">
+                                    <div class="col-6 border-end border-secondary border-opacity-25"><span class="text-white-50 d-block small">Preventa</span><strong class="text-white">${{ evento.precio_preventa|floatformat:"0" }}</strong></div>
+                                    <div class="col-6"><span class="text-white-50 d-block small">Taquilla</span><strong class="text-white">${{ evento.precio_puerta|floatformat:"0" }}</strong></div>
+                                </div>
+                                {% if evento.estado == 'REGISTRO_ONLINE' %}
+                                    <a href="{% url 'eventos:registro_publico' request.tenant.slug evento.slug %}" class="btn btn-dance rounded-pill w-100 py-2.5 fw-bold shadow-sm">Comprar Entrada</a>
+                                {% else %}
+                                    <button class="btn btn-outline-secondary rounded-pill w-100 py-2.5 fw-bold" disabled>Registro en Puerta</button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="col-12 text-center py-4">
+                        <div class="glass-card p-5 d-inline-block">
+                            <i class="bi bi-calendar-x fs-1 text-white-50 mb-3 d-block"></i>
+                            <p class="text-readable-muted mb-0">No hay eventos activos en cartelera por ahora.</p>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <footer id="contacto" class="pt-5 pb-3 position-relative" style="background-color: #030303; border-top: 2px solid var(--secondary-dance); z-index: 2;">
+        <div class="container">
+            <div class="row g-4 mb-5">
+                <div class="col-md-6 col-lg-4 text-center text-md-start">
+                    <h3 class="font-heading fw-bold text-white mb-3 d-flex align-items-center justify-content-center justify-content-md-start brand-logo-container">
+                        {% if request.tenant.logo %}
+                            <img src="{{ request.tenant.logo.url }}" alt="Logo">
+                        {% else %}
+                            <div style="width: 30px; height: 30px; background: linear-gradient(135deg, var(--primary-dance), var(--secondary-dance)); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 10px;">
+                                <i class="bi bi-music-note-beamed text-white" style="font-size: 0.9rem;"></i>
+                            </div>
+                        {% endif %}
+                        {{ request.tenant.nombre }}
+                    </h3>
+                    <p class="text-readable-muted small pe-lg-4">Escuela de baile profesional impulsada por tecnología de última generación.</p>
+                </div>
+                <div class="col-md-6 col-lg-4 text-center text-md-start">
+                    <h5 class="fw-bold text-white mb-4 text-uppercase tracking-wider small">Atención y Canales</h5>
+                    <div class="d-flex align-items-start mb-3 justify-content-center justify-content-md-start">
+                        <div class="bg-white bg-opacity-10 rounded-circle p-2 me-3 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;"><i class="bi bi-telephone-fill text-success"></i></div>
+                        <div><span class="text-white-50 d-block small">WhatsApp / Celular</span><span class="text-white fw-semibold">{{ request.tenant.telefono|default:"No registrado" }}</span></div>
+                    </div>
+                    <div class="d-flex align-items-start mb-3 justify-content-center justify-content-md-start">
+                        <div class="bg-white bg-opacity-10 rounded-circle p-2 me-3 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;"><i class="bi bi-clock-fill text-warning"></i></div>
+                        <div><span class="text-white-50 d-block small">Horario de Operación</span><span class="text-white fw-semibold">{{ request.tenant.horario_atencion }}</span></div>
+                    </div>
+                </div>
+                <div class="col-md-12 col-lg-4 text-center text-md-start">
+                    <h5 class="fw-bold text-white mb-4 text-uppercase tracking-wider small">Nuestra Sede</h5>
+                    <div class="d-flex align-items-start mb-4 justify-content-center justify-content-md-start">
+                        <div class="bg-white bg-opacity-10 rounded-circle p-2 me-3 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;"><i class="bi bi-geo-alt-fill text-danger"></i></div>
+                        <div><span class="text-white-50 d-block small">Ubicación de los Salones</span><span class="text-white">{{ request.tenant.direccion_sede }}</span></div>
+                    </div>
+                    <div class="justify-content-center justify-content-md-start gap-2 {% if not request.tenant.instagram_url and not request.tenant.facebook_url and not request.tenant.tiktok_url and not request.tenant.youtube_url and not request.tenant.whatsapp_url %}d-none{% else %}d-flex{% endif %}">
+                        {% if request.tenant.instagram_url %}<a href="{{ request.tenant.instagram_url }}" target="_blank" class="btn btn-outline-light border-0 bg-white bg-opacity-10 rounded-circle p-0 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;"><i class="bi bi-instagram"></i></a>{% endif %}
+                        {% if request.tenant.facebook_url %}<a href="{{ request.tenant.facebook_url }}" target="_blank" class="btn btn-outline-light border-0 bg-white bg-opacity-10 rounded-circle p-0 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;"><i class="bi bi-facebook"></i></a>{% endif %}
+                        {% if request.tenant.tiktok_url %}<a href="{{ request.tenant.tiktok_url }}" target="_blank" class="btn btn-outline-light border-0 bg-white bg-opacity-10 rounded-circle p-0 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;"><i class="bi bi-tiktok"></i></a>{% endif %}
+                        {% if request.tenant.youtube_url %}<a href="{{ request.tenant.youtube_url }}" target="_blank" class="btn btn-outline-light border-0 bg-white bg-opacity-10 rounded-circle p-0 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;"><i class="bi bi-youtube"></i></a>{% endif %}
+                        {% if request.tenant.whatsapp_url %}<a href="{{ request.tenant.whatsapp_url }}" target="_blank" class="btn btn-outline-light border-0 bg-white bg-opacity-10 rounded-circle p-0 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;"><i class="bi bi-whatsapp"></i></a>{% endif %}
+                    </div>
+                </div>
+            </div>
+            <hr style="border-color: rgba(255,255,255,0.1);">
+            <div class="row align-items-center g-3 mt-2">
+                <div class="col-md-6 text-center text-md-start">
+                    <p class="text-white-50 small mb-0">&copy; 2026 <strong>{{ request.tenant.nombre }}</strong>. Todos los derechos reservados.</p>
+                </div>
+                <div class="col-md-6 text-center text-md-end">
+                    <p class="small text-white-50 mb-0">Infraestructura tecnológica por <a href="#" class="text-white fw-bold text-decoration-none">AppDanza</a></p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+{% extends "base_tenant.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6 mx-auto">
+        <div class="card border-0 shadow-sm p-4 bg-white">
+            <h4 class="fw-bold mb-1 text-dark">
+                <i class="bi bi-tags-fill me-2 text-tenant-primary"></i>Crear Nuevo Plan
+            </h4>
+            <p class="text-muted small mb-4">Configura una nueva membresía o tiquetera para tus alumnos.</p>
+            
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger small p-2 shadow-sm border-0">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-secondary">Nombre del Plan</label>
+                    {{ form.nombre }}
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-secondary">Descripción (Opcional)</label>
+                    {{ form.descripcion }}
+                </div>
+                
+                <div class="row g-2">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-semibold text-secondary">Precio ($)</label>
+                        {{ form.precio }}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-semibold text-secondary">Duración (Días)</label>
+                        {{ form.duracion_dias }}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-semibold text-secondary">Total Clases</label>
+                        {{ form.clases_totales }}
+                    </div>
+                </div>
+
+                <hr class="my-4 opacity-25">
+
+                <div class="d-flex gap-2">
+                    <a href="{% url 'planes_estudiantes:lista_estudiantes' request.tenant.slug %}" class="btn btn-light w-50 py-2 fw-semibold">
+                        Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-dark w-50 py-2 fw-bold">
+                        <i class="bi bi-save me-1"></i> Guardar Plan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

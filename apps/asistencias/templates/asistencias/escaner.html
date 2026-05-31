@@ -1,0 +1,76 @@
+{% extends "base_tenant.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6 mx-auto text-center">
+        <div class="card border-0 shadow-sm p-4 bg-white">
+            <h3 class="fw-bold text-dark mb-1"><i class="bi bi-camera me-2 text-tenant-primary"></i>Escáner de Clases</h3>
+            <p class="text-muted small mb-4">Apunta la cámara al código QR del estudiante para validar su entrada.</p>
+
+            <div id="reader" class="mx-auto rounded overflow-hidden shadow-sm bg-light" style="width: 100%; max-width: 350px;"></div>
+
+            <div id="resultado-escaner" class="mt-4 d-none">
+                <div id="alerta-box" class="alert p-3 m-0 rounded border">
+                    <h5 id="alerta-titulo" class="fw-bold m-0"></h5>
+                    <p id="alerta-mensaje" class="m-0 small mt-1"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+<script>
+    // Obtener el token CSRF que exige Django para peticiones POST
+    const csrftoken = "{{ csrf_token }}";
+    let lastResult = "";
+
+    function onScanSuccess(decodedText, decodedResult) {
+        // Evitamos que vuelva a disparar la petición si lee el mismo QR seguido en menos de 3 segundos
+        if (decodedText === lastResult) return;
+        lastResult = decodedText;
+        
+        // Efecto visual de procesamiento
+        document.getElementById('resultado-escaner').classList.remove('d-none');
+        const box = document.getElementById('alerta-box');
+        box.className = "alert alert-info p-3 m-0";
+        document.getElementById('alerta-titulo').innerText = "Procesando...";
+        document.getElementById('alerta-mensaje').innerText = "Validando credenciales en el servidor...";
+
+        // 🚀 Petición asíncrona (AJAX) a nuestro backend Django
+        fetch("{% url 'asistencias:api_procesar_qr' request.tenant.slug %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({ token: decodedText })
+        })
+        .then(response => response.json().then(data => ({ status: response.status, body: data })))
+        .then(res => {
+            box.className = res.status === 200 ? "alert alert-success p-3 m-0" : "alert alert-danger p-3 m-0";
+            document.getElementById('alerta-titulo').innerText = res.status === 200 ? "¡Acceso Autorizado!" : "¡Acceso Denegado!";
+            
+            if (res.status === 200) {
+                document.getElementById('alerta-mensaje').innerHTML = `<strong>${res.body.estudiante}</strong> ha ingresado. <br> Clases restantes en su plan: <strong>${res.body.clases_restantes}</strong>`;
+            } else {
+                document.getElementById('alerta-mensaje').innerText = res.body.mensaje;
+            }
+            
+            // Limpiamos el candado de escaneo a los 4 segundos para permitir otra lectura
+            setTimeout(() => { lastResult = ""; }, 4000);
+        })
+        .catch(err => {
+            box.className = "alert alert-danger p-3 m-0";
+            document.getElementById('alerta-titulo').innerText = "Error";
+            document.getElementById('alerta-mensaje').innerText = "Hubo un problema de conexión con el servidor.";
+            setTimeout(() => { lastResult = ""; }, 4000);
+        });
+    }
+
+    // Inicializamos el escáner apuntando a la cámara trasera (environment)
+    let html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+    html5QrcodeScanner.render(onScanSuccess);
+</script>
+{% endblock %}

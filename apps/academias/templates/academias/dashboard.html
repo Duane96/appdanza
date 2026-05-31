@@ -1,0 +1,390 @@
+{% extends "base_tenant.html" %}
+
+{% block content %}
+<div class="row">
+    <!-- BLOQUE DE BIENVENIDA -->
+    <div class="col-12 mb-4">
+        <div class="bg-white p-4 rounded shadow-sm border-start border-4" style="border-color: var(--bg-academia-primary) !important;">
+            <h1 class="fw-bold text-dark m-0">¡Hola, {{ request.user.username }}! 👋</h1>
+            <p class="text-muted m-0 mt-1">Estás gestionando el panel de la academia: <strong class="text-tenant-primary">{{ request.tenant.nombre }}</strong></p>
+        </div>
+    </div>
+
+    {% if es_partner %}
+<div class="alert alert-info border-0 shadow-sm d-flex align-items-center mb-4 rounded-3">
+    <i class="bi bi-star-fill text-warning me-3 fs-4"></i>
+    <div>
+        <h6 class="mb-0 fw-bold">Modo Partner Activo</h6>
+        <p class="mb-0 small">Estás disfrutando de todos los módulos sin costo. ¡Gracias por ayudarnos a probar el sistema!</p>
+    </div>
+</div>
+{% endif %}
+
+    <!-- KPI 1: ALUMNOS ACTIVOS -->
+     {% if request.tenant.suscripcion_saas.modulo_estudiantes_activo %}
+    <div class="col-md-4 mb-3">
+        <div class="card border-0 shadow-sm p-3 bg-white h-100">
+            <div class="d-flex align-items-center">
+                <div class="p-3 rounded-circle bg-opacity-10 bg-success me-3" style="color: green;">
+                    <i class="bi bi-people-fill h3 m-0"></i>
+                </div>
+                <div>
+                    <h6 class="text-muted mb-1 text-uppercase small font-monospace">Alumnos Activos</h6>
+                    <h3 class="fw-bold mb-0">{{ estudiantes_activos }} <span class="fs-6 text-muted font-normal">/ {{ estudiantes_totales }}</span></h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- KPI 2: ASISTENCIAS HOY -->
+     {% if request.tenant.suscripcion_saas.modulo_asistencias_activo %}
+    <div class="col-md-4 mb-3">
+        <div class="card border-0 shadow-sm p-3 bg-white h-100">
+            <div class="d-flex align-items-center">
+                <div class="p-3 rounded-circle bg-opacity-10 bg-warning me-3" style="color: orange;">
+                    <i class="bi bi-qr-code-scan h3 m-0"></i>
+                </div>
+                <div>
+                    <h6 class="text-muted mb-1 text-uppercase small font-monospace">Asistencias Hoy</h6>
+                    <h3 class="fw-bold mb-0">{{ asistencias_hoy }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+
+    <!-- KPI 3: CAJA FINANCIERA -->
+     {% if request.tenant.suscripcion_saas.modulo_finanzas_activo %}
+    <div class="col-md-4 mb-3">
+        <div class="card border-0 shadow-sm p-3 bg-white h-100">
+            <div class="d-flex align-items-center">
+                <div class="p-3 rounded-circle bg-opacity-10 bg-info me-3" style="color: darkcyan;">
+                    <i class="bi bi-cash-stack h3 m-0"></i>
+                </div>
+                <div>
+                    <h6 class="text-muted mb-1 text-uppercase small font-monospace">Caja del Mes</h6>
+                    <h3 class="fw-bold mb-0">$ {{ ingresos_mes|floatformat:0 }} COP</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- COMPARATIVOS FINANCIEROS -->
+ {% if request.tenant.suscripcion_saas.modulo_finanzas_activo %}
+<div class="row g-3">
+    <div class="col-md-6 mb-3">
+        <div class="card border-0 shadow-sm p-3 bg-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="small fw-semibold text-secondary"><i class="bi bi-wallet2 me-1"></i> Utilidad Neta (Este Mes):</span>
+                <strong class="{% if utilidad_mes >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    $ {{ utilidad_mes|floatformat:0 }} COP
+                </strong>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-3">
+        <div class="card border-0 shadow-sm p-3 bg-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="small fw-semibold text-secondary"><i class="bi bi-graph-up me-1"></i> Crecimiento en Ventas:</span>
+                <span class="fw-bold {% if comparativa_ingresos >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {% if comparativa_ingresos >= 0 %}+{% endif %}{{ comparativa_ingresos }}% <small class="text-muted font-normal small">vs mes anterior</small>
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <!-- ALERTAS OPERATIVAS -->
+    <div class="col-md-6 mb-3">
+        <div class="card border-0 shadow-sm bg-white p-4 h-100">
+            <h5 class="fw-bold text-dark mb-3"><i class="bi bi-shield-exclamation text-danger me-2"></i>Alertas de Retención (Fidelización)</h5>
+            
+            <div class="list-group list-group-flush small">
+                <div class="list-group-item d-flex justify-content-between align-items-center px-0 bg-transparent">
+                    <div>
+                        <span class="fw-semibold d-block text-dark">Alumnos en riesgo de abandono</span>
+                        <small class="text-muted">Llevan más de 7 días sin asistir a clase</small>
+                    </div>
+                    <button class="badge {% if alumnos_en_riesgo > 0 %}bg-danger border-0 action-btn{% else %}bg-secondary bg-opacity-10 text-secondary border-0{% endif %} rounded-pill fw-bold fs-6 px-3 py-1"
+                            {% if alumnos_en_riesgo > 0 %}data-bs-toggle="modal" data-bs-target="#modalAlumnosRiesgo"{% endif %}>
+                        {{ alumnos_en_riesgo }}
+                    </button>
+                </div>
+                
+                <div class="list-group-item d-flex justify-content-between align-items-center px-0 bg-transparent">
+                    <div>
+                        <span class="fw-semibold d-block text-dark">Membresías por vencer esta semana</span>
+                        <small class="text-muted">Planes que expiran en los próximos 5 días</small>
+                    </div>
+                    <button class="badge {% if planes_por_vencer > 0 %}bg-warning text-dark border-0 action-btn{% else %}bg-secondary bg-opacity-10 text-secondary border-0{% endif %} rounded-pill fw-bold fs-6 px-3 py-1"
+                            {% if planes_por_vencer > 0 %}data-bs-toggle="modal" data-bs-target="#modalPlanesVencer"{% endif %}>
+                        {{ planes_por_vencer }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FLUJOS DE CAJA -->
+    <div class="col-md-6 mb-3">
+        <div class="card border-0 shadow-sm bg-white p-4 h-100">
+            <h5 class="fw-bold text-dark mb-3"><i class="bi bi-bank me-2 text-tenant-primary"></i>Dónde está el dinero hoy</h5>
+            
+            <div class="p-3 bg-light rounded mb-3">
+                <div class="d-flex justify-content-between small mb-2">
+                    <span class="text-secondary"><i class="bi bi-cash me-1 text-success"></i> Efectivo en Recepción:</span>
+                    <strong class="text-dark">$ {{ caja_efectivo|floatformat:0 }} COP</strong>
+                </div>
+                <div class="progress" style="height: 6px;">
+                    <div class="progress-bar bg-success" style="width: {{ porcentaje_efectivo }}%"></div>
+                </div>
+            </div>
+
+            <div class="p-3 bg-light rounded">
+                <div class="d-flex justify-content-between small mb-2">
+                    <span class="text-secondary"><i class="bi bi-credit-card me-1 text-info"></i> Bancos / Transferencias (Nequi):</span>
+                    <strong class="text-dark">$ {{ caja_transferencia|floatformat:0 }} COP</strong>
+                </div>
+                <div class="progress" style="height: 6px;">
+                    <div class="progress-bar bg-info" style="width: {{ porcentaje_transferencia }}%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if request.tenant.suscripcion_saas.modulo_eventos_activo %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm bg-white p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="fw-bold text-dark m-0">
+                    <i class="bi bi-calendar-check text-tenant-primary me-2"></i>Eventos en Curso
+                </h5>
+                <a href="{% url 'eventos:admin_lista' request.tenant.slug %}" class="btn btn-sm btn-outline-dark rounded-pill">Ver todos</a>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light text-secondary small text-uppercase">
+                        <tr>
+                            <th>Evento</th>
+                            <th>Fecha</th>
+                            <th>Estado</th>
+                            <th>Recaudo</th>
+                            <th class="text-end">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for evento in eventos_activos %}
+                        <tr>
+                            <td>
+                                <div class="fw-bold text-dark">{{ evento.nombre }}</div>
+                                <span class="text-muted small">{{ evento.academia.nombre }}</span>
+                            </td>
+                            <td>{{ evento.fecha|date:"d/m/Y" }}</td>
+                            <td>
+                                {% if evento.estado == 'REGISTRO_ONLINE' %}
+                                    <span class="badge bg-success bg-opacity-10 text-success">Online</span>
+                                {% else %}
+                                    <span class="badge bg-warning bg-opacity-10 text-warning">Puerta</span>
+                                {% endif %}
+                            </td>
+                            <td class="fw-bold">$ {{ evento.ingresos_totales|default:0|floatformat:0 }}</td>
+                            <td class="text-end">
+                                <a href="{% url 'eventos:admin_detalle' request.tenant.slug evento.slug %}" class="btn btn-sm btn-tenant-primary rounded-pill px-3">
+                                    Gestionar
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-3">No hay eventos activos en este momento.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if not es_partner %}
+
+<!-- 🌟 NUEVA SECCIÓN: ESTADO DE LA LICENCIA DEL SISTEMA (REEMPLAZA ACCESOS RÁPIDOS) -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm bg-white p-4">
+            <h5 class="fw-bold text-dark mb-4 d-flex align-items-center gap-2">
+                <i class="bi bi-shield-check text-success"></i> 
+                <span>Licencia de Plataforma: <span class="text-tenant-primary font-monospace small fw-bold">{{ request.tenant.suscripcion_saas.plan.nombre|default:"Plan Base de Demostración" }}</span></span>
+            </h5>
+            
+            <div class="row align-items-center g-4">
+                <!-- Información de Vencimiento -->
+                <div class="col-md-4 border-end">
+                    <div class="p-2">
+                        <span class="text-muted small d-block text-uppercase fw-semibold tracking-wider mb-1">Próxima Fecha de Pago</span>
+                        <h4 class="fw-black text-dark mb-2">
+                            {% if request.tenant.suscripcion_saas.fecha_vencimiento %}
+                                {{ request.tenant.suscripcion_saas.fecha_vencimiento|date:"d \d\e F, Y" }}
+                            {% else %}
+                                <span class="text-danger">Sin Registrar</span>
+                            {% endif %}
+                        </h4>
+                        
+                        <!-- Badge dinámico de estado de cuenta -->
+                        {% if request.tenant.suscripcion_saas.estado == 'ACTIVO' %}
+                            <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-1.5 fw-bold small">
+                                <i class="bi bi-check-circle-fill me-1"></i> Suscripción Al Día
+                            </span>
+                        {% elif request.tenant.suscripcion_saas.estado == 'PRUEBA' %}
+                            <span class="badge bg-warning bg-opacity-10 text-dark rounded-pill px-3 py-1.5 fw-bold small">
+                                <i class="bi bi-clock-history me-1"></i> Período de Prueba Activo
+                            </span>
+                        {% else %}
+                            <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-1.5 fw-bold small">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i> Cuenta en Mora
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Capacidad del Servidor / Alumnos Permitidos por Plan -->
+                <div class="col-md-8">
+                    <div class="px-md-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted small fw-semibold"><i class="bi bi-hdd-network me-1"></i> Capacidad de Alumnos en Base de Datos:</span>
+                            <span class="small fw-bold text-dark">
+                                {{ estudiantes_totales }} registrados / {{ request.tenant.suscripcion_saas.plan.max_estudiantes|default:"100" }} cupos permitidos
+                            </span>
+                        </div>
+                        
+                        <!-- Barra de consumo de recursos en base de datos -->
+                        <div class="progress rounded-pill mb-2" style="height: 12px;">
+                            <div class="progress-bar rounded-pill bg-primary" 
+                                 role="progressbar" 
+                                 style="width: {% widthratio estudiantes_totales request.tenant.suscripcion_saas.plan.max_estudiantes|default:100 100 %}%" 
+                                 aria-valuenow="{{ estudiantes_totales }}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="{{ request.tenant.suscripcion_saas.plan.max_estudiantes|default:100 }}">
+                            </div>
+                        </div>
+                        <p class="text-muted xxs mb-0 style-index" style="font-size: 0.75rem;">
+                            * Si excedes el límite contratado de alumnos, deberás migrar a una licencia superior en el Panel Maestro para permitir nuevas asistencias QR.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endif %}
+
+<!-- MODAL: ALUMNOS EN RIESGO -->
+<div class="modal fade" id="modalAlumnosRiesgo" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-person-dash me-2"></i>Alumnos Ausentes (Más de 7 días)</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle m-0 table-borderless">
+                        <thead class="table-light text-secondary small font-monospace text-uppercase">
+                            <tr>
+                                <th class="ps-4">Estudiante</th>
+                                <th>Plan Actual</th>
+                                <th>Última Clase</th>
+                                <th class="text-end pe-4">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for est in alumnos_en_riesgo_lista %}
+                            <tr class="border-bottom">
+                                <td class="ps-4">
+                                    <strong class="text-dark d-block">{{ est.nombres }} {{ est.apellidos }}</strong>
+                                    <small class="text-muted">{{ est.telefono }}</small>
+                                </td>
+                                <td><span class="badge bg-light text-dark fw-normal">{{ est.plan_nombre }}</span></td>
+                                <td class="text-danger fw-semibold">{{ est.ultima_asistencia_str }}</td>
+                                <td class="text-end pe-4">
+                                    <a href="https://wa.me/57{{ est.telefono }}?text=Hola%20{{ est.nombres }},%20te%20extrañamos%20en%20la%20academia%20{{ request.tenant.nombre }}.%20¡Esperamos%20verte%20pronto%20en%20clase!%20💃✨" 
+                                       target="_blank" class="btn btn-sm btn-success rounded-pill px-3">
+                                        <i class="bi bi-whatsapp me-1"></i> Escribir
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: PLANES POR VENCER -->
+<div class="modal fade" id="modalPlanesVencer" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title fw-bold"><i class="bi bi-hourglass-split me-2"></i>Planes por Vencer (Próximos 5 días)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle m-0 table-borderless">
+                        <thead class="table-light text-secondary small font-monospace text-uppercase">
+                            <tr>
+                                <th class="ps-4">Estudiante</th>
+                                <th>Plan a Vencer</th>
+                                <th>Vence El</th>
+                                <th class="text-end pe-4">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for insc in planes_por_vencer_lista %}
+                            <tr class="border-bottom">
+                                <td class="ps-4">
+                                    <strong class="text-dark d-block">{{ insc.estudiante.nombres }} {{ insc.estudiante.apellidos }}</strong>
+                                    <small class="text-muted">{{ insc.estudiante.telefono }}</small>
+                                </td>
+                                <td><span class="badge bg-light text-dark fw-normal">{{ insc.plan.nombre }}</span></td>
+                                <td class="text-warning-dark fw-bold">{{ insc.fecha_fin|date:"d/m/Y" }}</td>
+                                <td class="text-end pe-4">
+                                    <a href="https://wa.me/57{{ insc.estudiante.telefono }}?text=Hola%20{{ insc.estudiante.nombres }},%20tu%20plan%20{{ insc.plan.nombre }}%20en%20{{ request.tenant.nombre }}%20está%20próximo%20a%20vencer%20el%20{{ insc.fecha_fin|date:'d/m/Y' }}.%20¿Te%20gustaría%20renovarlo%20en%20tu%20siguiente%20clase?%20💳🕺" 
+                                       target="_blank" class="btn btn-sm btn-dark rounded-pill px-3">
+                                        <i class="bi bi-whatsapp text-success me-1"></i> Recordar Renovación
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .action-btn {
+        cursor: pointer;
+        transition: transform 0.2s ease, filter 0.2s ease;
+    }
+    .action-btn:hover {
+        transform: scale(1.1);
+        filter: brightness(0.9);
+    }
+</style>
+{% endblock %}

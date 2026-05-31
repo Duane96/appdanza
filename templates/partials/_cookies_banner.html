@@ -1,0 +1,52 @@
+<div id="cookies-banner" class="fixed-bottom p-4 d-none" style="z-index: 9999;">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                <div class="card border-0 shadow-lg rounded-4 text-white" style="background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(8px);">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-start gap-3">
+                            <div class="bg-primary bg-opacity-25 rounded-circle p-2 text-primary">
+                                <i class="bi bi-cookie fs-3"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="fw-bold mb-1 text-white">Control de Cookies e Identidad</h6>
+                                <p class="text-white-50 small mb-3" style="line-height: 1.4;">
+                                    Utilizamos cookies técnicas y esenciales para garantizar el aislamiento seguro de tu cuenta, gestionar tus tiqueteras de baile y optimizar la navegación multi-tenant en nuestra plataforma.
+                                </p>
+                                <div class="d-flex justify-content-end gap-2">
+                                    <button type="button" id="btn-rechazar-cookies" class="btn btn-sm btn-link text-white-50 text-decoration-none small">Configurar</button>
+                                    <button type="button" id="btn-aceptar-cookies" class="btn btn-primary btn-sm rounded-pill px-4 fw-bold shadow-sm">
+                                        Entendido, Aceptar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const banner = document.getElementById('cookies-banner');
+        const btnAceptar = document.getElementById('btn-aceptar-cookies');
+
+        // 🔍 REVISIÓN LOCAL: Verificamos si el usuario ya dio su consentimiento antes
+        if (!localStorage.getItem('saas_cookies_aceptadas')) {
+            // Si es su primera vez en el ecosistema, removemos 'd-none' para mostrarlo con suavidad
+            banner.classList.remove('d-none');
+            banner.classList.add('animate__animated', 'animate__fadeInUp');
+        }
+
+        // 🎯 DETONANTE DE ACEPTACIÓN
+        btnAceptar.addEventListener('click', function() {
+            // Guardamos la bandera en el navegador por 365 días
+            localStorage.setItem('saas_cookies_aceptadas', 'true');
+            
+            // Ocultamos el banner de inmediato
+            banner.classList.add('d-none');
+        });
+    });
+</script>

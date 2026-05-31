@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Maestro | AppDanza Hub</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f4f6f9;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        .navbar-master {
+            background-color: #030303; /* Estilo alineado a AppDanza */
+            border-bottom: 4px solid #3b82f6;
+        }
+        .card-kpi {
+            border: none;
+            border-radius: 16px;
+            transition: transform 0.2s;
+        }
+        .card-kpi:hover {
+            transform: translateY(-4px);
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-master shadow-sm py-3">
+        <div class="container">
+            <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="#">
+                <i class="bi bi-shield-lock-fill text-primary"></i> 
+                <span>AppDanza <span class="text-primary small fw-semibold">MASTER</span></span>
+            </a>
+            <div class="ms-auto d-flex align-items-center gap-3">
+                <span class="text-white-50 small"><i class="bi bi-person-circle"></i> Súper Admin</span>
+                <a href="/" class="btn btn-sm btn-outline-light rounded-pill px-3">Ir al Sitio Público</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-5">
+        
+        <div class="d-flex justify-content-between align-items-center mb-5">
+            <div>
+                <h1 class="fw-black text-dark m-0">Consola de Control Core</h1>
+                <p class="text-muted mb-0">Monitoreo global de inquilinos, suscripciones y licenciamiento del sistema.</p>
+            </div>
+            <div class="gap-2 d-flex">
+                <button class="btn btn-outline-dark rounded-3 fw-bold bg-white shadow-sm d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#crearPlanModal">
+                    <i class="bi bi-tags-fill text-primary"></i> Nuevo Plan SaaS
+                </button>
+                <button class="btn btn-primary rounded-3 fw-bold shadow-sm d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#crearAcademiaModal">
+                    <i class="bi bi-plus-circle-fill"></i> Registrar Inquilino
+                </button>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-5">
+            <div class="col-md-4">
+                <div class="card card-kpi bg-white shadow-sm p-4">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="text-muted d-block small text-uppercase fw-bold mb-1">Inquilinos Totales</span>
+                            <h2 class="fw-bold text-dark m-0">{{ total_academias }}</h2>
+                        </div>
+                        <div class="bg-primary bg-opacity-10 rounded-circle p-3 text-primary">
+                            <i class="bi bi-building display-6"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card card-kpi bg-white shadow-sm p-4">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="text-muted d-block small text-uppercase fw-bold mb-1">Suscripciones Al Día</span>
+                            <h2 class="fw-bold text-success m-0">{{ academias_activas }}</h2>
+                        </div>
+                        <div class="bg-success bg-opacity-10 rounded-circle p-3 text-success">
+                            <i class="bi bi-check-circle-fill display-6"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card card-kpi bg-white shadow-sm p-4">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="text-muted d-block small text-uppercase fw-bold mb-1">En Mora / Suspendidos</span>
+                            <h2 class="fw-bold text-danger m-0">{{ academias_suspendidas }}</h2>
+                        </div>
+                        <div class="bg-danger bg-opacity-10 rounded-circle p-3 text-danger">
+                            <i class="bi bi-x-circle-fill display-6"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-5">
+            <h4 class="fw-bold text-dark mb-4 d-flex align-items-center gap-2">
+                <i class="bi bi-grid-3x3-gap text-primary"></i> Gestión Operativa de Inquilinos
+            </h4>
+            
+            <div class="table-responsive">
+                <table class="table table-hover align-middle m-0">
+                    <thead class="table-light text-secondary small text-uppercase">
+                        <tr>
+                            <th>Cliente / Empresa</th>
+                            <th>Ubicación</th>
+                            <th>Plan Contratado</th>
+                            <th>Estado SaaS</th>
+                            <th>Vencimiento</th>
+                            <th class="text-center">Alumnos</th>
+                            <th class="text-center">Asistencias</th>
+                            <th class="text-center">Finanzas</th>
+                            <th class="text-center">Multimed</th>
+                            <th class="text-center">Eventos</th>
+                            <th class="text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="small">
+                        {% for aca in academias %}
+                            <tr>
+                                <td>
+                                    <div class="fw-bold text-dark d-flex align-items-center gap-2">
+                                        {{ aca.nombre }}
+                                        {% if aca.es_solo_eventos %}
+                                            <i class="bi bi-ticket-perforated-fill text-warning" title="Productora de Eventos"></i>
+                                        {% endif %}
+                                    </div>
+                                    <span class="text-muted text-xs">/{{ aca.slug }}</span>
+                                    {% if aca.suscripcion_saas.es_cuenta_partner_gratis %}
+                                        <span class="badge bg-purple text-dark fw-bold ms-1" style="background-color: #e0e7ff; color: #4338ca !important;">Partner VIP 🌟</span>
+                                    {% endif %}
+                                    {% if aca.template_landing_personalizado %}
+                                        <span class="badge bg-info bg-opacity-10 text-info fw-normal ms-1" title="{{ aca.template_landing_personalizado }}">Custom HTML 🎨</span>
+                                    {% endif %}
+                                </td>
+                                <td><span class="fw-semibold text-dark">{{ aca.get_pais_display|default:"Colombia 🇨🇴" }}</span></td>
+                                <td><span class="fw-semibold text-secondary">{{ aca.suscripcion_saas.plan.nombre|default:"Sin Plan Asignado" }}</span></td>
+                                <td>
+                                    {% if aca.suscripcion_saas.estado == 'ACTIVO' %}
+                                        <span class="badge rounded-pill bg-success bg-opacity-10 text-success px-3 py-1.5">Activo</span>
+                                    {% elif aca.suscripcion_saas.estado == 'PRUEBA' %}
+                                        <span class="badge rounded-pill bg-warning bg-opacity-10 text-warning px-3 py-1.5">Prueba</span>
+                                    {% else %}
+                                        <span class="badge rounded-pill bg-danger bg-opacity-10 text-danger px-3 py-1.5">Suspendido</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-secondary fw-medium">{{ aca.suscripcion_saas.fecha_vencimiento|date:"d/m/Y"|default:"--" }}</td>
+                                
+                                <td class="text-center"><i class="bi {% if aca.suscripcion_saas.bloqueo_manual_estudiantes %}bi-lock-fill text-danger{% else %}bi-unlock-fill text-success{% endif %} fs-5"></i></td>
+                                <td class="text-center"><i class="bi {% if aca.suscripcion_saas.bloqueo_manual_asistencias %}bi-lock-fill text-danger{% else %}bi-unlock-fill text-success{% endif %} fs-5"></i></td>
+                                <td class="text-center"><i class="bi {% if aca.suscripcion_saas.bloqueo_manual_finanzas %}bi-lock-fill text-danger{% else %}bi-unlock-fill text-success{% endif %} fs-5"></i></td>
+                                <td class="text-center"><i class="bi {% if aca.suscripcion_saas.bloqueo_manual_multimedia %}bi-lock-fill text-danger{% else %}bi-unlock-fill text-success{% endif %} fs-5"></i></td>
+                                <td class="text-center"><i class="bi {% if aca.suscripcion_saas.bloqueo_manual_eventos %}bi-lock-fill text-danger{% else %}bi-unlock-fill text-success{% endif %} fs-5"></i></td>
+                                
+                                <td class="text-end">
+                                    <div class="btn-group btn-group-sm shadow-sm rounded-2">
+                                        {% if not aca.es_solo_eventos %}
+                                        <button type="button" class="btn btn-outline-light border text-dark" title="Auditar Estudiantes" 
+                                                onclick="cargarSoporteEstudiantes('{{ aca.id }}', '{{ aca.nombre }}')">
+                                            <i class="bi bi-people-fill text-primary"></i>
+                                        </button>
+                                        {% endif %}
+                                        <button type="button" class="btn btn-outline-light border text-dark" title="Editar Licencia / Módulos" 
+                                                onclick="abrirModalGestion('{{ aca.id }}', '{{ aca.nombre }}', '{{ aca.suscripcion_saas.estado|default:'PRUEBA' }}', '{{ aca.suscripcion_saas.bloqueo_manual_estudiantes }}', '{{ aca.suscripcion_saas.bloqueo_manual_asistencias }}', '{{ aca.suscripcion_saas.bloqueo_manual_finanzas }}', '{{ aca.suscripcion_saas.bloqueo_manual_multimedia }}', '{{ aca.suscripcion_saas.bloqueo_manual_eventos }}', '{{ aca.suscripcion_saas.es_cuenta_partner_gratis }}', '{{ aca.es_solo_eventos }}')">
+                                            <i class="bi bi-sliders"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="11" class="text-center text-muted py-5">
+                                    <i class="bi bi-exclamation-circle display-6 d-block mb-2"></i>
+                                    No hay inquilinos registrados en el ecosistema.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="gestionLicenciaModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header border-0 pt-4 px-4">
+                    <h5 class="modal-title fw-bold text-dark" id="modalAcademiaNombre">Gestionar Licencia</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="form-licencia-saas" class="modal-body px-4 py-2">
+                    {% csrf_token %}
+                    <input type="hidden" id="modal-academia-id" name="academia_id">
+                    
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Estado de la Suscripción</label>
+                        <select class="form-select rounded-3" id="modal-estado" name="estado">
+                            <option value="ACTIVO">Activo / Al Día</option>
+                            <option value="SUSPENDIDO">Suspendido (Bloqueo Total)</option>
+                            <option value="PRUEBA">Período de Prueba</option>
+                        </select>
+                    </div>
+
+                    <div class="p-3 mb-3 border rounded-3" style="background-color: #fffbeb; border-color: #fde68a !important;">
+                        <div class="form-check form-switch m-0">
+                            <input class="form-check-input" type="checkbox" id="switchProductoraEdit" name="es_solo_eventos">
+                            <label class="form-check-label small fw-bold text-dark" for="switchProductoraEdit">
+                                🎫 Modo Productora de Eventos (Solo Taquilla)
+                            </label>
+                        </div>
+                        <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">
+                            Al activar, el Landing Page cambiará a vitrina de eventos y ocultará membresías/clases regulares.
+                        </small>
+                    </div>
+
+                    <div class="p-3 bg-light rounded-3 mb-3 border">
+                        <div class="form-check form-switch m-0">
+                            <input class="form-check-input" type="checkbox" id="switchPartnerVIP" name="es_cuenta_partner_gratis">
+                            <label class="form-check-label small fw-bold text-indigo" for="switchPartnerVIP" style="color: #4338ca;">
+                                🌟 Habilitar como Cuenta Partner / Gratis Permanente
+                            </label>
+                        </div>
+                        <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">
+                            El sistema omitirá facturaciones mensuales y deudas de comisiones.
+                        </small>
+                    </div>
+
+                    <label class="form-label small fw-bold d-block border-bottom pb-2 mb-2">Anular / Forzar Bloqueo de Módulos</label>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="switchEstudiantes" name="bloqueo_estudiantes">
+                        <label class="form-check-label small fw-semibold" for="switchEstudiantes">Bloquear Módulo Estudiantes</label>
+                    </div>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="switchAsistencias" name="bloqueo_asistencias">
+                        <label class="form-check-label small fw-semibold" for="switchAsistencias">Bloquear Asistencias QR</label>
+                    </div>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="switchFinanzas" name="bloqueo_finanzas">
+                        <label class="form-check-label small fw-semibold" for="switchFinanzas">Bloquear Contabilidad / DIAN</label>
+                    </div>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="switchMultimedia" name="bloqueo_multimedia">
+                        <label class="form-check-label small fw-semibold" for="switchMultimedia">Bloquear Clases Virtuales</label>
+                    </div>
+                    <div class="form-check form-switch mb-4">
+                        <input class="form-check-input" type="checkbox" id="switchEventos" name="bloqueo_eventos">
+                        <label class="form-check-label small fw-semibold" for="switchEventos">Bloquear Gestión de Eventos</label>
+                    </div>
+
+                    <div class="text-end border-top pt-3 pb-2">
+                        <button type="button" class="btn btn-light rounded-3 px-3 me-2" data-bs-dismiss="modal">Cerrar</button>
+                        <button type="submit" class="btn btn-primary rounded-3 px-4">Guardar Cambios</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="crearPlanModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <form method="POST" action="{% url 'master_crear_plan' %}" class="modal-content border-0 shadow rounded-4">
+                {% csrf_token %}
+                <div class="modal-header border-0 pt-4 px-4">
+                    <h5 class="modal-title fw-bold text-dark">Estructurar Nuevo Plan Comercial</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body px-4 py-2">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Nombre comercial del Plan</label>
+                        <input type="text" name="nombre" class="form-control rounded-3" placeholder="Ej: Plan Platinum" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Estrategia de Cobro de Licencia</label>
+                        <select name="tipo_cobro" class="form-select rounded-3">
+                            <option value="MENSUAL" selected>Suscripción Mensual / Días Fijos</option>
+                            <option value="POR_EVENTO">Plan Transaccional Pure Event (Mensualidad $0)</option>
+                        </select>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Precio Mensual / Fijo (COP)</label>
+                            <input type="number" name="precio" class="form-control rounded-3" placeholder="150000" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Límite de Alumnos</label>
+                            <input type="number" name="max_estudiantes" class="form-control rounded-3" placeholder="200" required>
+                        </div>
+                    </div>
+                    
+                    <label class="form-label small fw-bold d-block mb-2">Módulos Permitidos por Defecto</label>
+                    <div class="form-check form-switch mb-1">
+                        <input class="form-check-input" type="checkbox" id="p_estudiantes" name="estudiantes" checked>
+                        <label class="form-check-label small" for="p_estudiantes">Acceso a Módulo Estudiantes</label>
+                    </div>
+                    <div class="form-check form-switch mb-1">
+                        <input class="form-check-input" type="checkbox" id="p_multimedia" name="multimedia" checked>
+                        <label class="form-check-label small" for="p_multimedia">Acceso a Multimedia</label>
+                    </div>
+                    <div class="form-check form-switch mb-1">
+                        <input class="form-check-input" type="checkbox" id="p_finanzas" name="finanzas" checked>
+                        <label class="form-check-label small" for="p_finanzas">Acceso a Finanzas / DIAN</label>
+                    </div>
+                    <div class="form-check form-switch mb-1">
+                        <input class="form-check-input" type="checkbox" id="p_asistencias" name="asistencias" checked>
+                        <label class="form-check-label small" for="p_asistencias">Acceso a Asistencias QR</label>
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="p_eventos" name="eventos" checked>
+                        <label class="form-check-label small" for="p_eventos">Acceso a Gestión de Eventos</label>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pb-4 px-4">
+                    <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary rounded-3 px-4">Guardar Plan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal fade" id="crearAcademiaModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <form method="POST" action="{% url 'master_crear_academia' %}" class="modal-content border-0 shadow rounded-4">
+                {% csrf_token %}
+                <div class="modal-header border-0 pt-4 px-4">
+                    <h5 class="modal-title fw-bold text-dark">Dar de Alta Nuevo Inquilino</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body px-4 py-2">
+                    <h6 class="text-uppercase text-xs text-primary fw-bold mb-3"><i class="bi bi-building"></i> Datos Básicos</h6>
+                    
+                    <div class="p-3 mb-3 border rounded-3 text-center" style="background-color: #fffbeb; border-color: #fde68a !important;">
+                        <div class="form-check form-switch d-inline-block m-0">
+                            <input class="form-check-input" type="checkbox" id="switchCrearProductora" name="es_solo_eventos">
+                            <label class="form-check-label small fw-bold text-dark ms-2" for="switchCrearProductora">
+                                🎫 Empresa Productora (Solo vende Eventos)
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Nombre del Cliente / Empresa</label>
+                        <input type="text" name="nombre" class="form-control rounded-3" placeholder="Ej: Ritmo Latino Bogota" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">País de Operación Fiscal</label>
+                        <select name="pais" class="form-select rounded-3">
+                            <option value="CO" selected>Colombia 🇨🇴 (COP - Tarifa Plana)</option>
+                            <option value="US">Estados Unidos 🇺🇸 (USD)</option>
+                            <option value="ES">España 🇪🇸 (EUR)</option>
+                            <option value="MX">México 🇲🇽 (MXN)</option>
+                            <option value="CL">Chile 🇨🇱 (CLP)</option>
+                            <option value="BR">Brasil 🇧🇷 (BRL)</option>
+                            <option value="PE">Perú 🇵🇪 (PEN)</option>
+                            <option value="OT">Otro País (USD)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Sub-URL / Slug del Sistema</label>
+                        <div class="input-group">
+                            <span class="input-group-text rounded-start-3 bg-light text-muted small">/</span>
+                            <input type="text" name="slug" class="form-control rounded-end-3" placeholder="ritmo-latino" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Ruta de Landing Personalizada (Opcional - Premium)</label>
+                        <input type="text" name="template_landing_personalizado" class="form-control rounded-3" placeholder="Ej: academias/landings/academia3.html">
+                        <div class="form-text text-xs text-muted">Déjalo vacío si el cliente usará el index común estándar o el de eventos.</div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Asignar Plan Inicial</label>
+                            <select name="plan_id" class="form-select rounded-3" required>
+                                {% for plan in planes_saas %}
+                                    <option value="{{ plan.id }}">{{ plan.nombre }} (${{ plan.precio_mensual|floatformat:0 }} COP)</option>
+                                {% empty %}
+                                    <option disabled>⚠️ Debes crear un plan SaaS primero</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Días de Prueba Gratis</label>
+                            <input type="number" name="dias_prueba" class="form-control rounded-3" value="15" min="1" required>
+                        </div>
+                    </div>
+
+                    <h6 class="text-uppercase text-xs text-warning fw-bold mt-4 mb-3"><i class="bi bi-person-badge-fill"></i> Cuenta del Administrador (Cliente)</h6>
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold">Correo Electrónico (Usuario)</label>
+                        <input type="email" name="admin_email" class="form-control rounded-3" placeholder="director@academia.com" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Contraseña Inicial</label>
+                        <input type="password" name="admin_password" class="form-control rounded-3" placeholder="••••••••" required>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pb-4 px-4">
+                    <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary rounded-3 px-4">Crear Empresa</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal fade" id="visorEstudiantesSoporteModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header border-0 pt-4 px-4">
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark" id="visorEstudiantesTitulo">Auditoría Externa de Alumnos</h5>
+                        <span class="text-xs text-muted">Rescate de registros del inquilino</span>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body px-4 py-2">
+                    <div class="table-responsive" style="max-height: 400px;">
+                        <table class="table table-sm align-middle">
+                            <thead class="table-light text-secondary small text-uppercase">
+                                <tr>
+                                    <th>Nombre Completo</th>
+                                    <th>Identificación</th>
+                                    <th>Estado Interno</th>
+                                    <th>Registro</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-soporte-estudiantes-cuerpo" class="small"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pb-4 px-4">
+                    <button type="button" class="btn btn-secondary rounded-3 px-4" data-bs-dismiss="modal">Cerrar Visor</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    let modalLicencia = null;
+
+    // 🚀 ACTUALIZADO: Añadimos 'esProductora' como parámetro y configuramos el switch
+    function abrirModalGestion(id, nombre, estado, blqEstudiantes, blqAsistencias, blqFinanzas, blqMultimedia, blqEventos, esPartnerVIP, esProductora) {
+        document.getElementById('modalAcademiaNombre').innerText = "Licencia Especial: " + nombre;
+        document.getElementById('modal-academia-id').value = id;
+        document.getElementById('modal-estado').value = estado;
+        
+        // Bloqueos
+        document.getElementById('switchEstudiantes').checked = blqEstudiantes === 'True';
+        document.getElementById('switchAsistencias').checked = blqAsistencias === 'True';
+        document.getElementById('switchFinanzas').checked = blqFinanzas === 'True';
+        document.getElementById('switchMultimedia').checked = blqMultimedia === 'True';
+        document.getElementById('switchEventos').checked = blqEventos === 'True';
+        
+        // Switches Especiales
+        document.getElementById('switchPartnerVIP').checked = esPartnerVIP === 'True';
+        document.getElementById('switchProductoraEdit').checked = esProductora === 'True';
+
+        modalLicencia = new bootstrap.Modal(document.getElementById('gestionLicenciaModal'));
+        modalLicencia.show();
+    }
+
+    function cargarSoporteEstudiantes(academiaId, academiaNombre) {
+        document.getElementById('visorEstudiantesTitulo').innerText = "Alumnos en Sistema: " + academiaNombre;
+        const tablaCuerpo = document.getElementById('tabla-soporte-estudiantes-cuerpo');
+        tablaCuerpo.innerHTML = `<tr><td colspan="4" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div> Cargando datos...</td></tr>`;
+        
+        var modalVisor = new bootstrap.Modal(document.getElementById('visorEstudiantesSoporteModal'));
+        modalVisor.show();
+
+        fetch(`{% url 'api_estudiantes_academia' %}?academia_id=${academiaId}`)
+        .then(response => {
+            if (!response.ok) throw new Error("HTTP error " + response.status);
+            return response.json();
+        })
+        .then(data => {
+            if(data.status === 'success') {
+                tablaCuerpo.innerHTML = "";
+                if(data.estudiantes.length === 0) {
+                    tablaCuerpo.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4">Esta academia aún no registra estudiantes.</td></tr>`;
+                    return;
+                }
+                data.estudiantes.forEach(est => {
+                    let badgeEstado = est.estado === 'ACTIVO' 
+                        ? `<span class="badge bg-success bg-opacity-10 text-success">Activo</span>`
+                        : `<span class="badge bg-danger bg-opacity-10 text-danger">Inactivo</span>`;
+                    let nombreCompleto = `${est.nombres} ${est.apellidos || ''}`.trim();
+                    let fila = `
+                        <tr>
+                            <td class="fw-bold text-dark">${nombreCompleto}</td>
+                            <td class="text-secondary fw-medium">${est.identificacion || '--'}</td>
+                            <td>${badgeEstado}</td>
+                            <td class="text-muted">${new Date(est.fecha_registro).toLocaleDateString('es-CO')}</td>
+                        </tr>`;
+                    tablaCuerpo.insertAdjacentHTML('beforeend', fila);
+                });
+            }
+        })
+        .catch(error => {
+            tablaCuerpo.innerHTML = `<tr><td colspan="4" class="text-center text-danger py-4">Error al conectar con la base de datos.</td></tr>`;
+        });
+    }
+
+    if (document.getElementById('form-licencia-saas')) {
+        document.getElementById('form-licencia-saas').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const csrfToken = this.querySelector('[name=csrfmiddlewaretoken]').value;
+            
+            fetch("{% url 'actualizar_licencia' %}", {
+                method: "POST",
+                body: formData,
+                headers: { 
+                    "X-Requested-With": "XMLHttpRequest",
+                    "X-CSRFToken": csrfToken
+                }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error("Error en servidor.");
+                return response.json();
+            })
+            .then(data => {
+                if(data.status === 'success') {
+                    window.location.reload(); 
+                } else {
+                    alert("Error al actualizar.");
+                }
+            })
+            .catch(error => alert("Ocurrió un error. Asegúrate de estar autenticado."));
+        });
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,154 @@
+{% extends "base_tenant.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6 mx-auto">
+        
+        {% if error %}
+            <div class="alert alert-danger text-center shadow-sm border-0">{{ error }}</div>
+        {% else %}
+            
+            <div class="card border-0 shadow-sm bg-white p-4 mb-4 text-center">
+                <div class="mb-2">
+                    <span class="badge bg-tenant-primary-subtle text-tenant-primary px-3 py-2 rounded-pill fw-bold">PORTAL ESTUDIANTE</span>
+                </div>
+                <h3 class="fw-bold text-dark mb-1">{{ estudiante.nombres }} {{ estudiante.apellidos }}</h3>
+                <p class="text-muted small font-monospace">@{{ request.user.username }}</p>
+                
+                <hr class="my-3 opacity-25">
+
+                {% if plan_actual %}
+                    <div class="row bg-light rounded p-3 m-0">
+                        <div class="col-6 text-start border-end">
+                            <span class="text-secondary small d-block">Plan Vigente</span>
+                            <strong class="text-dark d-block text-truncate" style="max-width: 150px;">{{ plan_actual.plan.nombre }}</strong>
+                        </div>
+                        <div class="col-6 text-end">
+                            <span class="text-secondary small d-block">Clases Disponibles</span>
+                            <span class="badge bg-success fs-6 fw-bold px-3">{{ plan_actual.clases_restantes }}</span>
+                        </div>
+                    </div>
+                    <div class="mt-2 text-start px-1">
+                        <small class="text-muted"><i class="bi bi-calendar-event me-1"></i>Vence el: <strong>{{ plan_actual.fecha_fin|date:"d/m/Y" }}</strong></small>
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning small p-2 m-0 text-center">⚠️ No tienes tiqueteras ni membresías activas.</div>
+                {% endif %}
+            </div>
+
+            <ul class="nav nav-pills nav-justified bg-white p-1 rounded shadow-sm mb-3" id="portalTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active py-2 fw-semibold" id="qr-tab" data-bs-toggle="tab" data-bs-target="#tab-qr" type="button" role="tab">
+                        <i class="bi bi-qr-code d-block d-sm-inline me-sm-1"></i> Mi QR
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link py-2 fw-semibold" id="asistencias-tab" data-bs-toggle="tab" data-bs-target="#tab-asistencias" type="button" role="tab">
+                        <i class="bi bi-calendar-check d-block d-sm-inline me-sm-1"></i> Asistencias
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link py-2 fw-semibold" id="pagos-tab" data-bs-toggle="tab" data-bs-target="#tab-pagos" type="button" role="tab">
+                        <i class="bi bi-cash-coin d-block d-sm-inline me-sm-1"></i> Mis Pagos
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="portalTabsContent">
+                
+                <div class="tab-pane fade show active" id="tab-qr" role="tabpanel">
+                    <div class="card border-0 shadow-sm bg-white p-4 text-center">
+                        <p class="text-muted small mb-4">Muestra este código en la entrada de la academia para registrar tu ingreso automático.</p>
+                        {% if estudiante.qr_code %}
+                            <div class="bg-light p-3 rounded-3 d-inline-block mx-auto border mb-3">
+                                <img src="{{ estudiante.qr_code.url }}" alt="Mi Código QR" class="img-fluid bg-white p-2 rounded" style="max-width: 200px;">
+                            </div>
+                            <div class="small text-secondary font-monospace bg-light p-2 rounded border border-dashed">
+                                Token: {{ estudiante.token_asistencia|slice:":8" }}...
+                            </div>
+                        {% else %}
+                            <div class="text-danger my-4"><i class="bi bi-exclamation-octagon fs-2"></i><br>Error al cargar tu código QR. Contacta al administrador.</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="tab-asistencias" role="tabpanel">
+                    <div class="card border-0 shadow-sm bg-white p-3">
+                        <h6 class="fw-bold mb-3 text-secondary"><i class="bi bi-clock-history me-1 text-tenant-primary"></i>Tus Ingresos</h6>
+                        
+                        {% if asistencias %}
+                            <div class="list-group list-group-flush">
+                                {% for asis in asistencias %}
+                                    <div class="list-group-item d-flex justify-content-between align-items-center px-1 py-3">
+                                        <div class="d-flex align-items-center">
+                                            <div class="bg-success-subtle text-success rounded-circle px-2 py-1 me-3 fw-bold small">
+                                                #{{ forloop.revcounter }}
+                                            </div>
+                                            <div>
+                                                <span class="d-block text-dark fw-semibold" style="font-size: 0.95rem;">Clase Tomada</span>
+                                                <small class="text-muted">{{ asis.fecha_hora|date:"d M Y - h:i a" }}</small>
+                                            </div>
+                                        </div>
+                                        <span class="badge bg-light text-success border border-success-subtle small"><i class="bi bi-check2-circle me-1"></i>Validado</span>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center py-4 text-muted small"><i class="bi bi-calendar-x d-block fs-3 mb-2"></i>No registras asistencias en esta academia todavía.</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="tab-pagos" role="tabpanel">
+                    <div class="card border-0 shadow-sm bg-white p-3">
+                        <h6 class="fw-bold mb-3 text-secondary"><i class="bi bi-wallet2 me-1 text-tenant-primary"></i>Planes Comprados e Inversiones</h6>
+                        
+                        {% if pagos %}
+                            <div class="list-group list-group-flush">
+                                {% for pago in pagos %}
+                                    <div class="list-group-item px-1 py-3">
+                                        <div class="d-flex justify-content-between align-items-top mb-1">
+                                            <div>
+                                                <strong class="text-dark d-block" style="font-size: 0.95rem;">{{ pago.plan.nombre }}</strong>
+                                                <small class="text-muted"><i class="bi bi-calendar3 me-1"></i>Adquirido: {{ pago.fecha_inicio|date:"d/m/Y" }}</small>
+                                            </div>
+                                            <div class="text-end">
+                                                <span class="text-success fw-bold d-block" style="font-size: 1.05rem;">
+                                                    ${{ pago.plan.precio|floatformat:0 }} COP
+                                                </span>
+                                                {% if pago.saldo_pendiente > 0 %}
+                                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle small">
+                                                        Debe: ${{ pago.saldo_pendiente|floatformat:0 }}
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle small">
+                                                        Pagado Completo
+                                                    </span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center py-4 text-muted small"><i class="bi bi-cash-stack d-block fs-3 mb-2"></i>No hay registros de pagos en tu cuenta.</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+            </div>
+        {% endif %}
+
+    </div>
+</div>
+
+<style>
+    .nav-pills .nav-link.active, .nav-pills .show>.nav-link {
+        background-color: var(--tenant-primary, #0d6efd) !important;
+        color: white !important;
+    }
+    .nav-pills .nav-link {
+        color: #6c757d;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,438 @@
+{% extends "base_tenant.html" %}
+{% load static %}
+
+{% block content %}
+{% csrf_token %}
+
+<div class="container-fluid py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 fw-bold text-dark">
+            <i class="bi bi-cloud-arrow-up text-info me-2"></i>
+            Carga Múltiple de Video Clases
+        </h1>
+    </div>
+
+    <div class="row">
+
+        <div class="col-lg-11 mx-auto">
+
+            <!-- DROP ZONE -->
+
+            <div class="card shadow-sm border-0 rounded-4 mb-4 bg-white">
+
+                <div class="card-body">
+
+                    <div
+                        id="drop-zone"
+                        class="text-center p-5"
+                        style="
+                            border: 2px dashed #0dcaf0;
+                            border-radius: 15px;
+                            cursor: pointer;
+                            background: #f8f9fa;
+                            min-height: 250px;
+                            display: flex;
+                            flex-direction: column;
+                            justify-content: center;
+                        "
+                    >
+
+                        <i class="bi bi-box-arrow-in-up text-info display-4 mb-3"></i>
+
+                        <h4>Arrastra tus videos aquí</h4>
+
+                        <p class="text-muted small">
+                            O haz clic para seleccionar archivos
+                        </p>
+
+                        <input
+                            type="file"
+                            id="multiFileInput"
+                            multiple
+                            accept="video/*"
+                            style="display:none;"
+                        >
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- COLA -->
+
+            <div id="video-queue" class="row"></div>
+
+            <!-- BOTONES -->
+
+            <div
+                id="global-actions"
+                class="text-center mb-5"
+                style="display:none;"
+            >
+
+                <hr class="text-muted">
+
+                <button
+                    id="btnSubirTodo"
+                    class="btn btn-info text-white btn-lg rounded-pill px-5 shadow-sm fw-bold"
+                >
+                    <i class="bi bi-play-circle me-2"></i>
+                    Comenzar todas las subidas
+                </button>
+
+                <a
+                    href="{% url 'multimedia:lista_clases_admin' slug_academia %}"
+                    class="btn btn-link text-secondary"
+                >
+                    Cancelar
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- TEMPLATE TARJETA -->
+
+<template id="video-card-template">
+
+    <div class="col-xl-6 col-lg-6 mb-4 video-item">
+
+        <div class="card border-0 border-start border-info border-4 shadow-sm h-100 py-3 bg-white rounded-3">
+
+            <div class="card-body">
+
+                <div class="row align-items-center">
+
+                    <div class="col mr-2">
+
+                        <div class="small fw-bold text-info text-uppercase mb-2 name-label"></div>
+
+                        <div class="mt-3">
+
+                            <div class="mb-2">
+
+                                <label class="small fw-semibold text-secondary mb-1">
+                                    Título
+                                </label>
+
+                                <input
+                                    type="text"
+                                    class="form-control form-control-sm input-titulo"
+                                >
+
+                            </div>
+
+                            <div class="mb-2">
+
+                                <label class="small fw-semibold text-secondary mb-1">
+                                    Descripción
+                                </label>
+
+                                <textarea
+                                    class="form-control form-control-sm input-desc"
+                                    rows="2"
+                                ></textarea>
+
+                            </div>
+
+                            <div class="mb-3">
+
+                                <label class="small fw-semibold text-secondary mb-1">
+                                    Módulo
+                                </label>
+
+                                <select
+                                    class="form-select form-select-sm input-modulo"
+                                >
+
+                                    {% for mod in form.fields.modulo.queryset %}
+                                        <option value="{{ mod.id }}">
+                                            {{ mod.titulo }}
+                                        </option>
+                                    {% endfor %}
+
+                                </select>
+
+                            </div>
+
+                        </div>
+
+                        <!-- PROGRESS -->
+
+                        <div class="progress mb-2" style="height:8px;">
+
+                            <div
+                                class="progress-bar bg-info bar-progreso"
+                                role="progressbar"
+                                style="width:0%;"
+                            ></div>
+
+                        </div>
+
+                        <div class="small status-label text-muted fw-medium">
+                            Pendiente...
+                        </div>
+
+                    </div>
+
+                    <div class="col-auto">
+
+                        <button
+                            class="btn btn-sm btn-light border btn-remove text-danger rounded-circle"
+                        >
+                            <i class="bi bi-trash"></i>
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</template>
+
+<!-- GOOGLE IDENTITY SERVICES -->
+
+
+<script src="https://accounts.google.com/gsi/client" onload="inicializarGIS()" async defer></script>
+
+<script>
+
+////////////////////////////////////////////////////////////
+// CONFIG
+////////////////////////////////////////////////////////////
+const CLIENT_ID = "993677042719-cneh2jc7gd2f72sf5cbuk0jb48t4gphb.apps.googleusercontent.com";
+const SCOPES = "https://www.googleapis.com/auth/youtube.upload";
+
+let tokenClient = null;
+let accessToken = null;
+let colaDeArchivos = [];
+
+////////////////////////////////////////////////////////////
+// INIT (Llamado por el onload del script de Google)
+////////////////////////////////////////////////////////////
+function inicializarGIS() {
+    console.log("================================");
+    console.log("✅ GOOGLE GIS CARGADO EXITOSAMENTE");
+    console.log("================================");
+
+    tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID,
+        scope: SCOPES,
+        callback: (response) => {
+            // Este callback se sobrescribirá en la Promesa de loginGoogle
+            accessToken = response.access_token;
+        },
+        error_callback: (err) => {
+            console.error("❌ ERROR POPUP", err);
+            alert("Google bloqueó el popup o fue cerrado.");
+        }
+    });
+}
+
+// Promesa para manejar el login de forma limpia (Traído de tu script funcional)
+function loginGoogle() {
+    return new Promise((resolve, reject) => {
+        if (!tokenClient) {
+            reject("El cliente de Google aún no ha cargado.");
+            return;
+        }
+        
+        // Sobrescribimos el callback temporalmente para esta petición
+        tokenClient.callback = (response) => {
+            if (response.error) {
+                console.error(response);
+                alert("Error OAuth Google");
+                reject(response.error);
+            } else {
+                accessToken = response.access_token;
+                console.log("✅ ACCESS TOKEN OK");
+                resolve();
+            }
+        };
+        tokenClient.requestAccessToken({ prompt: "consent" });
+    });
+}
+
+////////////////////////////////////////////////////////////
+// ELEMENTOS Y DRAG & DROP (Sin cambios)
+////////////////////////////////////////////////////////////
+const dropZone = document.getElementById("drop-zone");
+const fileInput = document.getElementById("multiFileInput");
+const videoQueue = document.getElementById("video-queue");
+const globalActions = document.getElementById("global-actions");
+const template = document.getElementById("video-card-template");
+
+dropZone.onclick = () => fileInput.click();
+dropZone.ondragover = (e) => {
+    e.preventDefault();
+    dropZone.style.background = "#eefcff";
+};
+dropZone.ondragleave = () => { dropZone.style.background = "#f8f9fa"; };
+dropZone.ondrop = (e) => {
+    e.preventDefault();
+    dropZone.style.background = "#f8f9fa";
+    manejarArchivos(e.dataTransfer.files);
+};
+fileInput.onchange = (e) => manejarArchivos(e.target.files);
+
+function manejarArchivos(files) {
+    for (let file of files) {
+        if (!file.type.startsWith("video/")) continue;
+
+        const id = "vid_" + Math.random().toString(36).substring(2, 9);
+        colaDeArchivos.push({ id: id, file: file, subido: false });
+
+        const clon = template.content.cloneNode(true);
+        const card = clon.querySelector(".video-item");
+        card.id = "card-" + id;
+
+        clon.querySelector(".name-label").innerText = file.name;
+        clon.querySelector(".input-titulo").value = file.name.split('.').slice(0, -1).join('.');
+
+        clon.querySelector(".btn-remove").onclick = () => {
+            document.getElementById("card-" + id).remove();
+            colaDeArchivos = colaDeArchivos.filter(item => item.id !== id);
+            if(colaDeArchivos.length === 0) globalActions.style.display = "none";
+        };
+
+        videoQueue.appendChild(clon);
+    }
+
+    if (colaDeArchivos.length > 0) {
+        globalActions.style.display = "block";
+    }
+}
+
+////////////////////////////////////////////////////////////
+// SUBIDA RESUMABLE (Igual a tu código nuevo)
+////////////////////////////////////////////////////////////
+async function uploadVideoResumable(file, title, description, id) {
+    const metadata = {
+        snippet: { title: title, description: description },
+        status: { privacyStatus: "unlisted" }
+    };
+
+    const initRes = await fetch(
+        "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status",
+        {
+            method: "POST",
+            headers: {
+                "Authorization": "Bearer " + accessToken,
+                "Content-Type": "application/json",
+                "X-Upload-Content-Type": file.type
+            },
+            body: JSON.stringify(metadata)
+        }
+    );
+
+    if (!initRes.ok) throw new Error("Google rechazó autenticación.");
+    
+    const uploadUrl = initRes.headers.get("Location");
+    if (!uploadUrl) throw new Error("No llegó upload URL.");
+
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", uploadUrl, true);
+        xhr.setRequestHeader("Authorization", "Bearer " + accessToken);
+        xhr.setRequestHeader("Content-Type", file.type);
+
+        const progressBar = document.querySelector(`#card-${id} .bar-progreso`);
+        const statusLabel = document.querySelector(`#card-${id} .status-label`);
+
+        xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+                const percent = Math.round((e.loaded / e.total) * 100);
+                progressBar.style.width = percent + "%";
+                statusLabel.innerText = `Subiendo ${percent}%`;
+            }
+        };
+
+        xhr.onload = () => {
+            if (xhr.status === 200 || xhr.status === 201) {
+                const response = JSON.parse(xhr.responseText);
+                resolve(response.id);
+            } else {
+                reject("Error YouTube: " + xhr.status);
+            }
+        };
+        xhr.onerror = () => reject("Error de red");
+        xhr.send(file);
+    });
+}
+
+////////////////////////////////////////////////////////////
+// BOTÓN SUBIR
+////////////////////////////////////////////////////////////
+document.getElementById("btnSubirTodo").onclick = async function () {
+    // 1. Validar que tengamos el token antes de empezar a procesar
+    if (!accessToken) {
+        try {
+            await loginGoogle(); // Espera a que el usuario se loguee
+        } catch (err) {
+            console.error("Autenticación fallida o cancelada", err);
+            return; // Detiene el proceso si no hay login
+        }
+    }
+
+    // 2. Procesar las subidas
+    this.disabled = true;
+    this.innerHTML = "Subiendo videos...";
+
+    for (let item of colaDeArchivos) {
+        if (item.subido) continue;
+
+        const card = document.getElementById("card-" + item.id);
+        const titulo = card.querySelector(".input-titulo").value;
+        const descripcion = card.querySelector(".input-desc").value;
+        const modulo = card.querySelector(".input-modulo").value;
+        const statusLabel = card.querySelector(".status-label");
+
+        try {
+            const videoId = await uploadVideoResumable(item.file, titulo, descripcion, item.id);
+
+            // Sincronizar con Django
+            const fd = new FormData();
+            fd.append("modulo", modulo);
+            fd.append("titulo", titulo);
+            fd.append("descripcion", descripcion);
+            fd.append("video_id", videoId);
+
+            const res = await fetch(window.location.href, {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": "{{ csrf_token }}",
+                    "X-Requested-With": "XMLHttpRequest"
+                },
+                body: fd
+            });
+
+            if (!res.ok) throw new Error("Error guardando en BD");
+
+            item.subido = true;
+            statusLabel.innerText = "✅ Sincronizado";
+            statusLabel.classList.replace("text-muted", "text-success");
+            card.querySelector('.btn-remove').style.display = 'none'; // Opcional: ocultar botón borrar si ya subió
+
+        } catch (err) {
+            console.error(err);
+            statusLabel.innerText = "❌ Error";
+            statusLabel.classList.replace("text-muted", "text-danger");
+        }
+    }
+
+    this.innerHTML = "✅ Finalizado";
+    this.disabled = false; // Permitir reintentar los que fallaron
+};
+</script>
+{% endblock %}

@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AppDanza | El Sistema Operativo para tu Academia</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-dark-core: #050505; 
+            --card-dark: rgba(17, 24, 39, 0.6); 
+            --accent-primary: #3b82f6; 
+            --accent-secondary: #ec4899; 
+            --text-high-contrast: #e2e8f0; 
+        }
+
+        body {
+            background-color: var(--bg-dark-core);
+            color: #ffffff;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .font-space {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        /* Luces de fondo dinámicas */
+        .glow-bg, .glow-bg-left {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(100px);
+            z-index: 0;
+            pointer-events: none;
+            animation: pulseGlow 8s infinite alternate;
+        }
+
+        .glow-bg {
+            width: 500px;
+            height: 500px;
+            background: rgba(59, 130, 246, 0.15);
+            top: -10%;
+            right: -5%;
+        }
+
+        .glow-bg-left {
+            width: 600px;
+            height: 600px;
+            background: rgba(236, 72, 153, 0.12);
+            top: 40%;
+            left: -15%;
+            animation-delay: -4s;
+        }
+
+        @keyframes pulseGlow {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(1.2); opacity: 1; }
+        }
+
+        .navbar-appdanza {
+            background: rgba(5, 5, 5, 0.85);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Tarjetas UI */
+        .feature-card {
+            background: var(--card-dark);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 24px;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.03), transparent);
+            transform: translateX(-100%);
+            transition: 0.6s;
+        }
+        .feature-card:hover {
+            transform: translateY(-8px);
+            border-color: rgba(59, 130, 246, 0.4);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+        }
+        .feature-card:hover::before {
+            transform: translateX(100%);
+        }
+
+        .icon-box {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 0 20px rgba(255,255,255,0.02);
+        }
+
+        /* Precios */
+        .price-card {
+            background: rgba(17, 24, 39, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 28px;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s;
+        }
+        .price-card.featured {
+            border: 2px solid var(--accent-primary);
+            background: linear-gradient(180deg, rgba(17,24,39,0.9) 0%, rgba(59,130,246,0.05) 100%);
+            transform: scale(1.02);
+        }
+        .price-card.featured::before {
+            content: "POPULAR";
+            position: absolute;
+            top: 25px;
+            right: -35px;
+            background: linear-gradient(90deg, var(--accent-primary), #60a5fa);
+            color: #fff;
+            font-size: 0.7rem;
+            font-weight: 800;
+            padding: 6px 40px;
+            transform: rotate(45deg);
+            letter-spacing: 1.5px;
+        }
+
+        /* Utilidades de texto */
+        .text-readable-muted { color: var(--text-high-contrast) !important; font-weight: 400; }
+        .text-gradient { background: linear-gradient(90deg, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        /* Estilos Step-by-Step */
+        .step-number {
+            width: 48px;
+            height: 48px;
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            font-weight: bold;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Estilos Acordeón FAQ (Adaptación Oscura) */
+        .accordion-item {
+            background-color: transparent;
+            border: 1px solid rgba(255,255,255,0.05);
+            margin-bottom: 1rem;
+            border-radius: 16px !important;
+            overflow: hidden;
+        }
+        .accordion-button {
+            background-color: var(--card-dark);
+            color: #fff;
+            font-weight: 600;
+            box-shadow: none !important;
+            padding: 1.25rem 1.5rem;
+        }
+        .accordion-button:not(.collapsed) {
+            background-color: rgba(59, 130, 246, 0.1);
+            color: #60a5fa;
+        }
+        .accordion-button::after { filter: invert(1); } /* Hace la flechita blanca */
+        .accordion-body {
+            background-color: rgba(17, 24, 39, 0.4);
+            color: var(--text-high-contrast);
+            border-top: 1px solid rgba(255,255,255,0.05);
+            padding: 1.5rem;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="glow-bg"></div>
+    <div class="glow-bg-left"></div>
+
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-appdanza fixed-top py-3">
+        <div class="container">
+            <a class="navbar-brand fw-bold font-space d-flex align-items-center gap-2 fs-4" href="#">
+                <div style="width: 35px; height: 35px; background: linear-gradient(135deg, #3b82f6, #ec4899); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                    <i class="bi bi-play-fill text-white fs-5"></i>
+                </div>
+                <span>App<span class="fw-light">Danza</span></span>
+            </a>
+            <div class="d-none d-md-flex align-items-center gap-4">
+                <a href="#como-funciona" class="text-white-50 text-decoration-none small hover-white">Cómo funciona</a>
+                <a href="#precios" class="text-white-50 text-decoration-none small hover-white">Planes</a>
+                <a href="#faq" class="text-white-50 text-decoration-none small hover-white">FAQ</a>
+                <a href="#" class="btn btn-outline-light btn-sm rounded-pill px-4 fw-semibold ms-2">Ingresar</a>
+            </div>
+        </div>
+    </nav>
+
+    <header class="container text-center position-relative" style="padding-top: 180px; padding-bottom: 100px; z-index: 2;">
+        <div class="row justify-content-center">
+            <div class="col-lg-9">
+                <div class="d-inline-flex align-items-center gap-2 px-3 py-2 rounded-pill mb-4" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);">
+                    <span class="badge bg-primary rounded-pill">V 2.0</span>
+                    <span class="small text-white-50">Ingeniería para el ecosistema de la danza</span>
+                </div>
+                
+                <h1 class="display-3 font-space fw-bold mb-4 text-white" style="line-height: 1.1;">
+                    El motor tecnológico de tu <br>
+                    <span class="text-gradient">academia de baile.</span>
+                </h1>
+                
+                <p class="fs-5 text-readable-muted mx-auto mb-5" style="max-width: 700px; line-height: 1.6;">
+                    Digitaliza tus alumnos, automatiza el acceso con códigos QR y blinda tus finanzas en una plataforma diseñada exclusivamente para el ritmo de tu negocio.
+                </p>
+                
+                <div class="d-flex flex-column flex-sm-row justify-content-center gap-3">
+                    <a href="#precios" class="btn btn-primary btn-lg rounded-pill px-5 py-3 font-space fw-bold shadow-lg" style="font-size: 1rem;">
+                        Ver Licencias <i class="bi bi-arrow-right ms-2"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <section id="modulos" class="container py-5 position-relative" style="z-index: 2;">
+        <div class="text-center mb-5 pb-4">
+            <h2 class="font-space fw-bold text-white display-5">Todo bajo control</h2>
+            <p class="text-readable-muted">Herramientas profesionales integradas en un solo lugar.</p>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-3">
+                <div class="card feature-card p-4 h-100">
+                    <div class="icon-box mb-4 text-primary"><i class="bi bi-qr-code-scan fs-3"></i></div>
+                    <h5 class="font-space fw-bold text-white mb-3">Accesos QR</h5>
+                    <p class="text-readable-muted small mb-0">Credenciales únicas. Controla la asistencia en recepción escaneando a tus alumnos en menos de un segundo.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="card feature-card p-4 h-100">
+                    <div class="icon-box mb-4 text-success"><i class="bi bi-wallet2 fs-3"></i></div>
+                    <h5 class="font-space fw-bold text-white mb-3">Finanzas DIAN</h5>
+                    <p class="text-readable-muted small mb-0">Flujo de caja, tiqueteras y gastos de sede. Balances financieros estructurados para tu contabilidad.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="card feature-card p-4 h-100">
+                    <div class="icon-box mb-4 text-danger"><i class="bi bi-play-circle fs-3"></i></div>
+                    <h5 class="font-space fw-bold text-white mb-3">Multimedia Segura</h5>
+                    <p class="text-readable-muted small mb-0">Embebe videos ocultos de YouTube. El sistema asegura que solo alumnos con planes al día puedan visualizarlos.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="card feature-card p-4 h-100">
+                    <div class="icon-box mb-4 text-warning"><i class="bi bi-ticket-detailed fs-3"></i></div>
+                    <h5 class="font-space fw-bold text-white mb-3">Gestión de Eventos</h5>
+                    <p class="text-readable-muted small mb-0">Organiza galas y congresos. Vende preventas, aplica cupones de descuento y gestiona la taquilla independiente.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="como-funciona" class="container py-5 my-5 position-relative" style="z-index: 2;">
+        <div class="row align-items-center">
+            <div class="col-lg-5 mb-5 mb-lg-0">
+                <h2 class="font-space fw-bold text-white display-6 mb-4">Migrar a la era digital es más fácil de lo que crees.</h2>
+                <p class="text-readable-muted mb-4">Deja atrás las hojas de cálculo confusas y los cuadernos de asistencia perdidos. AppDanza se encarga de la ingeniería pesada para que tú te enfoques en enseñar.</p>
+                <div class="d-flex align-items-center gap-3 mt-4 p-3 rounded-4" style="background: rgba(255,255,255,0.03); border: 1px dashed rgba(255,255,255,0.1);">
+                    <i class="bi bi-shield-check text-success fs-2"></i>
+                    <div>
+                        <strong class="text-white d-block">Arquitectura Multi-tenant</strong>
+                        <span class="small text-white-50">Tus datos están aislados y encriptados.</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-6 offset-lg-1">
+                <div class="d-flex flex-column gap-4">
+                    <div class="card feature-card p-4 border-0">
+                        <div class="d-flex gap-4">
+                            <div class="step-number font-space">1</div>
+                            <div>
+                                <h5 class="text-white fw-bold mb-2">Configura tu sede</h5>
+                                <p class="text-readable-muted small mb-0">Registra los planes que ofreces (mensualidades, clases sueltas o tiqueteras). Agrega a tu staff e instructores con permisos controlados.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card feature-card p-4 border-0">
+                        <div class="d-flex gap-4">
+                            <div class="step-number font-space">2</div>
+                            <div>
+                                <h5 class="text-white fw-bold mb-2">Conecta a tus alumnos</h5>
+                                <p class="text-readable-muted small mb-0">Tus estudiantes ingresan al portal, compran su plan y el sistema les genera automáticamente su credencial QR intransferible.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card feature-card p-4 border-0">
+                        <div class="d-flex gap-4">
+                            <div class="step-number font-space">3</div>
+                            <div>
+                                <h5 class="text-white fw-bold mb-2">Control total y crecimiento</h5>
+                                <p class="text-readable-muted small mb-0">Escanea asistencias, bloquea morosos en la puerta automáticamente y revisa tu cierre de caja detallado a final de mes.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="precios" class="container py-5 my-5 position-relative" style="z-index: 2;">
+        <div class="text-center mb-5 pb-3">
+            <h2 class="font-space fw-bold text-white display-5">Elige tu licencia</h2>
+            <p class="text-readable-muted">Planes escalables según el volumen de tu academia.</p>
+        </div>
+
+        <div class="row g-4 justify-content-center align-items-stretch">
+            {% for plan in planes %}
+                <div class="col-md-6 col-lg-4 d-flex">
+                    <div class="card price-card shadow p-4 w-100 d-flex flex-column {% if plan.permite_multimedia %}featured{% endif %}">
+                        <div class="card-body p-2 d-flex flex-column h-100">
+                            <h4 class="font-space fw-bold text-white mb-1">{{ plan.nombre }}</h4>
+                            <div class="d-flex align-items-baseline my-3">
+                                <span class="display-5 font-space fw-bold text-white">${{ plan.precio_mensual|floatformat:0 }}</span>
+                                <span class="text-white-50 small ms-2">/ mes</span>
+                            </div>
+                            
+                            <div class="p-3 mb-4 rounded-3" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);">
+                                <p class="text-white small mb-0 text-center">Hasta <strong>{{ plan.max_estudiantes }}</strong> estudiantes activos</p>
+                            </div>
+                            
+                            <ul class="list-unstyled d-flex flex-column gap-3 small mb-5 mt-auto">
+                                <li class="d-flex align-items-center gap-3 text-white">
+                                    <i class="bi {% if plan.permite_asistencias_qr %}bi-check-circle-fill text-primary{% else %}bi-x-circle text-muted{% endif %} fs-5"></i>
+                                    <span class="{% if not plan.permite_asistencias_qr %}text-muted{% endif %}">Escáner de Asistencias QR</span>
+                                </li>
+                                <li class="d-flex align-items-center gap-3 text-white">
+                                    <i class="bi {% if plan.permite_finanzas %}bi-check-circle-fill text-primary{% else %}bi-x-circle text-muted{% endif %} fs-5"></i>
+                                    <span class="{% if not plan.permite_finanzas %}text-muted{% endif %}">Módulo de Finanzas y Caja</span>
+                                </li>
+                                <li class="d-flex align-items-center gap-3 text-white">
+                                    <i class="bi {% if plan.permite_multimedia %}bi-check-circle-fill text-primary{% else %}bi-x-circle text-muted{% endif %} fs-5"></i>
+                                    <span class="{% if not plan.permite_multimedia %}text-muted{% endif %}">Gestor de Videos Privados</span>
+                                </li>
+                                <li class="d-flex align-items-center gap-3 text-white">
+                                    <i class="bi {% if plan.permite_eventos %}bi-check-circle-fill text-primary{% else %}bi-x-circle text-muted{% endif %} fs-5"></i>
+                                    <span class="{% if not plan.permite_eventos %}text-muted{% endif %}">Creación de Eventos y Taquilla</span>
+                                </li>
+                            </ul>
+                            
+                            <button class="btn {% if plan.permite_multimedia %}btn-primary{% else %}btn-outline-light{% endif %} w-100 rounded-pill py-2.5 fw-bold mt-auto">
+                                Seleccionar Plan
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="col-12 text-center py-5">
+                    <div class="p-5 rounded-4" style="background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.1);">
+                        <i class="bi bi-box-seam text-white-50 display-4 mb-3 d-block"></i>
+                        <p class="text-readable-muted fs-5">No hay planes comerciales configurados en la consola maestra.</p>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section id="faq" class="container py-5 my-5 position-relative" style="z-index: 2;">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 text-center mb-5">
+                <h2 class="font-space fw-bold text-white display-6">Preguntas Frecuentes</h2>
+                <p class="text-readable-muted">Resolvemos tus dudas sobre seguridad, finanzas e implementación.</p>
+            </div>
+            <div class="col-lg-8">
+                <div class="accordion" id="faqAppDanza">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingOne">
+                            <button class="accordion-button font-space" type="button" data-bs-toggle="collapse" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                                ¿Los datos de mis alumnos están seguros y separados de otras escuelas?
+                            </button>
+                        </h2>
+                        <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#faqAppDanza">
+                            <div class="accordion-body">
+                                <strong>Totalmente.</strong> AppDanza utiliza una arquitectura Multi-Tenant aislada. Esto significa que la base de datos de tu academia funciona en una "bóveda" exclusiva. Ni otras academias pueden ver tus datos, ni tú los de ellos.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingTwo">
+                            <button class="accordion-button collapsed font-space" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                                ¿Cómo funciona el módulo de la DIAN y el cierre de caja?
+                            </button>
+                        </h2>
+                        <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#faqAppDanza">
+                            <div class="accordion-body">
+                                Entendemos la contabilidad colombiana. El sistema automatiza el registro de ingresos (mensualidades, clases) y te permite registrar los egresos fijos (arriendo, nómina). Al final del mes, generas un reporte estructurado que le facilitará la vida a tu contador y te mantendrá al día normativamente.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingThree">
+                            <button class="accordion-button collapsed font-space" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                                ¿Necesito hardware especial para escanear el QR?
+                            </button>
+                        </h2>
+                        <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#faqAppDanza">
+                            <div class="accordion-body">
+                                <strong>Cero equipos costosos.</strong> Cualquier celular, tablet o laptop con cámara y conexión a internet puede convertirse en el escáner oficial de la recepción. Tu equipo de staff solo inicia sesión con su rol, apunta al QR del estudiante y el sistema valida si puede entrar o si su mensualidad está vencida.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="py-5 mt-5" style="border-top: 1px solid rgba(255, 255, 255, 0.05); background: #030303;">
+        <div class="container text-center text-md-start">
+            <div class="row align-items-center g-4">
+                <div class="col-md-4 text-center text-md-start">
+                    <div class="d-flex align-items-center justify-content-center justify-content-md-start gap-2 mb-2">
+                        <div style="width: 24px; height: 24px; background: linear-gradient(135deg, #3b82f6, #ec4899); border-radius: 6px; display: flex; align-items: center; justify-content: center;">
+                            <i class="bi bi-play-fill text-white" style="font-size: 0.8rem;"></i>
+                        </div>
+                        <strong class="font-space text-white fs-5">AppDanza</strong>
+                    </div>
+                    <p class="text-readable-muted small mb-0">&copy; 2026. Todos los derechos reservados.</p>
+                </div>
+                <div class="col-md-8 text-center text-md-end">
+                    <p class="small text-readable-muted mb-0">Infraestructura SaaS multi-tenant. Cifrado de extremo a extremo.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    {% include 'partials/_cookies_banner.html' %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

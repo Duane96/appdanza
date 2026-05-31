@@ -1,0 +1,75 @@
+{% extends "base_tenant.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6 mx-auto">
+        <div class="card border-0 shadow-sm p-4 bg-white">
+            <h4 class="fw-bold mb-1 text-dark"><i class="bi bi-person-badge me-2 text-dark"></i>Liquidar Nómina de Profesor</h4>
+            <p class="text-muted small mb-4">El sistema autogenerará el Documento Soporte a no obligados a facturar para tu contabilidad DIAN.</p>
+            
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="form-label small fw-bold text-secondary">Cédula del Profesor</label>
+                        {{ form.profesor_nit }}
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="form-label small fw-bold text-secondary">Nombre del Profesor</label>
+                        {{ form.profesor_nombre }}
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="form-label small fw-bold text-secondary">Cantidad de Clases Dictadas</label>
+                        {{ form.cantidad_clases }}
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="form-label small fw-bold text-secondary">Valor por Clase acordado ($)</label>
+                        {{ form.valor_clase }}
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-secondary">Fecha de Pago</label>
+                    {{ form.fecha_pago }}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-secondary">Detalles Extras o Fechas</label>
+                    {{ form.detalles }}
+                </div>
+
+                <div class="bg-light p-3 rounded border text-center mb-4">
+                    <span class="text-secondary small d-block uppercase fw-bold">Total a Transferir al Profesor</span>
+                    <h2 class="fw-bold text-dark m-0" id="visor-total">$0 COP</h2>
+                </div>
+
+                <hr class="my-4">
+                <div class="d-flex gap-2">
+                    <a href="{% url 'finanzas:panel_finanzas' request.tenant.slug %}" class="btn btn-light w-50 py-2">Cancelar</a>
+                    <button type="submit" class="btn btn-dark w-50 py-2 fw-bold">Liquidar y Firmar Soporte</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    const clasesInput = document.querySelector('input[name="cantidad_clases"]');
+    const valorInput = document.querySelector('input[name="valor_clase"]');
+    const visor = document.getElementById('visor-total');
+
+    function calcular() {
+        const clases = parseFloat(clasesInput.value) || 0;
+        const valor = parseFloat(valorInput.value) || 0;
+        const total = clases * valor;
+        visor.innerText = `$${total.toLocaleString('es-CO')} COP`;
+    }
+
+    clasesInput.addEventListener('input', calcular);
+    valorInput.addEventListener('input', calcular);
+</script>
+{% endblock %}

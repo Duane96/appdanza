@@ -1,0 +1,57 @@
+{% extends "base_tenant.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+        <div>
+            <h2 class="fw-bold text-dark m-0">Gestión de Clases Virtuales</h2>
+            <p class="text-muted small mb-0">Administra los títulos de tus módulos y el contenido multimedia para tus alumnos.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'multimedia:crear_clase' request.tenant.slug %}" class="btn btn-light border rounded-pill px-4 fw-bold shadow-sm">
+                <i class="bi bi-plus-circle me-1"></i> Nueva Clase
+            </a>
+            <a href="{% url 'multimedia:subir_video' request.tenant.slug %}" class="btn btn-tenant-primary rounded-pill px-4 fw-bold shadow-sm">
+                <i class="bi bi-cloud-arrow-up me-1"></i> Subir Video
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        {% for modulo in modulos %}
+            <div class="col-md-6 col-xl-4">
+                <div class="card border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center gap-3 mb-3">
+                            <div class="rounded-circle bg-tenant-primary bg-opacity-10 text-center d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                <i class="bi bi-collection-play-fill text-tenant-primary fs-4"></i>
+                            </div>
+                            <h5 class="fw-bold text-dark m-0">{{ modulo.titulo }}</h5>
+                        </div>
+                        <p class="text-muted small text-truncate-3 mb-4" style="height: 60px;">
+                            {{ modulo.descripcion|default:"Sin descripción detallada." }}
+                        </p>
+                        <div class="border-top pt-3 d-flex justify-content-between align-items-center">
+                            <span class="badge bg-light text-dark border small fw-medium">
+                                <i class="bi bi-play-btn me-1"></i> {{ modulo.videos.count }} Videos subidos
+                            </span>
+                            <a href="{% url 'multimedia:subir_video' request.tenant.slug %}?modulo_id={{ modulo.id }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                <i class="bi bi-plus"></i> Añadir Video
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-12 text-center py-5">
+                <div class="p-5 bg-white rounded-4 shadow-sm d-inline-block">
+                    <i class="bi bi-camera-video-off display-4 text-muted mb-3 d-block"></i>
+                    <h5 class="fw-bold">No has creado ninguna clase aún</h5>
+                    <p class="text-muted">Crea tu primer módulo para empezar a organizar tu academia virtual.</p>
+                    <a href="{% url 'multimedia:crear_clase' request.tenant.slug %}" class="btn btn-tenant-primary rounded-pill px-5 py-2 fw-bold">Crear mi primera Clase</a>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

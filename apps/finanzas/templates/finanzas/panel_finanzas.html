@@ -1,0 +1,214 @@
+{% extends "base_tenant.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold text-dark m-0"><i class="bi bi-wallet2 me-2 text-tenant-primary"></i>Finanzas y Soportes</h2>
+        <p class="text-muted m-0 small">Control contable de ingresos, egresos y documentos soporte para la DIAN.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'finanzas:registrar_ingreso' request.tenant.slug %}" class="btn btn-success fw-bold">
+            <i class="bi bi-plus-circle me-1"></i> Ingreso Varios
+        </a>
+        <a href="{% url 'finanzas:registrar_gasto' request.tenant.slug %}" class="btn btn-danger fw-bold">
+            <i class="bi bi-dash-circle me-1"></i> Registrar Gasto
+        </a>
+        <a href="{% url 'finanzas:liquidar_profesor' request.tenant.slug %}" class="btn btn-dark fw-bold">
+            <i class="bi bi-person-badge me-1"></i> Liquidar Profesor
+        </a>
+    </div>
+</div>
+
+{% if messages %}
+    {% for msg in messages %}
+        <div class="alert alert-{{ msg.tags }} alert-dismissible fade show small shadow-sm border-0" role="alert">
+            {{ msg }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<ul class="nav nav-tabs mb-4" id="finanzasTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active fw-bold text-success" id="ingresos-tab" data-bs-toggle="tab" data-bs-target="#ingresos-pane" type="button" role="tab">
+            <i class="bi bi-arrow-down-left-circle me-1"></i> Recibos de Caja (Ingresos)
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link fw-bold text-danger" id="gastos-tab" data-bs-toggle="tab" data-bs-target="#gastos-pane" type="button" role="tab">
+            <i class="bi bi-arrow-up-right-circle me-1"></i> Comprobantes de Egreso (Gastos)
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="finanzasTabsContent">
+    
+    <div class="tab-pane fade show active" id="ingresos-pane" role="tabpanel" tabindex="0">
+        <div class="card border-0 shadow-sm bg-white p-3">
+            <div class="table-responsive">
+                <table id="tabla-ingresos" class="table table-hover align-middle w-100">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Recibo</th>
+                            <th>Fecha</th>
+                            <th>Cliente (NIT)</th>
+                            <th>Concepto / Tipo</th>
+                            <th>Medio</th>
+                            <th>Monto</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ing in ingresos %}
+                        <tr class="{% if ing.estado == 'ANULADO' %}table-danger opacity-50{% endif %}">
+                            <td><strong class="font-monospace text-dark">{{ ing.numero_recibo }}</strong></td>
+                            <td><small class="text-muted">{{ ing.fecha|date:"d/m/Y" }}</small></td>
+                            <td>
+                                <span class="d-block fw-semibold text-dark">{{ ing.cliente_nombre }}</span>
+                                <span class="text-muted small font-monospace">CC: {{ ing.cliente_nit }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border small">{{ ing.get_tipo_income_display|default:ing.tipo_ingreso }}</span>
+                                <small class="d-block text-muted text-truncate" style="max-width: 200px;">{{ ing.concepto }}</small>
+                            </td>
+                            <td><small class="badge bg-secondary-subtle text-secondary">{{ ing.get_medio_pago_display }}</small></td>
+                            <td><strong class="text-success">${{ ing.monto|floatformat:0 }}</strong></td>
+                            <td class="text-center">
+                                {% if ing.estado == 'ACTIVO' %}
+                                    <button class="btn btn-sm btn-outline-danger border-0" data-bs-toggle="modal" data-bs-target="#modalAnularIngreso{{ ing.id }}">
+                                        <i class="bi bi-x-circle"></i> Anular
+                                    </button>
+                                    
+                                    <div class="modal fade" id="modalAnularIngreso{{ ing.id }}" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog modal-dialog-centered">
+                                            <form method="post" action="{% url 'finanzas:anular_transaccion' request.tenant.slug 'ingreso' ing.id %}">
+                                                {% csrf_token %}
+                                                <div class="modal-content text-start">
+                                                    <div class="modal-header border-0 pb-0">
+                                                        <h5 class="fw-bold text-dark m-0">Anular Recibo {{ ing.numero_recibo }}</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <p class="text-muted small">Al anular este recibo, su valor se restará del flujo de caja. Esta acción es irreversible.</p>
+                                                        <div class="mb-3">
+                                                            <label class="form-label small fw-bold text-secondary">Motivo de Anulación (Requerido por Auditoría)</label>
+                                                            <textarea name="motivo_anulacion" class="form-control" rows="2" required placeholder="Ej: Error en el monto digitado o retractación del alumno"></textarea>
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer border-0 pt-0">
+                                                        <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Cancelar</button>
+                                                        <button type="submit" class="btn btn-sm btn-danger fw-bold">Confirmar Anulación</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <span class="badge bg-danger small" data-bs-toggle="tooltip" title="Motivo: {{ ing.motivo_anulacion }}">ANULADO</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade" id="gastos-pane" role="tabpanel" tabindex="0">
+        <div class="card border-0 shadow-sm bg-white p-3">
+            <div class="table-responsive">
+                <table id="tabla-gastos" class="table table-hover align-middle w-100">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Egreso</th>
+                            <th>Factura Proveedor</th>
+                            <th>Fecha</th>
+                            <th>Tercero / Beneficiario</th>
+                            <th>Concepto / Categoría</th>
+                            <th>Soporte</th>
+                            <th>Monto</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for gas in gastos %}
+                        <tr class="{% if gas.estado == 'ANULADO' %}table-danger opacity-50{% endif %}">
+                            <td><strong class="font-monospace text-dark">{{ gas.numero_egreso }}</strong></td>
+                            <td><span class="font-monospace text-muted small">{{ gas.numero_factura_proveedor|default:"-- Interno --" }}</span></td>
+                            <td><small class="text-muted">{{ gas.fecha|date:"d/m/Y" }}</small></td>
+                            <td>
+                                <span class="d-block fw-semibold text-dark">{{ gas.proveedor_nombre }}</span>
+                                <span class="text-muted small font-monospace">NIT/CC: {{ gas.proveedor_nit }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border small">{{ gas.get_categoria_display }}</span>
+                                <small class="d-block text-muted text-truncate" style="max-width: 200px;">{{ gas.concepto }}</small>
+                            </td>
+                            <td>
+                                {% if gas.soporte_digital %}
+                                    <a href="{{ gas.soporte_digital.url }}" target="_blank" class="btn btn-xs btn-outline-secondary p-1 py-0 fs-7">
+                                        <i class="bi bi-paperclip"></i> Ver adjunto
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted small italic">Ninguno</span>
+                                {% endif %}
+                            </td>
+                            <td><strong class="text-danger">${{ gas.monto|floatformat:0 }}</strong></td>
+                            <td class="text-center">
+                                {% if gas.estado == 'ACTIVO' %}
+                                    <button class="btn btn-sm btn-outline-danger border-0" data-bs-toggle="modal" data-bs-target="#modalAnularGasto{{ gas.id }}">
+                                        <i class="bi bi-x-circle"></i> Anular
+                                    </button>
+                                    
+                                    <div class="modal fade" id="modalAnularGasto{{ gas.id }}" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog modal-dialog-centered">
+                                            <form method="post" action="{% url 'finanzas:anular_transaccion' request.tenant.slug 'gasto' gas.id %}">
+                                                {% csrf_token %}
+                                                <div class="modal-content text-start">
+                                                    <div class="modal-header border-0 pb-0">
+                                                        <h5 class="fw-bold text-dark m-0">Anular Egreso {{ gas.numero_egreso }}</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <p class="text-muted small">Al anular este egreso, se anulará su rastro en los costos del mes de la academia.</p>
+                                                        <div class="mb-3">
+                                                            <label class="form-label small fw-bold text-secondary">Motivo de Anulación</label>
+                                                            <textarea name="motivo_anulacion" class="form-control" rows="2" required placeholder="Ej: Error en la liquidación o factura duplicada"></textarea>
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer border-0 pt-0">
+                                                        <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Cancelar</button>
+                                                        <button type="submit" class="btn btn-sm btn-danger fw-bold">Confirmar Anulación</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <span class="badge bg-danger small" data-bs-toggle="tooltip" title="Motivo: {{ gas.motivo_anulacion }}">ANULADO</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        $('#tabla-ingresos').DataTable({ "pageLength": 10, "lengthChange": false, "ordering": false, "language": { "search": "Filtrar ingresos:", "paginate": { "next": "Sig", "previous": "Ant" }, "info": "Mostrando _START_ a _END_ de _TOTAL_", "infoEmpty": "", "zeroRecords": "Ningún recibo coincide" } });
+        $('#tabla-gastos').DataTable({ "pageLength": 10, "lengthChange": false, "ordering": false, "language": { "search": "Filtrar gastos:", "paginate": { "next": "Sig", "previous": "Ant" }, "info": "Mostrando _START_ a _END_ de _TOTAL_", "infoEmpty": "", "zeroRecords": "Ningún egreso coincide" } });
+    });
+</script>
+{% endblock %}

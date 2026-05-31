@@ -1,0 +1,76 @@
+{% extends "base_tenant.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6 mx-auto">
+        <div class="card border-0 shadow-sm p-4 bg-white">
+            <h4 class="fw-bold mb-1 text-dark">
+                <i class="bi bi-ticket-perforated me-2 text-tenant-primary"></i>Vender / Asignar Plan
+            </h4>
+            <p class="text-muted small mb-4">Carga las tiqueteras controlando vigencias y abonos de caja.</p>
+            
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger small p-2 shadow-sm border-0">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-secondary">Seleccione Estudiante</label>
+                    {{ form.estudiante }}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-secondary">Seleccione Plan</label>
+                    {{ form.plan }}
+                </div>
+
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-semibold text-secondary">Fecha de Inicio</label>
+                        {{ form.fecha_inicio }}
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-semibold text-secondary">Fecha Fin (Excepción)</label>
+                        {{ form.fecha_fin }}
+                        <div class="form-text small text-muted" style="font-size: 0.72rem;">Vacío para usar la duración nativa del plan.</div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-semibold text-secondary">¿Cuánto pagó hoy?</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            {{ form.monto_pagado }}
+                            <span class="input-group-text small">COP</span>
+                        </div>
+                        {% if form.monto_pagado.errors %}
+                            <div class="text-danger small mt-1 fw-bold" style="font-size: 0.75rem;">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i>{{ form.monto_pagado.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-semibold text-secondary">Medio de Recaudo</label>
+                        {{ form.medio_pago }}
+                    </div>
+                </div>
+
+                <hr class="my-4 opacity-25">
+
+                <div class="d-flex gap-2">
+                    <a href="{% url 'planes_estudiantes:lista_estudiantes' request.tenant.slug %}" class="btn btn-light w-50 py-2 fw-semibold">
+                        Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-tenant-primary w-50 py-2 fw-bold">
+                        <i class="bi bi-check-circle me-1"></i> Activar e Inscribir
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
