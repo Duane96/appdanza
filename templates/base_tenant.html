@@ -113,12 +113,14 @@
                     <i class="bi bi-speedometer2 me-2"></i> Dashboard
                 </a>
             </li>
-
+            
+            {% if request.tenant.suscripcion_saas.modulo_estudiantes_activo %}
             <li class="nav-item">
                 <a class="nav-link text-white-50 {% if 'estudiantes' in request.path %}active-menu{% endif %}" href="{% url 'planes_estudiantes:lista_estudiantes' request.tenant.slug %}">
                     <i class="bi bi-people me-2"></i> Estudiantes
                 </a>
             </li>
+            {% endif %}
 
             {% if request.tenant.suscripcion_saas.modulo_asistencias_activo %}
             <li class="nav-item">
