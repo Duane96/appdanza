@@ -4,7 +4,7 @@ cffi==2.0.0
 charset-normalizer==3.4.7
 colorama==0.4.6
 cryptography==48.0.0
-Django==6.0.5
+Django==5.2.14
 django-crontab==0.7.1
 django-csp==4.0
 django-environ==0.13.0
