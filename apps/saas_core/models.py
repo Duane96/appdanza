@@ -103,3 +103,94 @@ class SuscripcionAcademia(models.Model):
         if self.bloqueo_manual_estudiantes: return False
         if self.es_cuenta_partner_gratis: return True
         return self.plan.permite_estudiantes
+    
+
+
+
+class LandingPageConfig(models.Model):
+    titulo_principal = models.CharField(max_length=200)
+    subtitulo_principal = models.TextField()
+
+    boton_principal_texto = models.CharField(max_length=100)
+    boton_principal_url = models.CharField(max_length=300)
+
+    whatsapp = models.CharField(max_length=30, blank=True)
+    email_contacto = models.EmailField(blank=True)
+
+    mostrar_capturas = models.BooleanField(default=True)
+    mostrar_faq = models.BooleanField(default=True)
+
+    activo = models.BooleanField(default=True)
+
+    def __str__(self):
+        return "Configuración Landing"
+    
+
+class ScreenshotLanding(models.Model):
+    titulo = models.CharField(max_length=100)
+
+    imagen = models.ImageField(
+        upload_to='landing/screenshots/'
+    )
+
+    descripcion = models.TextField(blank=True)
+
+    orden = models.PositiveIntegerField(default=0)
+
+    activo = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['orden']
+
+
+class TestimonioLanding(models.Model):
+    nombre = models.CharField(max_length=100)
+
+    academia = models.CharField(max_length=150)
+
+    foto = models.ImageField(
+        upload_to='landing/testimonios/',
+        blank=True,
+        null=True
+    )
+
+    comentario = models.TextField()
+
+    activo = models.BooleanField(default=True)
+
+
+
+class FAQLanding(models.Model):
+    pregunta = models.CharField(max_length=300)
+
+    respuesta = models.TextField()
+
+    orden = models.PositiveIntegerField(default=0)
+
+    activo = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['orden']
+
+
+class BeneficioLanding(models.Model):
+    icono = models.CharField(
+        max_length=50,
+        help_text="Bootstrap Icon"
+    )
+
+    titulo = models.CharField(max_length=100)
+
+    descripcion = models.TextField()
+
+    orden = models.PositiveIntegerField(default=0)
+
+    activo = models.BooleanField(default=True)
+
+
+class VideoLanding(models.Model):
+    titulo = models.CharField(max_length=100)
+
+    youtube_url = models.URLField()
+
+    activo = models.BooleanField(default=True)

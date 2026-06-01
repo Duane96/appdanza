@@ -6,6 +6,7 @@ from .models import PlanSaaS, SuscripcionAcademia
 from django.shortcuts import get_object_or_404
 from django.views import View
 from django.http import JsonResponse
+from .models import *
 
 from django.shortcuts import redirect
 from django.urls import reverse
@@ -38,6 +39,7 @@ class PanelMaestroDashboardView(UserPassesTestMixin, TemplateView):
         # Traemos todas las academias con sus planes mapeados de un solo golpe de base de datos
         context['academias'] = Academia.unfiltered_objects.all().select_related('suscripcion_saas__plan')
         context['planes_saas'] = PlanSaaS.objects.all()
+        context['config'] = LandingPageConfig.objects.first() or LandingPageConfig()
         
         return context
     
@@ -169,11 +171,68 @@ class APIObtenerEstudiantesAcademiaView(UserPassesTestMixin, View):
     
 
 class IndexSaaSGlobalView(TemplateView):
-    """Landing Page principal de la plataforma SaaS (Vitrina comercial externa)."""
     template_name = "saas_core/index_global.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Traemos todos los planes configurados en el sistema para la tabla comparativa de precios
-        context['planes'] = PlanSaaS.objects.all().order_by('precio_mensual')
+        context['config'] = LandingPageConfig.objects.first()
+        context['capturas'] = ScreenshotLanding.objects.filter(activo=True)
+        context['beneficios'] = BeneficioLanding.objects.filter(activo=True)
+        context['faqs'] = FAQLanding.objects.filter(activo=True)
+        context['testimonios'] = TestimonioLanding.objects.filter(activo=True)
+
+        # 🚀 NUEVO: Traemos solo las academias activas y que ya hayan subido su logo
+        context['academias_trust'] = Academia.unfiltered_objects.filter(
+            activo=True
+        ).exclude(logo='')
+
         return context
+    
+
+class MasterActualizarLandingView(UserPassesTestMixin, View):
+    def test_func(self):
+        return self.request.user.is_superuser
+
+    def post(self, request, *args, **kwargs):
+        action = request.POST.get('action')
+        try:
+            # 1. Configuración Básica
+            if action == 'general':
+                config = LandingPageConfig.objects.first() or LandingPageConfig()
+                config.titulo_principal = request.POST.get('titulo_principal')
+                config.subtitulo_principal = request.POST.get('subtitulo_principal')
+                config.boton_principal_texto = request.POST.get('boton_principal_texto')
+                config.whatsapp = request.POST.get('whatsapp')
+                config.email_contacto = request.POST.get('email_contacto')
+                config.mostrar_capturas = 'mostrar_capturas' in request.POST
+                config.mostrar_faq = 'mostrar_faq' in request.POST
+                config.save()
+
+            elif action == 'captura_add':
+                ScreenshotLanding.objects.create(
+                    titulo=request.POST.get('titulo'),
+                    imagen=request.FILES.get('imagen')
+                )
+
+            elif action == 'captura_del':
+                ScreenshotLanding.objects.get(id=request.POST.get('id')).delete()
+
+            elif action == 'testimonio_add':
+                TestimonioLanding.objects.create(
+                    nombre=request.POST.get('nombre'),
+                    comentario=request.POST.get('comentario'),
+                    foto=request.FILES.get('foto')
+                )
+
+            # 2. Manejo de Imágenes de Capturas (Ejemplo rápido)
+            if request.FILES:
+                for key, file in request.FILES.items():
+                    if 'nueva_captura' in key:
+                        ScreenshotLanding.objects.create(
+                            titulo=request.POST.get('nueva_captura_titulo', 'Imagen'),
+                            imagen=file
+                        )
+
+            return JsonResponse({'status': 'success'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)

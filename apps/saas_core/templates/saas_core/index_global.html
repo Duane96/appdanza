@@ -3,448 +3,598 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppDanza | El Sistema Operativo para tu Academia</title>
+    <title>AppDanza | El Sistema Operativo para tu Academia de Baile</title>
     
+    <!-- Bootstrap 5.3 & Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css" rel="stylesheet">
+    
+    <!-- Fuentes Premium (Space Grotesk para títulos, Plus Jakarta para lectura) -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
     
     <style>
         :root {
-            --bg-dark-core: #050505; 
-            --card-dark: rgba(17, 24, 39, 0.6); 
-            --accent-primary: #3b82f6; 
-            --accent-secondary: #ec4899; 
-            --text-high-contrast: #e2e8f0; 
+            /* Paleta Light & Pastel */
+            --bg-body: #f8fafc; /* Gris ultra claro azulado */
+            --bg-card: #ffffff;
+            --text-main: #0f172a; /* Pizarra oscuro, más elegante que negro */
+            --text-muted: #64748b;
+            --primary: #4f46e5; /* Indigo vibrante */
+            --primary-light: #e0e7ff;
+            --secondary: #db2777; /* Rosa vibrante */
+            --shadow-soft: 0 20px 40px -15px rgba(15, 23, 42, 0.08);
+            --shadow-hover: 0 30px 60px -15px rgba(15, 23, 42, 0.12);
+            --border-subtle: rgba(15, 23, 42, 0.06);
         }
 
         body {
-            background-color: var(--bg-dark-core);
-            color: #ffffff;
+            background-color: var(--bg-body);
+            color: var(--text-main);
             font-family: 'Plus Jakarta Sans', sans-serif;
             overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
         }
 
-        .font-space {
-            font-family: 'Space Grotesk', sans-serif;
-        }
+        .font-space { font-family: 'Space Grotesk', sans-serif; }
 
-        /* Luces de fondo dinámicas */
-        .glow-bg, .glow-bg-left {
+        /* 🌸 Brillos Pastel Ambientales (No más oscuridad) */
+        .glow-bg, .glow-bg-left, .glow-bg-bottom {
             position: absolute;
             border-radius: 50%;
-            filter: blur(100px);
+            filter: blur(120px);
             z-index: 0;
             pointer-events: none;
-            animation: pulseGlow 8s infinite alternate;
+            animation: pulseGlow 12s infinite alternate ease-in-out;
         }
-
         .glow-bg {
-            width: 500px;
-            height: 500px;
-            background: rgba(59, 130, 246, 0.15);
-            top: -10%;
-            right: -5%;
+            width: 600px; height: 600px;
+            background: rgba(99, 102, 241, 0.15); /* Indigo suave */
+            top: -10%; right: -5%;
         }
-
         .glow-bg-left {
-            width: 600px;
-            height: 600px;
-            background: rgba(236, 72, 153, 0.12);
-            top: 40%;
-            left: -15%;
-            animation-delay: -4s;
+            width: 500px; height: 500px;
+            background: rgba(236, 72, 153, 0.12); /* Rosa pastel */
+            top: 20%; left: -10%;
+            animation-delay: -3s;
         }
-
+        .glow-bg-bottom {
+            width: 700px; height: 700px;
+            background: rgba(56, 189, 248, 0.12); /* Azul cielo pastel */
+            bottom: 5%; right: 15%;
+            animation-delay: -6s;
+        }
         @keyframes pulseGlow {
-            0% { transform: scale(1); opacity: 0.8; }
-            100% { transform: scale(1.2); opacity: 1; }
+            0% { transform: scale(1) translate(0, 0); opacity: 0.8; }
+            100% { transform: scale(1.1) translate(-20px, 20px); opacity: 1; }
         }
 
+        /* 🧊 Glassmorphism Claro para el Navbar */
         .navbar-appdanza {
-            background: rgba(5, 5, 5, 0.85);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-subtle);
+            transition: all 0.3s;
+        }
+        .navbar-scrolled {
+            background: rgba(255, 255, 255, 0.98);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+        .nav-link {
+            color: var(--text-muted) !important;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+        .nav-link:hover { color: var(--primary) !important; }
+
+        /* ✨ Botones Premium */
+        .btn-primary-custom {
+            background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+            border: none;
+            color: white;
+            box-shadow: 0 10px 20px -5px rgba(79, 70, 229, 0.4);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .btn-primary-custom:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 25px -5px rgba(79, 70, 229, 0.5);
+            color: white;
         }
 
-        /* Tarjetas UI */
+        /* 🃏 Tarjetas Blancas Elevadas (Clean UI) */
         .feature-card {
-            background: var(--card-dark);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
             border-radius: 24px;
+            box-shadow: var(--shadow-soft);
             transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
             position: relative;
-            overflow: hidden;
-        }
-        .feature-card::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.03), transparent);
-            transform: translateX(-100%);
-            transition: 0.6s;
+            z-index: 2;
         }
         .feature-card:hover {
             transform: translateY(-8px);
-            border-color: rgba(59, 130, 246, 0.4);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+            box-shadow: var(--shadow-hover);
+            border-color: rgba(79, 70, 229, 0.2);
         }
-        .feature-card:hover::before {
-            transform: translateX(100%);
-        }
-
+        
+        /* Cajas de íconos en tonos pastel */
         .icon-box {
-            width: 64px;
-            height: 64px;
-            background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: inset 0 0 20px rgba(255,255,255,0.02);
-        }
-
-        /* Precios */
-        .price-card {
-            background: rgba(17, 24, 39, 0.8);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 28px;
-            position: relative;
-            overflow: hidden;
-            transition: transform 0.3s;
-        }
-        .price-card.featured {
-            border: 2px solid var(--accent-primary);
-            background: linear-gradient(180deg, rgba(17,24,39,0.9) 0%, rgba(59,130,246,0.05) 100%);
-            transform: scale(1.02);
-        }
-        .price-card.featured::before {
-            content: "POPULAR";
-            position: absolute;
-            top: 25px;
-            right: -35px;
-            background: linear-gradient(90deg, var(--accent-primary), #60a5fa);
-            color: #fff;
-            font-size: 0.7rem;
-            font-weight: 800;
-            padding: 6px 40px;
-            transform: rotate(45deg);
-            letter-spacing: 1.5px;
-        }
-
-        /* Utilidades de texto */
-        .text-readable-muted { color: var(--text-high-contrast) !important; font-weight: 400; }
-        .text-gradient { background: linear-gradient(90deg, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-
-        /* Estilos Step-by-Step */
-        .step-number {
-            width: 48px;
-            height: 48px;
-            background: rgba(59, 130, 246, 0.15);
-            color: #60a5fa;
-            border: 1px solid rgba(59, 130, 246, 0.3);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
-            font-weight: bold;
+            width: 60px; height: 60px;
+            background: var(--primary-light);
+            color: var(--primary);
+            border-radius: 18px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.75rem;
             margin-bottom: 1.5rem;
         }
 
-        /* Estilos Acordeón FAQ (Adaptación Oscura) */
-        .accordion-item {
-            background-color: transparent;
-            border: 1px solid rgba(255,255,255,0.05);
-            margin-bottom: 1rem;
-            border-radius: 16px !important;
+        .text-gradient { 
+            background: linear-gradient(90deg, #4f46e5, #ec4899); 
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent; 
+        }
+
+        /* 🏆 Marquee: Logos limpios */
+        .marquee-container { width: 100%; overflow: hidden; white-space: nowrap; }
+        .marquee-track { display: inline-flex; animation: scrollMarquee 30s linear infinite; }
+        .marquee-track:hover { animation-play-state: paused; }
+        @keyframes scrollMarquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+        .logo-grayscale { filter: grayscale(100%) opacity(0.4); transition: all 0.3s; }
+        .marquee-item:hover .logo-grayscale { filter: grayscale(0%) opacity(1); }
+
+        /* 💻 Mockup de Cristal para el Video/App */
+        .glass-window {
+            background: rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(24px);
+            border-radius: 24px;
+            box-shadow: 0 30px 60px -15px rgba(0,0,0,0.15);
             overflow: hidden;
+            transform: perspective(1000px) rotateY(-5deg) rotateX(2deg);
+            transition: transform 0.5s ease;
         }
-        .accordion-button {
-            background-color: var(--card-dark);
-            color: #fff;
-            font-weight: 600;
-            box-shadow: none !important;
-            padding: 1.25rem 1.5rem;
+        .glass-window:hover { transform: perspective(1000px) rotateY(0deg) rotateX(0deg); }
+        .window-header {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 12px 20px;
+            display: flex; gap: 8px;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
         }
-        .accordion-button:not(.collapsed) {
-            background-color: rgba(59, 130, 246, 0.1);
-            color: #60a5fa;
-        }
-        .accordion-button::after { filter: invert(1); } /* Hace la flechita blanca */
-        .accordion-body {
-            background-color: rgba(17, 24, 39, 0.4);
-            color: var(--text-high-contrast);
-            border-top: 1px solid rgba(255,255,255,0.05);
-            padding: 1.5rem;
-            line-height: 1.6;
-        }
+        .window-dot { width: 12px; height: 12px; border-radius: 50%; }
+        .dot-r { background: #ef4444; } .dot-y { background: #eab308; } .dot-g { background: #22c55e; }
+
+        /* Acordeón FAQ Clean */
+        .accordion-item { border: 1px solid var(--border-subtle); border-radius: 16px !important; margin-bottom: 1rem; overflow: hidden; background: white; box-shadow: var(--shadow-soft); }
+        .accordion-button { background: white; color: var(--text-main); font-weight: 600; box-shadow: none !important; padding: 1.25rem 1.5rem; }
+        .accordion-button:not(.collapsed) { background: var(--primary-light); color: var(--primary); }
+        .accordion-body { color: var(--text-muted); padding: 1.5rem; line-height: 1.6; }
+
+        /* Etiquetas Confianza */
+        .trust-badge { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-muted); }
     </style>
 </head>
 <body>
 
+    <!-- Capas de luces ambientales -->
     <div class="glow-bg"></div>
     <div class="glow-bg-left"></div>
+    <div class="glow-bg-bottom"></div>
 
-    <nav class="navbar navbar-expand-lg navbar-dark navbar-appdanza fixed-top py-3">
+    <!-- 🌐 NAVBAR LUMINOSO -->
+    <nav class="navbar navbar-expand-lg navbar-light navbar-appdanza fixed-top py-3" id="mainNavbar">
         <div class="container">
             <a class="navbar-brand fw-bold font-space d-flex align-items-center gap-2 fs-4" href="#">
-                <div style="width: 35px; height: 35px; background: linear-gradient(135deg, #3b82f6, #ec4899); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                <div style="width: 35px; height: 35px; background: linear-gradient(135deg, #4f46e5, #ec4899); border-radius: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);">
                     <i class="bi bi-play-fill text-white fs-5"></i>
                 </div>
-                <span>App<span class="fw-light">Danza</span></span>
+                <span class="text-dark">App<span class="fw-light">Danza</span></span>
             </a>
-            <div class="d-none d-md-flex align-items-center gap-4">
-                <a href="#como-funciona" class="text-white-50 text-decoration-none small hover-white">Cómo funciona</a>
-                <a href="#precios" class="text-white-50 text-decoration-none small hover-white">Planes</a>
-                <a href="#faq" class="text-white-50 text-decoration-none small hover-white">FAQ</a>
-                <a href="#" class="btn btn-outline-light btn-sm rounded-pill px-4 fw-semibold ms-2">Ingresar</a>
+            <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navMenu">
+                <div class="navbar-nav ms-auto align-items-center gap-4 mt-3 mt-lg-0">
+                    <a href="#solucion" class="nav-link">La Solución</a>
+                    <a href="#beneficios" class="nav-link">Módulos</a>
+                    {% if config.mostrar_capturas %}<a href="#pantallas" class="nav-link">Plataforma</a>{% endif %}
+                    {% if config.mostrar_faq %}<a href="#faq" class="nav-link">FAQ</a>{% endif %}
+                    
+                </div>
             </div>
         </div>
     </nav>
 
-    <header class="container text-center position-relative" style="padding-top: 180px; padding-bottom: 100px; z-index: 2;">
-        <div class="row justify-content-center">
-            <div class="col-lg-9">
-                <div class="d-inline-flex align-items-center gap-2 px-3 py-2 rounded-pill mb-4" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);">
-                    <span class="badge bg-primary rounded-pill">V 2.0</span>
-                    <span class="small text-white-50">Ingeniería para el ecosistema de la danza</span>
+    <!-- 🚀 HERO SECTION (SPLIT SCREEN CLEAN) -->
+    <header class="position-relative d-flex align-items-center" style="min-height: 100vh; padding-top: 80px; z-index: 2;">
+        <div class="container">
+            <div class="row align-items-center justify-content-between g-5">
+                
+                <!-- Columna Izquierda: Copywriting -->
+                <div class="col-lg-5 text-center text-lg-start">
+                    <div class="d-inline-flex align-items-center gap-2 px-3 py-2 rounded-pill mb-4 bg-white shadow-sm border border-opacity-10">
+                        <span class="badge rounded-pill" style="background: #e0e7ff; color: #4f46e5;">Nueva Versión</span>
+                        <span class="small fw-semibold text-muted">Gestión inteligente para academias</span>
+                    </div>
+                    
+                    <h1 class="display-4 font-space fw-bold mb-4" style="line-height: 1.15; color: var(--text-main);">
+                        {% if config.titulo_principal %}
+                            {{ config.titulo_principal|safe }}
+                        {% else %}
+                            El motor tecnológico de tu <span class="text-gradient d-block mt-2">academia de baile.</span>
+                        {% endif %}
+                    </h1>
+                    
+                    <p class="fs-5 text-muted mb-5" style="line-height: 1.6;">
+                        {{ config.subtitulo_principal|default:"Automatiza tu recepción con códigos QR, blinda tu caja diaria y despídete del desorden en Excel. Tu academia en piloto automático." }}
+                    </p>
+                    
+                    <div class="d-flex flex-column flex-sm-row align-items-center gap-3 justify-content-center justify-content-lg-start mb-4">
+                        <button type="button" class="btn btn-primary-custom btn-lg rounded-pill px-5 py-3 font-space fw-bold" data-bs-toggle="modal" data-bs-target="#leadModal">
+                            {% if config.boton_principal_texto %}{{ config.boton_principal_texto }}{% else %}Agendar Demo Gratuita{% endif %}
+                        </button>
+                    </div>
+                    
+                    <!-- Sellos de confianza -->
+                    <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start gap-4 mt-2">
+                        <div class="trust-badge"><i class="bi bi-shield-check text-success fs-5"></i> Cifrado Bancario</div>
+                        <div class="trust-badge"><i class="bi bi-headset text-primary fs-5"></i> Soporte Humano</div>
+                    </div>
+                </div>
+
+                <!-- Columna Derecha: Ventana Flotante con Video B-Roll -->
+                <div class="col-lg-6 position-relative">
+                    <!-- Decoración detrás del video -->
+                    <div class="position-absolute bg-primary rounded-circle blur-3xl opacity-20" style="width: 300px; height: 300px; top: -50px; right: -50px; filter: blur(60px); z-index: -1;"></div>
+                    
+                    <div class="glass-window">
+                        <!-- Barra superior del sistema operativo -->
+                        <div class="window-header">
+                            <div class="window-dot dot-r"></div>
+                            <div class="window-dot dot-y"></div>
+                            <div class="window-dot dot-g"></div>
+                        </div>
+                        <!-- Contenedor del Video -->
+                        <div class="position-relative bg-dark" style="aspect-ratio: 16/9; overflow: hidden;">
+                            <video autoplay loop muted playsinline class="w-100 h-100 object-fit-cover opacity-75">
+                                <!-- Asegúrate de poner la ruta correcta de tu B-Roll aquí -->
+                                <source src="/static/media/landing_broll.mp4" type="video/mp4">
+                            </video>
+                            
+                            <!-- Capa UI sobre el video para simular el software -->
+                            <div class="position-absolute bottom-0 start-0 w-100 p-4" style="background: linear-gradient(0deg, rgba(0,0,0,0.8) 0%, transparent 100%);">
+                                <div class="d-flex align-items-center gap-3 text-white">
+                                    <i class="bi bi-qr-code-scan fs-3 text-success"></i>
+                                    <div>
+                                        <h6 class="mb-0 fw-bold">Acceso Validado</h6>
+                                        <small class="opacity-75">Suscripción al día • Nivel Intermedio</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 
-                <h1 class="display-3 font-space fw-bold mb-4 text-white" style="line-height: 1.1;">
-                    El motor tecnológico de tu <br>
-                    <span class="text-gradient">academia de baile.</span>
-                </h1>
-                
-                <p class="fs-5 text-readable-muted mx-auto mb-5" style="max-width: 700px; line-height: 1.6;">
-                    Digitaliza tus alumnos, automatiza el acceso con códigos QR y blinda tus finanzas en una plataforma diseñada exclusivamente para el ritmo de tu negocio.
-                </p>
-                
-                <div class="d-flex flex-column flex-sm-row justify-content-center gap-3">
-                    <a href="#precios" class="btn btn-primary btn-lg rounded-pill px-5 py-3 font-space fw-bold shadow-lg" style="font-size: 1rem;">
-                        Ver Licencias <i class="bi bi-arrow-right ms-2"></i>
-                    </a>
-                </div>
             </div>
         </div>
     </header>
 
-    <section id="modulos" class="container py-5 position-relative" style="z-index: 2;">
-        <div class="text-center mb-5 pb-4">
-            <h2 class="font-space fw-bold text-white display-5">Todo bajo control</h2>
-            <p class="text-readable-muted">Herramientas profesionales integradas en un solo lugar.</p>
+    <!-- 🏆 MARQUEE: PRUEBA SOCIAL (BLANCO/GRIS) -->
+    {% if academias_trust %}
+    <section class="py-5 position-relative" style="background: white; border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); z-index: 2;">
+        <div class="container text-center mb-4">
+            <p class="text-muted small font-space text-uppercase fw-bold tracking-widest mb-0" style="letter-spacing: 1.5px;">Directores que ya confían en nuestra tecnología</p>
+        </div>
+        <div class="marquee-container w-100 position-relative">
+            <div class="position-absolute top-0 start-0 h-100 w-15" style="background: linear-gradient(90deg, white 0%, transparent 100%); z-index: 2; pointer-events: none;"></div>
+            <div class="position-absolute top-0 end-0 h-100 w-15" style="background: linear-gradient(270deg, white 0%, transparent 100%); z-index: 2; pointer-events: none;"></div>
+            
+            <div class="marquee-track d-flex align-items-center gap-5">
+                {% for academia in academias_trust %}
+                <div class="marquee-item d-flex align-items-center gap-3" style="min-width: max-content;">
+                    <img src="{{ academia.logo.url }}" alt="{{ academia.nombre }}" class="img-fluid logo-grayscale" style="max-height: 45px; object-fit: contain;">
+                </div>
+                {% endfor %}
+                {% for academia in academias_trust %}
+                <div class="marquee-item d-flex align-items-center gap-3" style="min-width: max-content;">
+                    <img src="{{ academia.logo.url }}" alt="{{ academia.nombre }}" class="img-fluid logo-grayscale" style="max-height: 45px; object-fit: contain;">
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- 🛑 SECCIÓN EL DOLOR VS LA SOLUCIÓN -->
+    <section id="solucion" class="container py-5 my-5 position-relative" style="z-index: 2;">
+        <div class="text-center mb-5 mx-auto" style="max-width: 650px;">
+            <h2 class="font-space fw-bold display-6 mb-3">La administración manual te está costando dinero.</h2>
+            <p class="text-muted fs-5">Las fugas de capital por alumnos morosos y el tiempo perdido en Excel frenan el crecimiento de tu escuela.</p>
+        </div>
+
+        <div class="row g-4 align-items-stretch">
+            <!-- Lo Malo (Gris) -->
+            <div class="col-md-6">
+                <div class="feature-card p-5 h-100 bg-white" style="border-top: 4px solid #94a3b8;">
+                    <h4 class="font-space fw-bold text-muted mb-4"><i class="bi bi-x-octagon me-2"></i> El método antiguo</h4>
+                    <ul class="list-unstyled d-flex flex-column gap-4 text-muted">
+                        <li class="d-flex align-items-start gap-3"><i class="bi bi-dash fs-5 text-danger mt-1"></i> <span>Asistencias tomadas en cuadernos o listas de WhatsApp que nadie revisa.</span></li>
+                        <li class="d-flex align-items-start gap-3"><i class="bi bi-dash fs-5 text-danger mt-1"></i> <span>Incapacidad de bloquear la entrada a alumnos con mensualidades vencidas.</span></li>
+                        <li class="d-flex align-items-start gap-3"><i class="bi bi-dash fs-5 text-danger mt-1"></i> <span>Videos de coreografías compartidos en Drive sin protección.</span></li>
+                    </ul>
+                </div>
+            </div>
+            <!-- Lo Bueno (Acento) -->
+            <div class="col-md-6">
+                <div class="feature-card p-5 h-100" style="background: var(--bg-card); border-top: 4px solid var(--primary);">
+                    <h4 class="font-space fw-bold mb-4" style="color: var(--primary);"><i class="bi bi-check-circle-fill me-2"></i> El estándar AppDanza</h4>
+                    <ul class="list-unstyled d-flex flex-column gap-4 text-dark">
+                        <li class="d-flex align-items-start gap-3"><i class="bi bi-check2-circle fs-5 text-primary mt-1"></i> <span><strong>Tiqueteras Digitales:</strong> Tu staff escanea el QR del alumno y el sistema descuenta la clase al instante.</span></li>
+                        <li class="d-flex align-items-start gap-3"><i class="bi bi-check2-circle fs-5 text-primary mt-1"></i> <span><strong>Filtro de Morosos:</strong> Si el plan expiró, la pantalla se pone en rojo automáticamente en recepción.</span></li>
+                        <li class="d-flex align-items-start gap-3"><i class="bi bi-check2-circle fs-5 text-primary mt-1"></i> <span><strong>Caja a prueba de balas:</strong> Conoce exactamente cuánto ingresó en efectivo vs transferencias.</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ⚡ MÓDULOS (TARJETAS BLANCAS) -->
+    <section id="beneficios" class="container py-5 my-4 position-relative" style="z-index: 2;">
+        <div class="text-center mb-5 mx-auto" style="max-width: 600px;">
+            <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-2 mb-3 fw-bold">Ecosistema Todo en Uno</span>
+            <h2 class="font-space fw-bold display-5">Módulos diseñados para dueños exigentes</h2>
         </div>
 
         <div class="row g-4">
-            <div class="col-md-6 col-lg-3">
-                <div class="card feature-card p-4 h-100">
-                    <div class="icon-box mb-4 text-primary"><i class="bi bi-qr-code-scan fs-3"></i></div>
-                    <h5 class="font-space fw-bold text-white mb-3">Accesos QR</h5>
-                    <p class="text-readable-muted small mb-0">Credenciales únicas. Controla la asistencia en recepción escaneando a tus alumnos en menos de un segundo.</p>
-                </div>
-            </div>
-            <div class="col-md-6 col-lg-3">
-                <div class="card feature-card p-4 h-100">
-                    <div class="icon-box mb-4 text-success"><i class="bi bi-wallet2 fs-3"></i></div>
-                    <h5 class="font-space fw-bold text-white mb-3">Finanzas DIAN</h5>
-                    <p class="text-readable-muted small mb-0">Flujo de caja, tiqueteras y gastos de sede. Balances financieros estructurados para tu contabilidad.</p>
-                </div>
-            </div>
-            <div class="col-md-6 col-lg-3">
-                <div class="card feature-card p-4 h-100">
-                    <div class="icon-box mb-4 text-danger"><i class="bi bi-play-circle fs-3"></i></div>
-                    <h5 class="font-space fw-bold text-white mb-3">Multimedia Segura</h5>
-                    <p class="text-readable-muted small mb-0">Embebe videos ocultos de YouTube. El sistema asegura que solo alumnos con planes al día puedan visualizarlos.</p>
-                </div>
-            </div>
-            <div class="col-md-6 col-lg-3">
-                <div class="card feature-card p-4 h-100">
-                    <div class="icon-box mb-4 text-warning"><i class="bi bi-ticket-detailed fs-3"></i></div>
-                    <h5 class="font-space fw-bold text-white mb-3">Gestión de Eventos</h5>
-                    <p class="text-readable-muted small mb-0">Organiza galas y congresos. Vende preventas, aplica cupones de descuento y gestiona la taquilla independiente.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section id="como-funciona" class="container py-5 my-5 position-relative" style="z-index: 2;">
-        <div class="row align-items-center">
-            <div class="col-lg-5 mb-5 mb-lg-0">
-                <h2 class="font-space fw-bold text-white display-6 mb-4">Migrar a la era digital es más fácil de lo que crees.</h2>
-                <p class="text-readable-muted mb-4">Deja atrás las hojas de cálculo confusas y los cuadernos de asistencia perdidos. AppDanza se encarga de la ingeniería pesada para que tú te enfoques en enseñar.</p>
-                <div class="d-flex align-items-center gap-3 mt-4 p-3 rounded-4" style="background: rgba(255,255,255,0.03); border: 1px dashed rgba(255,255,255,0.1);">
-                    <i class="bi bi-shield-check text-success fs-2"></i>
-                    <div>
-                        <strong class="text-white d-block">Arquitectura Multi-tenant</strong>
-                        <span class="small text-white-50">Tus datos están aislados y encriptados.</span>
+            {% for beneficio in beneficios %}
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card p-4 h-100">
+                    <div class="icon-box">
+                        <i class="bi {{ beneficio.icono|default:'bi-star-fill' }}"></i>
                     </div>
+                    <h5 class="font-space fw-bold mb-3">{{ beneficio.titulo }}</h5>
+                    <p class="text-muted small mb-0">{{ beneficio.descripcion }}</p>
                 </div>
             </div>
-            
-            <div class="col-lg-6 offset-lg-1">
-                <div class="d-flex flex-column gap-4">
-                    <div class="card feature-card p-4 border-0">
-                        <div class="d-flex gap-4">
-                            <div class="step-number font-space">1</div>
-                            <div>
-                                <h5 class="text-white fw-bold mb-2">Configura tu sede</h5>
-                                <p class="text-readable-muted small mb-0">Registra los planes que ofreces (mensualidades, clases sueltas o tiqueteras). Agrega a tu staff e instructores con permisos controlados.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card feature-card p-4 border-0">
-                        <div class="d-flex gap-4">
-                            <div class="step-number font-space">2</div>
-                            <div>
-                                <h5 class="text-white fw-bold mb-2">Conecta a tus alumnos</h5>
-                                <p class="text-readable-muted small mb-0">Tus estudiantes ingresan al portal, compran su plan y el sistema les genera automáticamente su credencial QR intransferible.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card feature-card p-4 border-0">
-                        <div class="d-flex gap-4">
-                            <div class="step-number font-space">3</div>
-                            <div>
-                                <h5 class="text-white fw-bold mb-2">Control total y crecimiento</h5>
-                                <p class="text-readable-muted small mb-0">Escanea asistencias, bloquea morosos en la puerta automáticamente y revisa tu cierre de caja detallado a final de mes.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section id="precios" class="container py-5 my-5 position-relative" style="z-index: 2;">
-        <div class="text-center mb-5 pb-3">
-            <h2 class="font-space fw-bold text-white display-5">Elige tu licencia</h2>
-            <p class="text-readable-muted">Planes escalables según el volumen de tu academia.</p>
-        </div>
-
-        <div class="row g-4 justify-content-center align-items-stretch">
-            {% for plan in planes %}
-                <div class="col-md-6 col-lg-4 d-flex">
-                    <div class="card price-card shadow p-4 w-100 d-flex flex-column {% if plan.permite_multimedia %}featured{% endif %}">
-                        <div class="card-body p-2 d-flex flex-column h-100">
-                            <h4 class="font-space fw-bold text-white mb-1">{{ plan.nombre }}</h4>
-                            <div class="d-flex align-items-baseline my-3">
-                                <span class="display-5 font-space fw-bold text-white">${{ plan.precio_mensual|floatformat:0 }}</span>
-                                <span class="text-white-50 small ms-2">/ mes</span>
-                            </div>
-                            
-                            <div class="p-3 mb-4 rounded-3" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);">
-                                <p class="text-white small mb-0 text-center">Hasta <strong>{{ plan.max_estudiantes }}</strong> estudiantes activos</p>
-                            </div>
-                            
-                            <ul class="list-unstyled d-flex flex-column gap-3 small mb-5 mt-auto">
-                                <li class="d-flex align-items-center gap-3 text-white">
-                                    <i class="bi {% if plan.permite_asistencias_qr %}bi-check-circle-fill text-primary{% else %}bi-x-circle text-muted{% endif %} fs-5"></i>
-                                    <span class="{% if not plan.permite_asistencias_qr %}text-muted{% endif %}">Escáner de Asistencias QR</span>
-                                </li>
-                                <li class="d-flex align-items-center gap-3 text-white">
-                                    <i class="bi {% if plan.permite_finanzas %}bi-check-circle-fill text-primary{% else %}bi-x-circle text-muted{% endif %} fs-5"></i>
-                                    <span class="{% if not plan.permite_finanzas %}text-muted{% endif %}">Módulo de Finanzas y Caja</span>
-                                </li>
-                                <li class="d-flex align-items-center gap-3 text-white">
-                                    <i class="bi {% if plan.permite_multimedia %}bi-check-circle-fill text-primary{% else %}bi-x-circle text-muted{% endif %} fs-5"></i>
-                                    <span class="{% if not plan.permite_multimedia %}text-muted{% endif %}">Gestor de Videos Privados</span>
-                                </li>
-                                <li class="d-flex align-items-center gap-3 text-white">
-                                    <i class="bi {% if plan.permite_eventos %}bi-check-circle-fill text-primary{% else %}bi-x-circle text-muted{% endif %} fs-5"></i>
-                                    <span class="{% if not plan.permite_eventos %}text-muted{% endif %}">Creación de Eventos y Taquilla</span>
-                                </li>
-                            </ul>
-                            
-                            <button class="btn {% if plan.permite_multimedia %}btn-primary{% else %}btn-outline-light{% endif %} w-100 rounded-pill py-2.5 fw-bold mt-auto">
-                                Seleccionar Plan
-                            </button>
-                        </div>
-                    </div>
-                </div>
             {% empty %}
-                <div class="col-12 text-center py-5">
-                    <div class="p-5 rounded-4" style="background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.1);">
-                        <i class="bi bi-box-seam text-white-50 display-4 mb-3 d-block"></i>
-                        <p class="text-readable-muted fs-5">No hay planes comerciales configurados en la consola maestra.</p>
-                    </div>
+            <!-- Fallbacks Limpios -->
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card p-4 h-100">
+                    <div class="icon-box"><i class="bi bi-qr-code-scan"></i></div>
+                    <h5 class="font-space fw-bold mb-3">Control de Acceso QR</h5>
+                    <p class="text-muted small mb-0">Convierte cualquier celular o tablet en el escáner oficial de la entrada. Control exacto de aforos y planes.</p>
                 </div>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card p-4 h-100">
+                    <div class="icon-box" style="background: #dcfce7; color: #16a34a;"><i class="bi bi-wallet2"></i></div>
+                    <h5 class="font-space fw-bold mb-3">Cierres Contables DIAN</h5>
+                    <p class="text-muted small mb-0">Emite recibos, controla gastos de sede e imprime balances financieros mensuales listos para tu contador.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card p-4 h-100">
+                    <div class="icon-box" style="background: #fee2e2; color: #dc2626;"><i class="bi bi-play-btn-fill"></i></div>
+                    <h5 class="font-space fw-bold mb-3">Academia Virtual Segura</h5>
+                    <p class="text-muted small mb-0">Embebe videos ocultos de YouTube en nuestra plataforma. El sistema garantiza que solo alumnos al día puedan visualizarlos.</p>
+                </div>
+            </div>
             {% endfor %}
         </div>
     </section>
 
-    <section id="faq" class="container py-5 my-5 position-relative" style="z-index: 2;">
-        <div class="row justify-content-center">
-            <div class="col-lg-8 text-center mb-5">
-                <h2 class="font-space fw-bold text-white display-6">Preguntas Frecuentes</h2>
-                <p class="text-readable-muted">Resolvemos tus dudas sobre seguridad, finanzas e implementación.</p>
+    <!-- 📱 ECOSISTEMA (CAPTURA DE PANTALLA PRINCIPAL) -->
+    {% if config.mostrar_capturas %}
+    <section id="pantallas" class="container py-5 my-5 position-relative bg-white rounded-5 shadow-sm border border-opacity-10 p-4 p-lg-5" style="z-index: 2;">
+        <div class="row align-items-center g-5">
+            <div class="col-lg-5">
+                <h2 class="font-space fw-bold display-6 mb-4">Tres portales, <br><span class="text-primary">una sola base de datos.</span></h2>
+                <p class="text-muted mb-4">Nuestra arquitectura multi-tenant mantiene tu información aislada en servidores de alto rendimiento.</p>
+                
+                <div class="d-flex flex-column gap-4">
+                    {% for captura in capturas %}
+                    <div class="d-flex align-items-start gap-3">
+                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mt-1 shadow-sm" style="width: 28px; height: 28px;"><i class="bi bi-check text-white"></i></div>
+                        <div>
+                            <h6 class="fw-bold mb-1 text-dark">{{ captura.titulo }}</h6>
+                            <p class="text-muted small mb-0">{{ captura.descripcion }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
-            <div class="col-lg-8">
-                <div class="accordion" id="faqAppDanza">
-                    <div class="accordion-item">
-                        <h2 class="accordion-header" id="headingOne">
-                            <button class="accordion-button font-space" type="button" data-bs-toggle="collapse" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
-                                ¿Los datos de mis alumnos están seguros y separados de otras escuelas?
-                            </button>
-                        </h2>
-                        <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#faqAppDanza">
-                            <div class="accordion-body">
-                                <strong>Totalmente.</strong> AppDanza utiliza una arquitectura Multi-Tenant aislada. Esto significa que la base de datos de tu academia funciona en una "bóveda" exclusiva. Ni otras academias pueden ver tus datos, ni tú los de ellos.
-                            </div>
+            
+            <div class="col-lg-7">
+                <div class="glass-window p-2 bg-light shadow-lg" style="border: 4px solid white;">
+                    {% if capturas.first %}
+                        <img src="{{ capturas.first.imagen.url }}" alt="Dashboard AppDanza" class="img-fluid rounded-4 shadow-sm w-100">
+                    {% else %}
+                        <div class="text-center p-5 text-muted">
+                            <i class="bi bi-laptop display-1 d-block mb-3 text-primary opacity-50"></i>
+                            <span class="small fw-semibold">Dashboard Administrativo</span>
                         </div>
-                    </div>
-                    <div class="accordion-item">
-                        <h2 class="accordion-header" id="headingTwo">
-                            <button class="accordion-button collapsed font-space" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
-                                ¿Cómo funciona el módulo de la DIAN y el cierre de caja?
-                            </button>
-                        </h2>
-                        <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#faqAppDanza">
-                            <div class="accordion-body">
-                                Entendemos la contabilidad colombiana. El sistema automatiza el registro de ingresos (mensualidades, clases) y te permite registrar los egresos fijos (arriendo, nómina). Al final del mes, generas un reporte estructurado que le facilitará la vida a tu contador y te mantendrá al día normativamente.
-                            </div>
-                        </div>
-                    </div>
-                    <div class="accordion-item">
-                        <h2 class="accordion-header" id="headingThree">
-                            <button class="accordion-button collapsed font-space" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
-                                ¿Necesito hardware especial para escanear el QR?
-                            </button>
-                        </h2>
-                        <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#faqAppDanza">
-                            <div class="accordion-body">
-                                <strong>Cero equipos costosos.</strong> Cualquier celular, tablet o laptop con cámara y conexión a internet puede convertirse en el escáner oficial de la recepción. Tu equipo de staff solo inicia sesión con su rol, apunta al QR del estudiante y el sistema valida si puede entrar o si su mensualidad está vencida.
-                            </div>
-                        </div>
-                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </section>
+    {% endif %}
 
-    <footer class="py-5 mt-5" style="border-top: 1px solid rgba(255, 255, 255, 0.05); background: #030303;">
+    <!-- 💬 TESTIMONIOS (LIMPIOS) -->
+    {% if testimonios %}
+    <section class="container py-5 my-4 position-relative" style="z-index: 2;">
+        <div class="text-center mb-5">
+            <h2 class="font-space fw-bold display-5">Aprobado por el ecosistema</h2>
+        </div>
+        <div class="row g-4 justify-content-center">
+            {% for test in testimonios %}
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card p-4 h-100 d-flex flex-column justify-content-between border-0 shadow-sm">
+                    <div class="mb-4">
+                        <i class="bi bi-quote fs-1 text-primary opacity-25"></i>
+                        <p class="text-dark fw-medium mt-2">"{{ test.comentario }}"</p>
+                    </div>
+                    <div class="d-flex align-items-center gap-3 pt-3 border-top border-light">
+                        {% if test.foto %}
+                        <img src="{{ test.foto.url }}" alt="{{ test.nombre }}" class="rounded-circle shadow-sm" style="width: 50px; height: 50px; object-fit: cover;">
+                        {% else %}
+                        <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center text-primary fw-bold" style="width: 50px; height: 50px;">{{ test.nombre|slice:":1" }}</div>
+                        {% endif %}
+                        <div>
+                            <strong class="text-dark d-block small">{{ test.nombre }}</strong>
+                            <span class="text-muted" style="font-size: 0.75rem;">{{ test.academia }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- 🗃️ FAQ -->
+    {% if config.mostrar_faq %}
+    <section id="faq" class="container py-5 my-5 position-relative" style="z-index: 2;">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 text-center mb-5">
+                <h2 class="font-space fw-bold display-6">Respuestas claras</h2>
+                <p class="text-muted">Despejamos tus dudas sobre implementación y seguridad.</p>
+            </div>
+            <div class="col-lg-8">
+                <div class="accordion" id="faqAccordion">
+                    {% for faq in faqs %}
+                    <div class="accordion-item border-0 shadow-sm">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed font-space" type="button" data-bs-toggle="collapse" data-bs-target="#faq-{{ faq.id }}">
+                                {{ faq.pregunta }}
+                            </button>
+                        </h2>
+                        <div id="faq-{{ faq.id }}" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body bg-light">
+                                {{ faq.respuesta }}
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="accordion-item border-0 shadow-sm">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button font-space" type="button" data-bs-toggle="collapse" data-bs-target="#c1">
+                                ¿Necesito hardware especial para el acceso QR?
+                            </button>
+                        </h2>
+                        <div id="c1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body bg-light">
+                                <strong>No.</strong> Cualquier smartphone, tablet o computadora con cámara sirve como punto de escaneo. Solo inicias sesión como Staff y abres el lector.
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- 📩 MODAL LEAD MAGNET (FONDO BLANCO ELEGANTE) -->
+    <div class="modal fade" id="leadModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-5 shadow-lg" style="overflow: hidden;">
+                <!-- Header del Modal con gradiente pastel -->
+                <div class="bg-light p-4 position-relative border-bottom border-opacity-10 text-center" style="background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);">
+                    <button type="button" class="btn-close position-absolute top-0 end-0 m-4" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <div class="d-inline-flex p-3 rounded-circle mb-3 bg-white shadow-sm mt-2">
+                        <i class="bi bi-calendar-check text-primary fs-3"></i>
+                    </div>
+                    <h4 class="font-space fw-bold text-dark">Agendar Demostración</h4>
+                    <p class="text-muted small mb-0 px-3">Deja tus datos. Te escribiremos a WhatsApp para mostrarte la plataforma operando en vivo.</p>
+                </div>
+                
+                <div class="p-4 p-md-5 bg-white">
+                    <form action="#" method="POST" id="leadForm">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-semibold">Tu Nombre</label>
+                            <input type="text" id="directorName" class="form-control form-control-lg bg-light border-0 shadow-none fs-6" placeholder="Ej: Duane Yaleja" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-semibold">Nombre de la Escuela</label>
+                            <input type="text" id="academyName" class="form-control form-control-lg bg-light border-0 shadow-none fs-6" placeholder="Ej: Ritmo Social" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label text-muted small fw-semibold">WhatsApp de Contacto</label>
+                            <input type="tel" id="directorPhone" class="form-control form-control-lg bg-light border-0 shadow-none fs-6" placeholder="Ej: +57 300 123 4567" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary-custom w-100 rounded-pill py-3 fw-bold font-space mt-2">
+                            Solicitar Acceso <i class="bi bi-whatsapp ms-2"></i>
+                        </button>
+                        <div class="text-center mt-3">
+                            <span class="small text-muted"><i class="bi bi-lock-fill me-1"></i> Tus datos están protegidos. No hacemos spam.</span>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🏢 FOOTER CLEAN -->
+    <footer class="py-5 mt-5 bg-white border-top">
         <div class="container text-center text-md-start">
             <div class="row align-items-center g-4">
                 <div class="col-md-4 text-center text-md-start">
                     <div class="d-flex align-items-center justify-content-center justify-content-md-start gap-2 mb-2">
-                        <div style="width: 24px; height: 24px; background: linear-gradient(135deg, #3b82f6, #ec4899); border-radius: 6px; display: flex; align-items: center; justify-content: center;">
+                        <div style="width: 24px; height: 24px; background: linear-gradient(135deg, #4f46e5, #ec4899); border-radius: 6px; display: flex; align-items: center; justify-content: center;">
                             <i class="bi bi-play-fill text-white" style="font-size: 0.8rem;"></i>
                         </div>
-                        <strong class="font-space text-white fs-5">AppDanza</strong>
+                        <strong class="font-space text-dark fs-5">AppDanza</strong>
                     </div>
-                    <p class="text-readable-muted small mb-0">&copy; 2026. Todos los derechos reservados.</p>
+                    <p class="text-muted small mb-0">&copy; 2026. Todos los derechos reservados.</p>
                 </div>
                 <div class="col-md-8 text-center text-md-end">
-                    <p class="small text-readable-muted mb-0">Infraestructura SaaS multi-tenant. Cifrado de extremo a extremo.</p>
+                    <p class="small text-muted mb-0 fw-medium">SaaS Multi-Tenant para el ecosistema del arte y el movimiento.</p>
                 </div>
             </div>
         </div>
     </footer>
 
-    {% include 'partials/_cookies_banner.html' %}
-
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- ⚡ JAVASCRIPT: Lógica UX y Ventas -->
+    <script>
+        // Sombra suave en Navbar al hacer Scroll
+        window.addEventListener('scroll', function() {
+            const navbar = document.getElementById('mainNavbar');
+            if (window.scrollY > 50) {
+                navbar.classList.add('navbar-scrolled');
+            } else {
+                navbar.classList.remove('navbar-scrolled');
+            }
+        });
+
+        // Lógica del Lead Magnet (Cierra la venta por WhatsApp)
+        document.getElementById('leadForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('directorName').value.trim();
+            const academy = document.getElementById('academyName').value.trim();
+            const phone = document.getElementById('directorPhone').value.trim();
+            
+            const whatsappSaaS = "{{ config.whatsapp|default:'573000000000' }}"; 
+            
+            const text = `¡Hola AppDanza! Me interesa una demostración del sistema para mi sede.%0A%0A` +
+                         `*Director:* ${name}%0A` +
+                         `*Academia:* ${academy}%0A` +
+                         `*Teléfono:* ${phone}%0A%0A` +
+                         `¿Tienen disponibilidad en la agenda?`;
+            
+            window.open(`https://api.whatsapp.com/send?phone=${whatsappSaaS}&text=${text}`, '_blank');
+            
+            const modalElement = document.getElementById('leadModal');
+            const modal = bootstrap.Modal.getInstance(modalElement);
+            modal.hide();
+            
+            // Limpia el formulario
+            this.reset();
+        });
+    </script>
 </body>
 </html>
