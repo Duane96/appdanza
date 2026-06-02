@@ -183,6 +183,7 @@ CONTENT_SECURITY_POLICY = {
             "https://www.youtube.com",      # <-- PERMITIDO: JS del reproductor de YouTube
             "https://s.ytimg.com",          # <-- PERMITIDO: Assets estáticos de YouTube (reproductor)
             "https://cdn.jsdelivr.net",
+            "https://static.cloudflareinsights.com",
         ),
 
         ####################################################
@@ -214,6 +215,7 @@ CONTENT_SECURITY_POLICY = {
             "https://www.googleapis.com",
             "https://youtube.googleapis.com",
             "https://cdn.jsdelivr.net",
+            "https://cloudflareinsights.com",
         ),
 
         ####################################################
