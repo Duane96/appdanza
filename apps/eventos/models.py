@@ -175,6 +175,8 @@ class CodigoDescuento(models.Model):
     limite_usos = models.PositiveIntegerField(default=100)
     usos_actuales = models.PositiveIntegerField(default=0)
     precio_especial = models.DecimalField(max_digits=10, decimal_places=2)
+    # NUEVO: Precio aplicado SOLAMENTE si el evento es multidía y el usuario elige Pase por 1 Día
+    precio_especial_dia = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Descuento (Por 1 Día)")
 
     class Meta:
         unique_together = ('evento', 'nombre_codigo')

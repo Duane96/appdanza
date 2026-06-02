@@ -17,8 +17,15 @@ class EventoForm(forms.ModelForm):
         
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control'}),
-            'fecha': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
-            'fecha_fin': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
+            # 🎯 REPARACIÓN SENIOR: format='%Y-%m-%dT%H:%M' fuerza la sintaxis compatible con HTML5
+            'fecha': forms.DateTimeInput(
+                format='%Y-%m-%dT%H:%M',
+                attrs={'class': 'form-control', 'type': 'datetime-local'}
+            ),
+            'fecha_fin': forms.DateTimeInput(
+                format='%Y-%m-%dT%H:%M',
+                attrs={'class': 'form-control', 'type': 'datetime-local'}
+            ),
             'es_multidias': forms.CheckboxInput(attrs={'class': 'form-check-input', 'role': 'switch'}),
             'cantidad_dias': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
             'precio_preventa': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Precio Full Pass'}),
@@ -41,10 +48,15 @@ class EventoForm(forms.ModelForm):
 class CodigoDescuentoForm(forms.ModelForm):
     class Meta:
         model = CodigoDescuento
-        fields = ['nombre_codigo', 'precio_especial', 'limite_usos', 'fecha_caducidad']
+        # 🎯 Añadimos 'precio_especial_dia' a los campos permitidos
+        fields = ['nombre_codigo', 'precio_especial', 'precio_especial_dia', 'limite_usos', 'fecha_caducidad']
         widgets = {
             'nombre_codigo': forms.TextInput(attrs={'class': 'form-control text-uppercase', 'placeholder': 'Ej: PROMO25K'}),
-            'precio_especial': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '25000'}),
+            'precio_especial': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '25000 (Pase Full)'}),
+            
+            # 🎯 Nuevo widget para el descuento de 1 día
+            'precio_especial_dia': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ej: 15000 (Solo para 1 Día)'}),
+            
             'limite_usos': forms.NumberInput(attrs={'class': 'form-control'}),
             'fecha_caducidad': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
         }

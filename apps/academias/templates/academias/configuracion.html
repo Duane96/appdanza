@@ -5,6 +5,13 @@
     <div class="mb-4">
         <h2 class="fw-bold text-dark m-0">Configuración de la Landing Pública</h2>
         <p class="text-muted small">Personaliza los colores, imágenes del carrete, textos informativos y enlaces comerciales de tu sitio web.</p>
+        
+        <!-- Badge informativo para que el usuario sepa en qué modo está -->
+        {% if object.es_solo_eventos %}
+            <span class="badge bg-warning text-dark border"><i class="bi bi-ticket-perforated-fill me-1"></i> Modo Productora de Eventos Activo</span>
+        {% else %}
+            <span class="badge bg-primary text-white border"><i class="bi bi-building me-1"></i> Modo Academia Regular Activo</span>
+        {% endif %}
     </div>
 
     <form method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
@@ -79,6 +86,8 @@
                     </div>
                 </div>
 
+                <!-- 🧠 CONDICIONAL: Los Cuadros de Características SOLO se muestran si NO es "Solo Eventos" -->
+                {% if not object.es_solo_eventos %}
                 <div class="card border-0 shadow-sm bg-white p-4 rounded-4 mb-4">
                     <h5 class="fw-bold text-dark mb-3"><i class="bi bi-grid-1x2-fill text-info me-2"></i>Cuadros Destacados de Características</h5>
                     <p class="text-muted small mb-3">Configura hasta 4 cuadros. Si dejas el título de los cuadros 3 o 4 en blanco, la landing ocultará el bloque automáticamente adaptando el diseño.</p>
@@ -161,8 +170,10 @@
                         </div>
                     </div>
                 </div>
+                {% endif %}
+            </div> 
 
-            </div> <div class="col-lg-6">
+            <div class="col-lg-6">
                 
                 <div class="card border-0 shadow-sm bg-white p-4 rounded-4 mb-4">
                     <h5 class="fw-bold text-dark mb-3"><i class="bi bi-images text-warning me-2"></i>Carrete Principal (Hero Slider)</h5>
@@ -186,6 +197,8 @@
                         </div>
                     </div>
 
+                    <!-- 🧠 CONDICIONAL: La Diapositiva 2 SOLO se muestra si NO es "Solo Eventos" -->
+                    {% if not object.es_solo_eventos %}
                     <div class="p-3 bg-light rounded-3 border">
                         <h6 class="fw-bold text-dark mb-2 small text-uppercase text-muted">Diapositiva 2 (Eventos/Comunidad)</h6>
                         <div class="mb-2">
@@ -204,6 +217,7 @@
                             {% endif %}
                         </div>
                     </div>
+                    {% endif %}
                 </div>
 
                 <div class="card border-0 shadow-sm bg-white p-4 rounded-4 mb-4">
@@ -217,6 +231,9 @@
                             <label class="form-label small fw-semibold text-secondary">Teléfono de Atención</label>
                             {{ form.telefono }}
                         </div>
+                        
+                        <!-- 🧠 CONDICIONAL: Sedes y Horarios SOLO se muestran si NO es "Solo Eventos" -->
+                        {% if not object.es_solo_eventos %}
                         <div class="col-12">
                             <label class="form-label small fw-semibold text-secondary">Dirección Exacta de la Sede</label>
                             {{ form.direccion_sede }}
@@ -225,6 +242,8 @@
                             <label class="form-label small fw-semibold text-secondary">Horario Comercial Público</label>
                             {{ form.horario_atencion }}
                         </div>
+                        {% endif %}
+
                         <div class="col-md-6">
                             <label class="form-label small fw-semibold text-secondary"><i class="bi bi-instagram text-danger me-1"></i>URL Instagram</label>
                             {{ form.instagram_url }}
@@ -233,6 +252,8 @@
                             <label class="form-label small fw-semibold text-secondary"><i class="bi bi-facebook text-primary me-1"></i>URL Facebook</label>
                             {{ form.facebook_url }}
                         </div>
+                        
+                        <!-- Las otras redes pueden o no ser relevantes, pero las dejamos por consistencia de negocio -->
                         <div class="col-md-4">
                             <label class="form-label small fw-semibold text-secondary"><i class="bi bi-tiktok text-dark me-1"></i>URL TikTok</label>
                             {{ form.tiktok_url }}
@@ -248,7 +269,10 @@
                     </div>
                 </div>
 
-            </div> </div> <div class="row mt-3">
+            </div> 
+        </div> 
+        
+        <div class="row mt-3">
             <div class="col-12 text-end mb-5">
                 <button type="submit" class="btn btn-tenant-primary px-5 py-2.5 rounded-pill fw-bold shadow-sm">
                     <i class="bi bi-cloud-check-fill me-2"></i>Guardar Cambios de la Plataforma
@@ -260,6 +284,7 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", function() {
+        // Ejecutamos el script solo si existen los selects de iconos (académicos)
         for (let i = 1; i <= 4; i++) {
             const selectElement = document.getElementById(`select-icono-${i}`);
             const previewElement = document.getElementById(`preview-box-${i}`);

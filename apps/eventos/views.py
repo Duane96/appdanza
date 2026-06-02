@@ -359,13 +359,24 @@ class RegistroEventoPublicoView(FormView):
             precio_unidad = self.evento_obj.precio_por_dia
             dias_a_otorgar = 1
 
-        # 🎟️ 3. MOTOR DE CUPONES
+        # 🎟️ 3. MOTOR DE CUPONES INTELIGENTE (ACTUALIZADO)
         codigo_texto = form.cleaned_data.get('codigo_cupon', '').strip().upper()
         if codigo_texto:
             cupon = CodigoDescuento.objects.filter(evento=self.evento_obj, nombre_codigo=codigo_texto).first()
             if cupon and cupon.es_valido:
                 recibo.codigo_descuento_usado = cupon
-                precio_unidad = cupon.precio_especial
+                
+                # Evaluación dinámica Multi-día
+                if self.evento_obj.es_multidias:
+                    if tipo_pase == 'FULL':
+                        precio_unidad = cupon.precio_especial
+                    else:
+                        # Si compró 1 día, usa precio_especial_dia (si existe), si no, fallback al especial normal
+                        precio_unidad = cupon.precio_especial_dia if cupon.precio_especial_dia else cupon.precio_especial
+                else:
+                    # Evento normal de 1 día
+                    precio_unidad = cupon.precio_especial
+
                 cupon.usos_actuales += 1
                 cupon.save(update_fields=['usos_actuales'])
 
@@ -410,9 +421,12 @@ class ValidarCuponAPIView(View):
         cupon = CodigoDescuento.objects.filter(evento=evento, nombre_codigo=codigo).first()
         
         if cupon and cupon.es_valido:
+            # Determinamos si hay un precio específico de día, si no, igualamos al full
+            precio_dia = float(cupon.precio_especial_dia) if cupon.precio_especial_dia else float(cupon.precio_especial)
             return JsonResponse({
                 'valido': True,
-                'precio_especial': float(cupon.precio_especial)
+                'precio_especial_full': float(cupon.precio_especial),
+                'precio_especial_dia': precio_dia
             })
         return JsonResponse({'valido': False})
     

@@ -250,9 +250,14 @@
                 {% for cod in codigos %}
                 <div class="list-group-item d-flex justify-content-between align-items-center px-0 bg-transparent">
                     <div>
-                        <strong class="text-dark">{{ cod.nombre_codigo }}</strong>
-                        <small class="text-muted d-block">Precio Cupón: ${{ cod.precio_especial|floatformat:0 }}</small>
-                    </div>
+    <strong class="text-dark">{{ cod.nombre_codigo }}</strong>
+    <small class="text-muted d-block">
+        Full: ${{ cod.precio_especial|floatformat:0 }} 
+        {% if evento.es_multidias and cod.precio_especial_dia %}
+            <span class="text-warning-emphasis">| x Día: ${{ cod.precio_especial_dia|floatformat:0 }}</span>
+        {% endif %}
+    </small>
+</div>
                     <span class="badge bg-light text-secondary font-monospace">{{ cod.usos_actuales }}/{{ cod.limite_usos }}</span>
                 </div>
                 {% empty %}
@@ -319,25 +324,40 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label small fw-semibold text-secondary">Nombre del Código (Cupón)</label>
-                        {{ form_codigo.nombre_codigo }}
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-semibold text-secondary">Precio Especial con Descuento ($)</label>
-                        {{ form_codigo.precio_especial }}
-                    </div>
-                    <div class="row g-2">
-                        <div class="col-6">
-                            <label class="form-label small fw-semibold text-secondary">Límite de Usos Max</label>
-                            {{ form_codigo.limite_usos }}
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label small fw-semibold text-secondary">Vence El</label>
-                            {{ form_codigo.fecha_caducidad }}
-                        </div>
-                    </div>
-                </div>
+    <div class="mb-3">
+        <label class="form-label small fw-semibold text-secondary">Nombre del Código (Cupón)</label>
+        {{ form_codigo.nombre_codigo }}
+    </div>
+    
+    {% if evento.es_multidias %}
+        <div class="mb-3">
+            <label class="form-label small fw-semibold text-secondary">Precio Descuento (Pase FULL) ($)</label>
+            {{ form_codigo.precio_especial }}
+        </div>
+        
+        <div class="mb-3 p-3 bg-light rounded border border-warning-subtle">
+            <label class="form-label small fw-semibold text-secondary"><i class="bi bi-star-half text-warning me-1"></i>Precio Descuento (Por 1 Día) ($)</label>
+            {{ form_codigo.precio_especial_dia }}
+            <small class="text-muted extra-small d-block mt-1">Este precio se aplicará SÓLO si el alumno selecciona el pase de "1 Día" en el congreso.</small>
+        </div>
+    {% else %}
+        <div class="mb-3">
+            <label class="form-label small fw-semibold text-secondary">Precio Especial con Descuento ($)</label>
+            {{ form_codigo.precio_especial }}
+        </div>
+        {% endif %}
+
+    <div class="row g-2">
+        <div class="col-6">
+            <label class="form-label small fw-semibold text-secondary">Límite Usos Max</label>
+            {{ form_codigo.limite_usos }}
+        </div>
+        <div class="col-6">
+            <label class="form-label small fw-semibold text-secondary">Vence El</label>
+            {{ form_codigo.fecha_caducidad }}
+        </div>
+    </div>
+</div>
                 <div class="modal-footer border-0">
                     <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cerrar</button>
                     <button type="submit" class="btn btn-dark px-4 fw-semibold">Guardar Cupón</button>
