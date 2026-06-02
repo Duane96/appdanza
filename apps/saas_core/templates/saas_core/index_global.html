@@ -3,28 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppDanza | El Sistema Operativo para tu Academia de Baile</title>
+    <title>AppDanza | La Cartelera Global de Baile</title>
     
     <!-- Bootstrap 5.3 & Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css" rel="stylesheet">
     
-    <!-- Fuentes Premium (Space Grotesk para títulos, Plus Jakarta para lectura) -->
+    <!-- Fuentes Premium -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
     
     <style>
         :root {
-            /* Paleta Light & Pastel */
-            --bg-body: #f8fafc; /* Gris ultra claro azulado */
+            /* Paleta Vibrante & Cálida (Estilo Baile/Energía) */
+            --bg-body: #fffbeb; 
             --bg-card: #ffffff;
-            --text-main: #0f172a; /* Pizarra oscuro, más elegante que negro */
+            --text-main: #1e1b4b; 
             --text-muted: #64748b;
-            --primary: #4f46e5; /* Indigo vibrante */
-            --primary-light: #e0e7ff;
-            --secondary: #db2777; /* Rosa vibrante */
-            --shadow-soft: 0 20px 40px -15px rgba(15, 23, 42, 0.08);
-            --shadow-hover: 0 30px 60px -15px rgba(15, 23, 42, 0.12);
-            --border-subtle: rgba(15, 23, 42, 0.06);
+            --primary: #f97316; /* Naranja vibrante */
+            --primary-light: #ffedd5;
+            --secondary: #e11d48; /* Rojo carmesí */
+            --secondary-light: #ffe4e6;
+            --accent: #10b981; 
+            --shadow-soft: 0 20px 40px -15px rgba(249, 115, 22, 0.15); 
+            --shadow-hover: 0 30px 60px -15px rgba(225, 29, 72, 0.2); 
+            --border-subtle: rgba(249, 115, 22, 0.1);
         }
 
         body {
@@ -37,519 +39,400 @@
 
         .font-space { font-family: 'Space Grotesk', sans-serif; }
 
-        /* 🌸 Brillos Pastel Ambientales (No más oscuridad) */
-        .glow-bg, .glow-bg-left, .glow-bg-bottom {
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(120px);
-            z-index: 0;
-            pointer-events: none;
-            animation: pulseGlow 12s infinite alternate ease-in-out;
-        }
-        .glow-bg {
-            width: 600px; height: 600px;
-            background: rgba(99, 102, 241, 0.15); /* Indigo suave */
-            top: -10%; right: -5%;
-        }
-        .glow-bg-left {
-            width: 500px; height: 500px;
-            background: rgba(236, 72, 153, 0.12); /* Rosa pastel */
-            top: 20%; left: -10%;
-            animation-delay: -3s;
-        }
-        .glow-bg-bottom {
-            width: 700px; height: 700px;
-            background: rgba(56, 189, 248, 0.12); /* Azul cielo pastel */
-            bottom: 5%; right: 15%;
-            animation-delay: -6s;
-        }
-        @keyframes pulseGlow {
-            0% { transform: scale(1) translate(0, 0); opacity: 0.8; }
-            100% { transform: scale(1.1) translate(-20px, 20px); opacity: 1; }
-        }
-
-        /* 🧊 Glassmorphism Claro para el Navbar */
+        /* Navbar Glassmorphism */
         .navbar-appdanza {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
             border-bottom: 1px solid var(--border-subtle);
-            transition: all 0.3s;
+            transition: all 0.3s ease;
         }
         .navbar-scrolled {
             background: rgba(255, 255, 255, 0.98);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            box-shadow: 0 10px 30px rgba(249, 115, 22, 0.1);
         }
-        .nav-link {
-            color: var(--text-muted) !important;
-            font-weight: 500;
-            transition: color 0.3s;
-        }
+        .nav-link { color: var(--text-main) !important; font-weight: 600; transition: color 0.3s; }
         .nav-link:hover { color: var(--primary) !important; }
 
-        /* ✨ Botones Premium */
+        /* Botones Premium */
         .btn-primary-custom {
-            background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
-            border: none;
-            color: white;
-            box-shadow: 0 10px 20px -5px rgba(79, 70, 229, 0.4);
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border: none; color: white;
+            box-shadow: 0 10px 25px -5px rgba(225, 29, 72, 0.5);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .btn-primary-custom:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 25px -5px rgba(79, 70, 229, 0.5);
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 15px 35px -5px rgba(225, 29, 72, 0.6);
             color: white;
         }
 
-        /* 🃏 Tarjetas Blancas Elevadas (Clean UI) */
+        /* Hero Carousel */
+        .hero-carousel { height: 85vh; min-height: 600px; position: relative; overflow: hidden; border-radius: 0 0 40px 40px; }
+        .carousel-item { height: 85vh; min-height: 600px; background-color: #000; }
+        .carousel-item img { object-fit: cover; height: 100%; width: 100%; opacity: 0.6; transition: transform 10s linear; }
+        .carousel-item.active img { transform: scale(1.1); }
+        .carousel-caption-custom {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 100%; max-width: 800px; z-index: 10; text-align: center;
+        }
+
+        /* Cinta de Tickets (Ticker) */
+        .ticker-wrap {
+            width: 100%; overflow: hidden; background: var(--text-main); color: white;
+            padding: 12px 0; border-top: 3px solid var(--primary); border-bottom: 3px solid var(--secondary);
+            transform: rotate(-1deg) scale(1.02); z-index: 10; position: relative; margin-top: -20px;
+        }
+        .ticker-move { display: inline-flex; white-space: nowrap; animation: ticker 25s linear infinite; }
+        .ticker-move:hover { animation-play-state: paused; }
+        @keyframes ticker { 0% { transform: translate3d(0, 0, 0); } 100% { transform: translate3d(-50%, 0, 0); } }
+        .ticker-item { padding: 0 2rem; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1.1rem; display: flex; align-items: center; gap: 10px; }
+
+        /* Tarjetas (Cards) */
         .feature-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-subtle);
-            border-radius: 24px;
-            box-shadow: var(--shadow-soft);
-            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-            position: relative;
-            z-index: 2;
-        }
-        .feature-card:hover {
-            transform: translateY(-8px);
-            box-shadow: var(--shadow-hover);
-            border-color: rgba(79, 70, 229, 0.2);
-        }
-        
-        /* Cajas de íconos en tonos pastel */
-        .icon-box {
-            width: 60px; height: 60px;
-            background: var(--primary-light);
-            color: var(--primary);
-            border-radius: 18px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1.75rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .text-gradient { 
-            background: linear-gradient(90deg, #4f46e5, #ec4899); 
-            -webkit-background-clip: text; 
-            -webkit-text-fill-color: transparent; 
-        }
-
-        /* 🏆 Marquee: Logos limpios */
-        .marquee-container { width: 100%; overflow: hidden; white-space: nowrap; }
-        .marquee-track { display: inline-flex; animation: scrollMarquee 30s linear infinite; }
-        .marquee-track:hover { animation-play-state: paused; }
-        @keyframes scrollMarquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
-        .logo-grayscale { filter: grayscale(100%) opacity(0.4); transition: all 0.3s; }
-        .marquee-item:hover .logo-grayscale { filter: grayscale(0%) opacity(1); }
-
-        /* 💻 Mockup de Cristal para el Video/App */
-        .glass-window {
-            background: rgba(255, 255, 255, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(24px);
-            border-radius: 24px;
-            box-shadow: 0 30px 60px -15px rgba(0,0,0,0.15);
+            background: var(--bg-card); border: 1px solid rgba(0,0,0,0.05);
+            border-radius: 28px; box-shadow: var(--shadow-soft);
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
             overflow: hidden;
-            transform: perspective(1000px) rotateY(-5deg) rotateX(2deg);
-            transition: transform 0.5s ease;
         }
-        .glass-window:hover { transform: perspective(1000px) rotateY(0deg) rotateX(0deg); }
-        .window-header {
-            background: rgba(255, 255, 255, 0.9);
-            padding: 12px 20px;
-            display: flex; gap: 8px;
-            border-bottom: 1px solid rgba(0,0,0,0.05);
+        .feature-card:hover { transform: translateY(-10px); box-shadow: var(--shadow-hover); }
+        
+        .academy-card {
+            background: white; border-radius: 20px; padding: 2rem; text-align: center;
+            border: 1px solid var(--border-subtle); transition: all 0.3s;
+            height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center;
         }
-        .window-dot { width: 12px; height: 12px; border-radius: 50%; }
-        .dot-r { background: #ef4444; } .dot-y { background: #eab308; } .dot-g { background: #22c55e; }
+        .academy-card:hover { border-color: var(--primary); box-shadow: var(--shadow-soft); transform: translateY(-5px); }
 
-        /* Acordeón FAQ Clean */
-        .accordion-item { border: 1px solid var(--border-subtle); border-radius: 16px !important; margin-bottom: 1rem; overflow: hidden; background: white; box-shadow: var(--shadow-soft); }
-        .accordion-button { background: white; color: var(--text-main); font-weight: 600; box-shadow: none !important; padding: 1.25rem 1.5rem; }
-        .accordion-button:not(.collapsed) { background: var(--primary-light); color: var(--primary); }
-        .accordion-body { color: var(--text-muted); padding: 1.5rem; line-height: 1.6; }
-
-        /* Etiquetas Confianza */
-        .trust-badge { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-muted); }
+        .text-gradient { background: linear-gradient(90deg, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        /* Métricas */
+        .metrics-section { background: linear-gradient(135deg, var(--text-main) 0%, #312e81 100%); color: white; border-radius: 40px; position: relative; overflow: hidden; }
+        .metrics-section::before { content: ''; position: absolute; width: 300px; height: 300px; background: var(--primary); border-radius: 50%; filter: blur(80px); opacity: 0.3; top: -50px; left: -50px; }
     </style>
 </head>
 <body>
 
-    <!-- Capas de luces ambientales -->
-    <div class="glow-bg"></div>
-    <div class="glow-bg-left"></div>
-    <div class="glow-bg-bottom"></div>
-
-    <!-- 🌐 NAVBAR LUMINOSO -->
+    <!-- 🌐 NAVBAR -->
     <nav class="navbar navbar-expand-lg navbar-light navbar-appdanza fixed-top py-3" id="mainNavbar">
         <div class="container">
             <a class="navbar-brand fw-bold font-space d-flex align-items-center gap-2 fs-4" href="#">
-                <div style="width: 35px; height: 35px; background: linear-gradient(135deg, #4f46e5, #ec4899); border-radius: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);">
-                    <i class="bi bi-play-fill text-white fs-5"></i>
+                <div style="width: 38px; height: 38px; background: linear-gradient(135deg, var(--primary), var(--secondary)); border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(225, 29, 72, 0.4);">
+                    <i class="bi bi-fire text-white fs-5"></i>
                 </div>
-                <span class="text-dark">App<span class="fw-light">Danza</span></span>
+                <span class="text-dark">App<span class="text-gradient">Danza</span></span>
             </a>
-            <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+            <button class="navbar-toggler border-0 shadow-none bg-light rounded-circle p-2" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navMenu">
-                <div class="navbar-nav ms-auto align-items-center gap-4 mt-3 mt-lg-0">
-                    <a href="#solucion" class="nav-link">La Solución</a>
-                    <a href="#beneficios" class="nav-link">Módulos</a>
-                    {% if config.mostrar_capturas %}<a href="#pantallas" class="nav-link">Plataforma</a>{% endif %}
-                    {% if config.mostrar_faq %}<a href="#faq" class="nav-link">FAQ</a>{% endif %}
-                    
+                <div class="navbar-nav ms-auto align-items-center gap-4 mt-3 mt-lg-0 bg-white bg-lg-transparent p-4 p-lg-0 rounded-4 shadow-sm shadow-lg-none">
+                    <a href="#cartelera" class="nav-link">Eventos</a>
+                    <a href="#academias" class="nav-link">Academias</a>
+                    <!-- El gancho SaaS se va al final -->
+                    <a href="#software" class="btn btn-dark rounded-pill px-4 py-2 fw-bold d-none d-lg-block shadow-sm">Soy Director <i class="bi bi-laptop ms-1"></i></a>
                 </div>
             </div>
         </div>
     </nav>
 
-    <!-- 🚀 HERO SECTION (SPLIT SCREEN CLEAN) -->
-    <header class="position-relative d-flex align-items-center" style="min-height: 100vh; padding-top: 80px; z-index: 2;">
-        <div class="container">
-            <div class="row align-items-center justify-content-between g-5">
-                
-                <!-- Columna Izquierda: Copywriting -->
-                <div class="col-lg-5 text-center text-lg-start">
-                    <div class="d-inline-flex align-items-center gap-2 px-3 py-2 rounded-pill mb-4 bg-white shadow-sm border border-opacity-10">
-                        <span class="badge rounded-pill" style="background: #e0e7ff; color: #4f46e5;">Nueva Versión</span>
-                        <span class="small fw-semibold text-muted">Gestión inteligente para academias</span>
+    <!-- 🌟 HERO CAROUSEL: EL CENTRO SON LOS EVENTOS -->
+    <div id="heroEventsCarousel" class="carousel slide carousel-fade hero-carousel" data-bs-ride="carousel" data-bs-pause="false">
+        <div class="carousel-inner h-100">
+            {% if eventos_globales %}
+                {% for evento in eventos_globales|slice:":3" %}
+                <div class="carousel-item h-100 {% if forloop.first %}active{% endif %}">
+                    {% if evento.imagen %}
+                        <img src="{{ evento.imagen.url }}" class="d-block w-100 h-100 object-fit-cover" alt="{{ evento.nombre }}">
+                    {% else %}
+                        <div class="w-100 h-100 bg-dark"></div>
+                    {% endif %}
+                    
+                    <!-- Gradiente oscuro para legibilidad -->
+                    <div class="position-absolute top-0 start-0 w-100 h-100" style="background: linear-gradient(0deg, rgba(30,27,75,0.9) 0%, rgba(30,27,75,0.4) 100%);"></div>
+                    
+                    <div class="carousel-caption-custom px-4">
+                        <span class="badge bg-primary text-white rounded-pill px-4 py-2 mb-4 fs-6 tracking-widest text-uppercase shadow-lg border border-white border-opacity-25">
+                            <i class="bi bi-star-fill me-1 text-warning"></i> Evento Destacado
+                        </span>
+                        <h1 class="display-3 font-space fw-bold text-white mb-3 text-shadow">{{ evento.nombre }}</h1>
+                        <p class="fs-4 text-white opacity-75 mb-5 fw-light">
+                            <i class="bi bi-calendar-event me-2"></i>{{ evento.fecha|date:"l, d \d\e F" }} &nbsp;|&nbsp; 
+                            <i class="bi bi-geo-alt me-2"></i>{{ evento.ubicacion }}
+                        </p>
+                        <a href="{% url 'academias:index' evento.academia.slug %}" target="_blank" class="btn btn-primary-custom btn-lg rounded-pill px-5 py-3 font-space fw-bold fs-5 shadow-lg">
+                            Conseguir Tickets <i class="bi bi-ticket-perforated ms-2"></i>
+                        </a>
+                        <p class="mt-4 small text-white opacity-50">Organizado por: <strong>{{ evento.academia.nombre }}</strong></p>
                     </div>
-                    
-                    <h1 class="display-4 font-space fw-bold mb-4" style="line-height: 1.15; color: var(--text-main);">
-                        {% if config.titulo_principal %}
-                            {{ config.titulo_principal|safe }}
-                        {% else %}
-                            El motor tecnológico de tu <span class="text-gradient d-block mt-2">academia de baile.</span>
-                        {% endif %}
-                    </h1>
-                    
-                    <p class="fs-5 text-muted mb-5" style="line-height: 1.6;">
-                        {{ config.subtitulo_principal|default:"Automatiza tu recepción con códigos QR, blinda tu caja diaria y despídete del desorden en Excel. Tu academia en piloto automático." }}
-                    </p>
-                    
-                    <div class="d-flex flex-column flex-sm-row align-items-center gap-3 justify-content-center justify-content-lg-start mb-4">
-                        <button type="button" class="btn btn-primary-custom btn-lg rounded-pill px-5 py-3 font-space fw-bold" data-bs-toggle="modal" data-bs-target="#leadModal">
-                            {% if config.boton_principal_texto %}{{ config.boton_principal_texto }}{% else %}Agendar Demo Gratuita{% endif %}
-                        </button>
-                    </div>
-                    
-                    <!-- Sellos de confianza -->
-                    <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start gap-4 mt-2">
-                        <div class="trust-badge"><i class="bi bi-shield-check text-success fs-5"></i> Cifrado Bancario</div>
-                        <div class="trust-badge"><i class="bi bi-headset text-primary fs-5"></i> Soporte Humano</div>
-                    </div>
-                </div>
-
-                <!-- Columna Derecha: Ventana Flotante con Video B-Roll -->
-                <div class="col-lg-6 position-relative">
-                    <!-- Decoración detrás del video -->
-                    <div class="position-absolute bg-primary rounded-circle blur-3xl opacity-20" style="width: 300px; height: 300px; top: -50px; right: -50px; filter: blur(60px); z-index: -1;"></div>
-                    
-                    <div class="glass-window">
-                        <!-- Barra superior del sistema operativo -->
-                        <div class="window-header">
-                            <div class="window-dot dot-r"></div>
-                            <div class="window-dot dot-y"></div>
-                            <div class="window-dot dot-g"></div>
-                        </div>
-                        <!-- Contenedor del Video -->
-                        <div class="position-relative bg-dark" style="aspect-ratio: 16/9; overflow: hidden;">
-                            <video autoplay loop muted playsinline class="w-100 h-100 object-fit-cover opacity-75">
-                                <!-- Asegúrate de poner la ruta correcta de tu B-Roll aquí -->
-                                <source src="/static/media/landing_broll.mp4" type="video/mp4">
-                            </video>
-                            
-                            <!-- Capa UI sobre el video para simular el software -->
-                            <div class="position-absolute bottom-0 start-0 w-100 p-4" style="background: linear-gradient(0deg, rgba(0,0,0,0.8) 0%, transparent 100%);">
-                                <div class="d-flex align-items-center gap-3 text-white">
-                                    <i class="bi bi-qr-code-scan fs-3 text-success"></i>
-                                    <div>
-                                        <h6 class="mb-0 fw-bold">Acceso Validado</h6>
-                                        <small class="opacity-75">Suscripción al día • Nivel Intermedio</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-            </div>
-        </div>
-    </header>
-
-    <!-- 🏆 MARQUEE: PRUEBA SOCIAL (BLANCO/GRIS) -->
-    {% if academias_trust %}
-    <section class="py-5 position-relative" style="background: white; border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); z-index: 2;">
-        <div class="container text-center mb-4">
-            <p class="text-muted small font-space text-uppercase fw-bold tracking-widest mb-0" style="letter-spacing: 1.5px;">Directores que ya confían en nuestra tecnología</p>
-        </div>
-        <div class="marquee-container w-100 position-relative">
-            <div class="position-absolute top-0 start-0 h-100 w-15" style="background: linear-gradient(90deg, white 0%, transparent 100%); z-index: 2; pointer-events: none;"></div>
-            <div class="position-absolute top-0 end-0 h-100 w-15" style="background: linear-gradient(270deg, white 0%, transparent 100%); z-index: 2; pointer-events: none;"></div>
-            
-            <div class="marquee-track d-flex align-items-center gap-5">
-                {% for academia in academias_trust %}
-                <div class="marquee-item d-flex align-items-center gap-3" style="min-width: max-content;">
-                    <img src="{{ academia.logo.url }}" alt="{{ academia.nombre }}" class="img-fluid logo-grayscale" style="max-height: 45px; object-fit: contain;">
                 </div>
                 {% endfor %}
-                {% for academia in academias_trust %}
-                <div class="marquee-item d-flex align-items-center gap-3" style="min-width: max-content;">
-                    <img src="{{ academia.logo.url }}" alt="{{ academia.nombre }}" class="img-fluid logo-grayscale" style="max-height: 45px; object-fit: contain;">
+            {% else %}
+                <!-- Fallback si no hay eventos activos -->
+                <div class="carousel-item h-100 active">
+                    <img src="https://images.unsplash.com/photo-1545128485-c400e7702796?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80" class="d-block w-100 h-100 object-fit-cover" alt="Baile">
+                    <div class="position-absolute top-0 start-0 w-100 h-100" style="background: rgba(30,27,75,0.7);"></div>
+                    <div class="carousel-caption-custom px-4">
+                        <h1 class="display-3 font-space fw-bold text-white mb-3">La comunidad en movimiento.</h1>
+                        <p class="fs-4 text-white opacity-75 mb-5 fw-light">Descubre los mejores talleres, sociales y congresos gestionados por nuestra tecnología.</p>
+                        <a href="#cartelera" class="btn btn-primary-custom btn-lg rounded-pill px-5 py-3 font-space fw-bold fs-5 shadow-lg">Explorar Cartelera</a>
+                    </div>
                 </div>
-                {% endfor %}
-            </div>
+            {% endif %}
         </div>
-    </section>
+        
+        <!-- Controles sutiles -->
+        <button class="carousel-control-prev" type="button" data-bs-target="#heroEventsCarousel" data-bs-slide="prev" style="width: 5%; z-index: 20;">
+            <div class="bg-white bg-opacity-25 rounded-circle p-2 backdrop-blur"><span class="carousel-control-prev-icon"></span></div>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#heroEventsCarousel" data-bs-slide="next" style="width: 5%; z-index: 20;">
+            <div class="bg-white bg-opacity-25 rounded-circle p-2 backdrop-blur"><span class="carousel-control-next-icon"></span></div>
+        </button>
+    </div>
+
+    <!-- 🎫 CINTA DE TICKETS (TICKER) -->
+    {% if eventos_globales %}
+    <div class="ticker-wrap shadow-lg">
+        <div class="ticker-move">
+            {% for evento in eventos_globales %}
+                <div class="ticker-item text-warning"><i class="bi bi-fire"></i></div>
+                <div class="ticker-item">{{ evento.nombre|upper }}</div>
+                <div class="ticker-item opacity-50">{{ evento.fecha|date:"d M" }}</div>
+                <div class="ticker-item text-accent">${{ evento.precio_preventa|floatformat:0 }}</div>
+            {% endfor %}
+            <!-- Duplicado para efecto infinito -->
+            {% for evento in eventos_globales %}
+                <div class="ticker-item text-warning"><i class="bi bi-fire"></i></div>
+                <div class="ticker-item">{{ evento.nombre|upper }}</div>
+                <div class="ticker-item opacity-50">{{ evento.fecha|date:"d M" }}</div>
+                <div class="ticker-item text-accent">${{ evento.precio_preventa|floatformat:0 }}</div>
+            {% endfor %}
+        </div>
+    </div>
     {% endif %}
 
-    <!-- 🛑 SECCIÓN EL DOLOR VS LA SOLUCIÓN -->
-    <section id="solucion" class="container py-5 my-5 position-relative" style="z-index: 2;">
-        <div class="text-center mb-5 mx-auto" style="max-width: 650px;">
-            <h2 class="font-space fw-bold display-6 mb-3">La administración manual te está costando dinero.</h2>
-            <p class="text-muted fs-5">Las fugas de capital por alumnos morosos y el tiempo perdido en Excel frenan el crecimiento de tu escuela.</p>
-        </div>
-
-        <div class="row g-4 align-items-stretch">
-            <!-- Lo Malo (Gris) -->
-            <div class="col-md-6">
-                <div class="feature-card p-5 h-100 bg-white" style="border-top: 4px solid #94a3b8;">
-                    <h4 class="font-space fw-bold text-muted mb-4"><i class="bi bi-x-octagon me-2"></i> El método antiguo</h4>
-                    <ul class="list-unstyled d-flex flex-column gap-4 text-muted">
-                        <li class="d-flex align-items-start gap-3"><i class="bi bi-dash fs-5 text-danger mt-1"></i> <span>Asistencias tomadas en cuadernos o listas de WhatsApp que nadie revisa.</span></li>
-                        <li class="d-flex align-items-start gap-3"><i class="bi bi-dash fs-5 text-danger mt-1"></i> <span>Incapacidad de bloquear la entrada a alumnos con mensualidades vencidas.</span></li>
-                        <li class="d-flex align-items-start gap-3"><i class="bi bi-dash fs-5 text-danger mt-1"></i> <span>Videos de coreografías compartidos en Drive sin protección.</span></li>
-                    </ul>
-                </div>
-            </div>
-            <!-- Lo Bueno (Acento) -->
-            <div class="col-md-6">
-                <div class="feature-card p-5 h-100" style="background: var(--bg-card); border-top: 4px solid var(--primary);">
-                    <h4 class="font-space fw-bold mb-4" style="color: var(--primary);"><i class="bi bi-check-circle-fill me-2"></i> El estándar AppDanza</h4>
-                    <ul class="list-unstyled d-flex flex-column gap-4 text-dark">
-                        <li class="d-flex align-items-start gap-3"><i class="bi bi-check2-circle fs-5 text-primary mt-1"></i> <span><strong>Tiqueteras Digitales:</strong> Tu staff escanea el QR del alumno y el sistema descuenta la clase al instante.</span></li>
-                        <li class="d-flex align-items-start gap-3"><i class="bi bi-check2-circle fs-5 text-primary mt-1"></i> <span><strong>Filtro de Morosos:</strong> Si el plan expiró, la pantalla se pone en rojo automáticamente en recepción.</span></li>
-                        <li class="d-flex align-items-start gap-3"><i class="bi bi-check2-circle fs-5 text-primary mt-1"></i> <span><strong>Caja a prueba de balas:</strong> Conoce exactamente cuánto ingresó en efectivo vs transferencias.</span></li>
-                    </ul>
-                </div>
+    <!-- 🎟️ CARTELERA GLOBAL DE EVENTOS -->
+    <section id="cartelera" class="container py-5 my-5 position-relative" style="z-index: 2;">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end mb-5">
+            <div class="text-center text-md-start">
+                <h2 class="font-space fw-bold display-5 text-dark mb-2">Cartelera Oficial</h2>
+                <p class="text-muted fs-5 mb-0">No te quedes por fuera. Asegura tu pase a los mejores eventos.</p>
             </div>
         </div>
-    </section>
 
-    <!-- ⚡ MÓDULOS (TARJETAS BLANCAS) -->
-    <section id="beneficios" class="container py-5 my-4 position-relative" style="z-index: 2;">
-        <div class="text-center mb-5 mx-auto" style="max-width: 600px;">
-            <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-2 mb-3 fw-bold">Ecosistema Todo en Uno</span>
-            <h2 class="font-space fw-bold display-5">Módulos diseñados para dueños exigentes</h2>
-        </div>
-
-        <div class="row g-4">
-            {% for beneficio in beneficios %}
+        <div class="row g-4 justify-content-center">
+            {% for evento in eventos_globales %}
             <div class="col-md-6 col-lg-4">
-                <div class="feature-card p-4 h-100">
-                    <div class="icon-box">
-                        <i class="bi {{ beneficio.icono|default:'bi-star-fill' }}"></i>
+                <div class="feature-card h-100 d-flex flex-column bg-white p-0">
+                    <div class="position-relative overflow-hidden" style="aspect-ratio: 4/5; background: var(--bg-body);">
+                        {% if evento.imagen %}
+                            <img src="{{ evento.imagen.url }}" alt="{{ evento.nombre }}" class="w-100 h-100 object-fit-cover transition-transform duration-500" style="transition: transform 0.5s ease;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">
+                        {% else %}
+                            <div class="w-100 h-100 d-flex align-items-center justify-content-center bg-light"><i class="bi bi-image fs-1 text-muted opacity-25"></i></div>
+                        {% endif %}
+                        
+                        <div class="position-absolute bottom-0 start-0 w-100 p-4 pt-5" style="background: linear-gradient(0deg, rgba(30,27,75,0.95) 0%, transparent 100%); z-index: 1;"></div>
+                        
+                        <div class="position-absolute top-0 end-0 m-3 bg-white rounded-4 shadow-lg text-center px-3 py-2" style="z-index: 2;">
+                            <span class="d-block small fw-bold text-uppercase" style="color: var(--secondary);">{{ evento.fecha|date:"M" }}</span>
+                            <span class="d-block fs-3 font-space fw-bold text-dark lh-1">{{ evento.fecha|date:"d" }}</span>
+                        </div>
+
+                        <div class="position-absolute top-0 start-0 m-3" style="z-index: 2;">
+                            <span class="badge bg-white text-dark shadow-lg rounded-pill px-3 py-2 d-flex align-items-center gap-2">
+                                {% if evento.academia.logo %}
+                                    <img src="{{ evento.academia.logo.url }}" alt="Logo" class="rounded-circle" style="width: 20px; height: 20px; object-fit: contain;">
+                                {% endif %}
+                                <span class="fw-bold">{{ evento.academia.nombre }}</span>
+                            </span>
+                        </div>
+
+                        <div class="position-absolute bottom-0 start-0 w-100 p-4" style="z-index: 2;">
+                            <h4 class="font-space fw-bold text-white mb-2 lh-sm">{{ evento.nombre }}</h4>
+                            <p class="small text-white opacity-75 mb-0"><i class="bi bi-geo-alt-fill text-primary"></i> {{ evento.ubicacion }}</p>
+                        </div>
                     </div>
-                    <h5 class="font-space fw-bold mb-3">{{ beneficio.titulo }}</h5>
-                    <p class="text-muted small mb-0">{{ beneficio.descripcion }}</p>
+                    
+                    <div class="p-4 bg-white d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="small text-muted d-block fw-semibold text-uppercase">Desde</span>
+                            <strong class="fs-4 text-dark font-space">${{ evento.precio_preventa|floatformat:0 }}</strong>
+                        </div>
+                        <a href="{% url 'academias:index' evento.academia.slug %}" target="_blank" class="btn btn-dark rounded-pill px-4 py-2 fw-bold shadow-sm">
+                            Comprar <i class="bi bi-arrow-right"></i>
+                        </a>
+                    </div>
                 </div>
             </div>
             {% empty %}
-            <!-- Fallbacks Limpios -->
-            <div class="col-md-6 col-lg-4">
-                <div class="feature-card p-4 h-100">
-                    <div class="icon-box"><i class="bi bi-qr-code-scan"></i></div>
-                    <h5 class="font-space fw-bold mb-3">Control de Acceso QR</h5>
-                    <p class="text-muted small mb-0">Convierte cualquier celular o tablet en el escáner oficial de la entrada. Control exacto de aforos y planes.</p>
-                </div>
-            </div>
-            <div class="col-md-6 col-lg-4">
-                <div class="feature-card p-4 h-100">
-                    <div class="icon-box" style="background: #dcfce7; color: #16a34a;"><i class="bi bi-wallet2"></i></div>
-                    <h5 class="font-space fw-bold mb-3">Cierres Contables DIAN</h5>
-                    <p class="text-muted small mb-0">Emite recibos, controla gastos de sede e imprime balances financieros mensuales listos para tu contador.</p>
-                </div>
-            </div>
-            <div class="col-md-6 col-lg-4">
-                <div class="feature-card p-4 h-100">
-                    <div class="icon-box" style="background: #fee2e2; color: #dc2626;"><i class="bi bi-play-btn-fill"></i></div>
-                    <h5 class="font-space fw-bold mb-3">Academia Virtual Segura</h5>
-                    <p class="text-muted small mb-0">Embebe videos ocultos de YouTube en nuestra plataforma. El sistema garantiza que solo alumnos al día puedan visualizarlos.</p>
+            <div class="col-12 text-center py-5">
+                <div class="p-5 bg-white rounded-5 border shadow-sm mx-auto" style="max-width: 600px;">
+                    <i class="bi bi-calendar2-x display-1 text-muted opacity-25 mb-3 d-block"></i>
+                    <h4 class="font-space fw-bold text-dark">Agenda en preparación</h4>
+                    <p class="text-muted mb-0">Nuestras academias están organizando los próximos eventos. ¡Vuelve pronto!</p>
                 </div>
             </div>
             {% endfor %}
         </div>
     </section>
 
-    <!-- 📱 ECOSISTEMA (CAPTURA DE PANTALLA PRINCIPAL) -->
-    {% if config.mostrar_capturas %}
-    <section id="pantallas" class="container py-5 my-5 position-relative bg-white rounded-5 shadow-sm border border-opacity-10 p-4 p-lg-5" style="z-index: 2;">
-        <div class="row align-items-center g-5">
-            <div class="col-lg-5">
-                <h2 class="font-space fw-bold display-6 mb-4">Tres portales, <br><span class="text-primary">una sola base de datos.</span></h2>
-                <p class="text-muted mb-4">Nuestra arquitectura multi-tenant mantiene tu información aislada en servidores de alto rendimiento.</p>
+    <!-- 🏢 ACADEMIAS (LA COMUNIDAD) -->
+    {% if academias_trust %}
+    <section id="academias" class="py-5 bg-white border-top border-bottom border-warning border-opacity-10">
+        <div class="container py-4">
+            <div class="text-center mb-5 mx-auto" style="max-width: 700px;">
+                <span class="badge bg-warning bg-opacity-25 text-dark border border-warning border-opacity-50 rounded-pill px-3 py-2 mb-3 fw-bold">Ecosistema Activo</span>
+                <h2 class="font-space fw-bold display-5 text-dark mb-3">Dónde aprender a bailar</h2>
+                <p class="text-muted fs-5">Estas son las escuelas y productoras de la comunidad que gestionan sus alumnos con nuestra tecnología.</p>
+            </div>
+
+            <div class="row g-4 justify-content-center">
+                {% for academia in academias_trust %}
+                <div class="col-6 col-md-4 col-lg-3">
+                    <a href="{% url 'academias:index' academia.slug %}" target="_blank" class="text-decoration-none">
+                        <div class="academy-card">
+                            <!-- 🧠 FALLBACK INTELIGENTE: Logo o Inicial -->
+                            {% if academia.logo %}
+                                <img src="{{ academia.logo.url }}" alt="{{ academia.nombre }}" class="img-fluid mb-3" style="max-height: 80px; object-fit: contain;">
+                            {% else %}
+                                <div class="d-flex align-items-center justify-content-center rounded-circle mb-3 mx-auto shadow-sm border border-primary border-opacity-10" style="width: 80px; height: 80px; background: var(--primary-light); color: var(--primary); font-size: 2.5rem;">
+                                    <span class="font-space fw-bold">{{ academia.nombre|slice:":1"|upper }}</span>
+                                </div>
+                            {% endif %}
+                            
+                            <h6 class="text-dark fw-bold mb-0 font-space">{{ academia.nombre }}</h6>
+                            <span class="small text-primary mt-2">Visitar Sede <i class="bi bi-box-arrow-up-right"></i></span>
+                        </div>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- 📊 MÉTRICAS DE IMPACTO -->
+    <section class="container py-5 my-5">
+        <div class="metrics-section p-5 p-md-5 shadow-lg">
+            <div class="row text-center position-relative z-index-2 g-5">
+                <div class="col-md-4">
+                    <div class="display-3 font-space fw-bold text-warning mb-2">+<span class="counter">50</span></div>
+                    <h5 class="fw-light opacity-75">Academias Confiando</h5>
+                </div>
+                <div class="col-md-4 border-md-start border-md-end border-light border-opacity-25">
+                    <div class="display-3 font-space fw-bold text-white mb-2">+<span class="counter">10</span>k</div>
+                    <h5 class="fw-light opacity-75">Tickets Validados</h5>
+                </div>
+                <div class="col-md-4">
+                    <div class="display-3 font-space fw-bold text-accent mb-2">0</div>
+                    <h5 class="fw-light opacity-75">Filas Lentas en Puerta</h5>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 💻 SAAS PITCH: PARA DIRECTORES Y ORGANIZADORES -->
+    <section id="software" class="container py-5 mt-5 position-relative border-top border-warning border-opacity-25">
+        <div class="row g-5 align-items-center">
+            <div class="col-lg-5 pe-lg-5 text-center text-lg-start">
+                <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-2 mb-3 fw-bold border border-danger border-opacity-25"><i class="bi bi-laptop me-1"></i> Para Dueños de Academias</span>
+                <h2 class="font-space fw-bold display-5 mb-4 text-dark">Tu pasión es bailar, <br><span class="text-gradient">no sufrir con Excel.</span></h2>
+                <p class="text-muted fs-5 mb-4">¿Quieres que tu academia aparezca en nuestra cartelera global? Olvida las listas de papel, los morosos y el caos en la puerta. Digitaliza toda tu taquilla hoy mismo.</p>
                 
-                <div class="d-flex flex-column gap-4">
-                    {% for captura in capturas %}
-                    <div class="d-flex align-items-start gap-3">
-                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mt-1 shadow-sm" style="width: 28px; height: 28px;"><i class="bi bi-check text-white"></i></div>
-                        <div>
-                            <h6 class="fw-bold mb-1 text-dark">{{ captura.titulo }}</h6>
-                            <p class="text-muted small mb-0">{{ captura.descripcion }}</p>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
+                <button type="button" class="btn btn-primary-custom btn-lg rounded-pill px-5 py-3 font-space fw-bold shadow-lg w-100 w-md-auto" data-bs-toggle="modal" data-bs-target="#leadModal">
+                    Crear mi Plataforma <i class="bi bi-rocket-takeoff ms-2"></i>
+                </button>
             </div>
-            
+
             <div class="col-lg-7">
-                <div class="glass-window p-2 bg-light shadow-lg" style="border: 4px solid white;">
-                    {% if capturas.first %}
-                        <img src="{{ capturas.first.imagen.url }}" alt="Dashboard AppDanza" class="img-fluid rounded-4 shadow-sm w-100">
-                    {% else %}
-                        <div class="text-center p-5 text-muted">
-                            <i class="bi bi-laptop display-1 d-block mb-3 text-primary opacity-50"></i>
-                            <span class="small fw-semibold">Dashboard Administrativo</span>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </section>
-    {% endif %}
-
-    <!-- 💬 TESTIMONIOS (LIMPIOS) -->
-    {% if testimonios %}
-    <section class="container py-5 my-4 position-relative" style="z-index: 2;">
-        <div class="text-center mb-5">
-            <h2 class="font-space fw-bold display-5">Aprobado por el ecosistema</h2>
-        </div>
-        <div class="row g-4 justify-content-center">
-            {% for test in testimonios %}
-            <div class="col-md-6 col-lg-4">
-                <div class="feature-card p-4 h-100 d-flex flex-column justify-content-between border-0 shadow-sm">
-                    <div class="mb-4">
-                        <i class="bi bi-quote fs-1 text-primary opacity-25"></i>
-                        <p class="text-dark fw-medium mt-2">"{{ test.comentario }}"</p>
+                <div class="feature-card p-5 bg-white border-0" style="box-shadow: 0 30px 60px rgba(30, 27, 75, 0.08);">
+                    <div class="d-flex align-items-center justify-content-between mb-4 border-bottom pb-4">
+                        <h4 class="font-space fw-bold text-dark m-0 d-flex align-items-center gap-2"><i class="bi bi-check-circle-fill text-accent fs-3"></i> Todo en un solo link</h4>
                     </div>
-                    <div class="d-flex align-items-center gap-3 pt-3 border-top border-light">
-                        {% if test.foto %}
-                        <img src="{{ test.foto.url }}" alt="{{ test.nombre }}" class="rounded-circle shadow-sm" style="width: 50px; height: 50px; object-fit: cover;">
-                        {% else %}
-                        <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center text-primary fw-bold" style="width: 50px; height: 50px;">{{ test.nombre|slice:":1" }}</div>
-                        {% endif %}
-                        <div>
-                            <strong class="text-dark d-block small">{{ test.nombre }}</strong>
-                            <span class="text-muted" style="font-size: 0.75rem;">{{ test.academia }}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </section>
-    {% endif %}
-
-    <!-- 🗃️ FAQ -->
-    {% if config.mostrar_faq %}
-    <section id="faq" class="container py-5 my-5 position-relative" style="z-index: 2;">
-        <div class="row justify-content-center">
-            <div class="col-lg-8 text-center mb-5">
-                <h2 class="font-space fw-bold display-6">Respuestas claras</h2>
-                <p class="text-muted">Despejamos tus dudas sobre implementación y seguridad.</p>
-            </div>
-            <div class="col-lg-8">
-                <div class="accordion" id="faqAccordion">
-                    {% for faq in faqs %}
-                    <div class="accordion-item border-0 shadow-sm">
-                        <h2 class="accordion-header">
-                            <button class="accordion-button collapsed font-space" type="button" data-bs-toggle="collapse" data-bs-target="#faq-{{ faq.id }}">
-                                {{ faq.pregunta }}
-                            </button>
-                        </h2>
-                        <div id="faq-{{ faq.id }}" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-                            <div class="accordion-body bg-light">
-                                {{ faq.respuesta }}
+                    
+                    <ul class="list-unstyled d-flex flex-column gap-4 text-dark m-0">
+                        <li class="d-flex align-items-start gap-4">
+                            <div class="bg-primary-light text-primary rounded-4 d-flex align-items-center justify-content-center shadow-sm" style="width: 55px; height: 55px; font-size: 1.5rem; flex-shrink: 0;"><i class="bi bi-qr-code-scan"></i></div>
+                            <div>
+                                <h5 class="fw-bold font-space text-dark mb-1">Entradas y Clases por QR</h5>
+                                <p class="text-muted mb-0 small">El sistema descuenta clases automáticamente al escanear, bloqueando el acceso a morosos.</p>
                             </div>
-                        </div>
-                    </div>
-                    {% empty %}
-                    <div class="accordion-item border-0 shadow-sm">
-                        <h2 class="accordion-header">
-                            <button class="accordion-button font-space" type="button" data-bs-toggle="collapse" data-bs-target="#c1">
-                                ¿Necesito hardware especial para el acceso QR?
-                            </button>
-                        </h2>
-                        <div id="c1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
-                            <div class="accordion-body bg-light">
-                                <strong>No.</strong> Cualquier smartphone, tablet o computadora con cámara sirve como punto de escaneo. Solo inicias sesión como Staff y abres el lector.
+                        </li>
+                        <li class="d-flex align-items-start gap-4">
+                            <div class="bg-secondary-light text-secondary rounded-4 d-flex align-items-center justify-content-center shadow-sm" style="width: 55px; height: 55px; font-size: 1.5rem; flex-shrink: 0;"><i class="bi bi-wallet2"></i></div>
+                            <div>
+                                <h5 class="fw-bold font-space text-dark mb-1">Caja Blindada</h5>
+                                <p class="text-muted mb-0 small">Separa ventas de preventa web vs taquilla. Registra gastos de DJ y obtén reportes netos.</p>
                             </div>
-                        </div>
-                    </div>
-                    {% endfor %}
+                        </li>
+                        <li class="d-flex align-items-start gap-4">
+                            <div class="rounded-4 d-flex align-items-center justify-content-center shadow-sm" style="width: 55px; height: 55px; font-size: 1.5rem; flex-shrink: 0; background: #dcfce7; color: #16a34a;"><i class="bi bi-globe"></i></div>
+                            <div>
+                                <h5 class="fw-bold font-space text-dark mb-1">Tu Landing Propia</h5>
+                                <p class="text-muted mb-0 small">Te damos tu propia página web (midominio.com/mi-escuela) con tus colores y logo.</p>
+                            </div>
+                        </li>
+                    </ul>
                 </div>
             </div>
         </div>
     </section>
-    {% endif %}
 
-    <!-- 📩 MODAL LEAD MAGNET (FONDO BLANCO ELEGANTE) -->
+    <!-- 📩 MODAL LEAD MAGNET -->
     <div class="modal fade" id="leadModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 rounded-5 shadow-lg" style="overflow: hidden;">
-                <!-- Header del Modal con gradiente pastel -->
-                <div class="bg-light p-4 position-relative border-bottom border-opacity-10 text-center" style="background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);">
-                    <button type="button" class="btn-close position-absolute top-0 end-0 m-4" data-bs-dismiss="modal" aria-label="Close"></button>
-                    <div class="d-inline-flex p-3 rounded-circle mb-3 bg-white shadow-sm mt-2">
-                        <i class="bi bi-calendar-check text-primary fs-3"></i>
+            <div class="modal-content border-0 rounded-5 shadow-lg overflow-hidden bg-white">
+                <div class="p-4 position-relative border-bottom border-warning border-opacity-25 text-center" style="background: linear-gradient(180deg, var(--primary-light) 0%, white 100%);">
+                    <button type="button" class="btn-close position-absolute top-0 end-0 m-4 shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <div class="d-inline-flex p-3 rounded-circle mb-3 bg-white shadow-sm mt-2 border border-primary border-opacity-25 text-primary fs-3">
+                        <i class="bi bi-rocket-takeoff-fill"></i>
                     </div>
-                    <h4 class="font-space fw-bold text-dark">Agendar Demostración</h4>
-                    <p class="text-muted small mb-0 px-3">Deja tus datos. Te escribiremos a WhatsApp para mostrarte la plataforma operando en vivo.</p>
+                    <h4 class="font-space fw-bold text-dark">Únete a la Cartelera Global</h4>
+                    <p class="text-muted small mb-0 px-3">Deja tus datos. Te contactaremos por WhatsApp para entregarte tu propio panel administrativo.</p>
                 </div>
                 
-                <div class="p-4 p-md-5 bg-white">
+                <div class="p-4 p-md-5">
                     <form action="#" method="POST" id="leadForm">
                         {% csrf_token %}
                         <div class="mb-3">
-                            <label class="form-label text-muted small fw-semibold">Tu Nombre</label>
-                            <input type="text" id="directorName" class="form-control form-control-lg bg-light border-0 shadow-none fs-6" placeholder="Ej: Duane Yaleja" required>
+                            <label class="form-label text-dark small fw-bold">Tu Nombre <span class="text-danger">*</span></label>
+                            <input type="text" id="directorName" class="form-control form-control-lg bg-light border-0 px-4 fs-6 rounded-4" placeholder="Ej: Duane Yaleja" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label text-muted small fw-semibold">Nombre de la Escuela</label>
-                            <input type="text" id="academyName" class="form-control form-control-lg bg-light border-0 shadow-none fs-6" placeholder="Ej: Ritmo Social" required>
+                            <label class="form-label text-dark small fw-bold">Nombre de la Escuela/Productora <span class="text-danger">*</span></label>
+                            <input type="text" id="academyName" class="form-control form-control-lg bg-light border-0 px-4 fs-6 rounded-4" placeholder="Ej: Ritmo Social" required>
                         </div>
                         <div class="mb-4">
-                            <label class="form-label text-muted small fw-semibold">WhatsApp de Contacto</label>
-                            <input type="tel" id="directorPhone" class="form-control form-control-lg bg-light border-0 shadow-none fs-6" placeholder="Ej: +57 300 123 4567" required>
+                            <label class="form-label text-dark small fw-bold">WhatsApp de Contacto <span class="text-danger">*</span></label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text bg-light border-0 text-muted ps-4 pe-2 rounded-start-4"><i class="bi bi-whatsapp"></i></span>
+                                <input type="tel" id="directorPhone" class="form-control bg-light border-0 fs-6 rounded-end-4 px-3" placeholder="+57 300 123 4567" required>
+                            </div>
                         </div>
-                        <button type="submit" class="btn btn-primary-custom w-100 rounded-pill py-3 fw-bold font-space mt-2">
-                            Solicitar Acceso <i class="bi bi-whatsapp ms-2"></i>
+                        <button type="submit" class="btn btn-primary-custom w-100 rounded-pill py-3 fw-bold font-space fs-5 mt-2">
+                            Solicitar Acceso
                         </button>
-                        <div class="text-center mt-3">
-                            <span class="small text-muted"><i class="bi bi-lock-fill me-1"></i> Tus datos están protegidos. No hacemos spam.</span>
-                        </div>
                     </form>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 🏢 FOOTER CLEAN -->
-    <footer class="py-5 mt-5 bg-white border-top">
+    <!-- 🏢 FOOTER -->
+    <footer class="py-5 mt-5 bg-white border-top border-warning border-opacity-25">
         <div class="container text-center text-md-start">
             <div class="row align-items-center g-4">
                 <div class="col-md-4 text-center text-md-start">
                     <div class="d-flex align-items-center justify-content-center justify-content-md-start gap-2 mb-2">
-                        <div style="width: 24px; height: 24px; background: linear-gradient(135deg, #4f46e5, #ec4899); border-radius: 6px; display: flex; align-items: center; justify-content: center;">
-                            <i class="bi bi-play-fill text-white" style="font-size: 0.8rem;"></i>
+                        <div style="width: 26px; height: 26px; background: linear-gradient(135deg, var(--primary), var(--secondary)); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                            <i class="bi bi-fire text-white" style="font-size: 0.8rem;"></i>
                         </div>
                         <strong class="font-space text-dark fs-5">AppDanza</strong>
                     </div>
-                    <p class="text-muted small mb-0">&copy; 2026. Todos los derechos reservados.</p>
+                    <p class="text-muted small mb-0">&copy; 2026. La comunidad de baile.</p>
                 </div>
                 <div class="col-md-8 text-center text-md-end">
-                    <p class="small text-muted mb-0 fw-medium">SaaS Multi-Tenant para el ecosistema del arte y el movimiento.</p>
+                    <p class="small text-muted mb-0 fw-bold">El punto de encuentro entre organizadores y bailarines.</p>
                 </div>
             </div>
         </div>
@@ -558,7 +441,6 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     
-    <!-- ⚡ JAVASCRIPT: Lógica UX y Ventas -->
     <script>
         // Sombra suave en Navbar al hacer Scroll
         window.addEventListener('scroll', function() {
@@ -570,31 +452,27 @@
             }
         });
 
-        // Lógica del Lead Magnet (Cierra la venta por WhatsApp)
+        // Lógica del Lead Magnet SaaS
         document.getElementById('leadForm').addEventListener('submit', function(e) {
             e.preventDefault();
-            
             const name = document.getElementById('directorName').value.trim();
             const academy = document.getElementById('academyName').value.trim();
             const phone = document.getElementById('directorPhone').value.trim();
-            
             const whatsappSaaS = "{{ config.whatsapp|default:'573000000000' }}"; 
             
-            const text = `¡Hola AppDanza! Me interesa una demostración del sistema para mi sede.%0A%0A` +
-                         `*Director:* ${name}%0A` +
-                         `*Academia:* ${academy}%0A` +
-                         `*Teléfono:* ${phone}%0A%0A` +
-                         `¿Tienen disponibilidad en la agenda?`;
-            
+            const text = `¡Hola AppDanza! Me interesa el sistema para mi academia y salir en la cartelera.%0A%0A*Director:* ${name}%0A*Academia:* ${academy}%0A*Teléfono:* ${phone}`;
             window.open(`https://api.whatsapp.com/send?phone=${whatsappSaaS}&text=${text}`, '_blank');
             
-            const modalElement = document.getElementById('leadModal');
-            const modal = bootstrap.Modal.getInstance(modalElement);
-            modal.hide();
-            
-            // Limpia el formulario
+            bootstrap.Modal.getInstance(document.getElementById('leadModal')).hide();
             this.reset();
         });
+
+        // Carrusel estilo Netflix para la Cartelera
+        function scrollCartelera(direction) {
+            const row = document.getElementById('carteleraRow');
+            const cardWidth = 360 + 24; // max-width de la tarjeta + margin (gap)
+            row.scrollBy({ left: cardWidth * direction, behavior: 'smooth' });
+        }
     </script>
 </body>
 </html>

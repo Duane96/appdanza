@@ -18,6 +18,9 @@ from django.db import transaction
 
 from django.contrib.auth.models import User
 
+from apps.eventos.models import Evento  # 🚨 NUEVO IMPORT
+from django.utils import timezone       # 🚨 NUEVO IMPORT
+
 class PanelMaestroDashboardView(UserPassesTestMixin, TemplateView):
     """Centro de mando global para el dueño del SaaS (Súper Admin)."""
     template_name = "saas_core/master_dashboard.html"
@@ -181,10 +184,20 @@ class IndexSaaSGlobalView(TemplateView):
         context['faqs'] = FAQLanding.objects.filter(activo=True)
         context['testimonios'] = TestimonioLanding.objects.filter(activo=True)
 
-        # 🚀 NUEVO: Traemos solo las academias activas y que ya hayan subido su logo
         context['academias_trust'] = Academia.unfiltered_objects.filter(
             activo=True
-        ).exclude(logo='')
+        ).order_by('-id')
+
+        # 🚀 NUEVO: Cartelera Global de Eventos
+        try:
+            # Traemos los próximos 6 eventos que estén activos, de academias activas.
+            context['eventos_globales'] = Evento.unfiltered_objects.filter(
+                academia__activo=True,  # Seguridad: que la academia no esté bloqueada
+                fecha__gte=timezone.now(),
+                estado__in=['REGISTRO_ONLINE', 'REGISTRO_PUERTA']
+            ).select_related('academia').order_by('fecha')[:6]
+        except Exception:
+            context['eventos_globales'] = []
 
         return context
     
