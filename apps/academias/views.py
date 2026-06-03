@@ -19,59 +19,54 @@ from .forms import ConfigMascaraForm
 
 from django.contrib.auth.views import LogoutView
 
+from apps.multimedia.models import VideoClase
+
 # apps/academias/views.py
 
 class LandingAcademiaView(TemplateView):
     """
     Muestra la Landing Page pública de la academia activa en la URL (Tenant).
-    Soporta la carga dinámica de plantillas HTML personalizadas (Premium/Marca Blanca)
-    y aísla estrictamente los planes comerciales y eventos vigentes del inquilino.
+    Soporta la carga dinámica de plantillas HTML y añade un video destacado del aula virtual.
     """
-    # 🚨 NOTA SENIOR: Eliminamos el 'template_name' estático clásico 
-    # porque ahora el motor de renderizado se resolverá de forma dinámica abajo.
-
+    
     def get_template_names(self):
-        """
-        Intercepta la petición y revisa en la base de datos si esta academia
-        cuenta con una plantilla HTML personalizada exclusiva o si está en MODO EVENTOS.
-        """
         academia_activa = self.request.tenant
-
-        # 1. CONTROL DE MARCA BLANCA: Si el campo contiene una ruta, Django la carga de inmediato (Prioridad 1)
         if academia_activa and academia_activa.template_landing_personalizado:
             return [academia_activa.template_landing_personalizado]
-            
-        # 2. 🎫 MODO PRODUCTORA DE EVENTOS: Carga la vitrina exclusiva de tickets (Prioridad 2)
         if academia_activa and academia_activa.es_solo_eventos:
             return ["academias/index_eventos.html"]
-        
-        # 3. Salvavidas / Fallback: Usa el index estándar del SaaS para academias regulares
         return ["academias/index.html"]
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Obtenemos la academia activa de la petición actual (inyectada por el Middleware)
         academia_activa = self.request.tenant
-        
-        # Inyectamos la academia explícitamente al contexto para el uso de variables de branding en el HTML
         context['academia'] = academia_activa
         
-        # 1. TRAER PLANES COMERCIALES (Aislados estrictamente al inquilino)
+        # 1. TRAER PLANES COMERCIALES
         try:
-            # Forzamos el filtro por la instancia para evitar fugas si el manager falla en frío
             context['planes'] = Plan.objects.filter(academia=academia_activa).order_by('precio')[:3]
         except (NameError, AttributeError):
             context['planes'] = []
             
-        # 2. TRAER EVENTOS VIGENTES (Aislados estrictamente al inquilino)
+        # 2. TRAER EVENTOS VIGENTES
         try:
             context['eventos'] = Evento.objects.filter(
-                academia=academia_activa, # Candado doble explícito Multi-Tenant
+                academia=academia_activa,
                 fecha__gte=timezone.now(),  
                 estado__in=['REGISTRO_ONLINE', 'REGISTRO_PUERTA']
             ).order_by('fecha')[:3]  
         except (NameError, AttributeError):
             context['eventos'] = []
+
+        # 3. 🎥 INYECCIÓN DE MULTIMEDIA DE DEMOSTRACIÓN (NUEVO)
+        # Traemos el último video subido por la academia filtrando a través de la relación del módulo
+        try:
+            video_destacado = VideoClase.objects.filter(
+                modulo__academia=academia_activa
+            ).order_by('-fecha_subida').first()
+            context['video_destacado'] = video_destacado
+        except Exception:
+            context['video_destacado'] = None
 
         return context
 
@@ -124,10 +119,12 @@ class DashboardAdminView(LoginRequiredMixin, TemplateView):
 
 
         # 📅 OBTENEMOS EL AÑO, MES Y DÍA ACTUAL (Manejo ultra-tolerante del tiempo)
-        ahora = timezone.now()
+        ahora = timezone.localtime(timezone.now())
         año_actual = ahora.year
         mes_actual = ahora.month
         hoy_fecha = ahora.date()
+
+        estado_activo = 'ACTIVO'
 
         # Cómputo inteligente de fechas para el mes anterior (Comparativa financiera)
         if mes_actual == 1:
@@ -155,12 +152,13 @@ class DashboardAdminView(LoginRequiredMixin, TemplateView):
         # El filtro es dinámico y soporta variaciones comunes en el string del estado activo ('ACTIVE' o 'ACTIVO')
         estado_activo = 'ACTIVE' if hasattr(ReciboIngreso, 'estado') else 'ACTIVO'
         
+        # Filtro alternativo si el mes falla
         ingresos_mes = ReciboIngreso.objects.filter(
             academia=academia, 
-            estado=estado_activo, 
-            fecha__year=año_actual,
-            fecha__month=mes_actual
+            estado='ACTIVO',
+            fecha__gte=ahora.replace(day=1, hour=0, minute=0, second=0),
         ).aggregate(total=Sum('monto'))['total'] or 0
+        
         context['ingresos_mes'] = ingresos_mes
         
         # Histórico histórico de ingresos de la academia
@@ -270,6 +268,8 @@ class DashboardAdminView(LoginRequiredMixin, TemplateView):
         return context
 
 
+# apps/academias/views.py
+
 class BrandingConfigView(LoginRequiredMixin, UpdateView):
     model = Academia
     form_class = ConfigMascaraForm
@@ -278,20 +278,38 @@ class BrandingConfigView(LoginRequiredMixin, UpdateView):
     def get_object(self, queryset=None):
         return self.request.tenant
 
-    def post(self, request, *args, **kwargs):
-        """Captura los datos y archivos (logos/banners) enviados por el admin."""
-        self.object = self.get_object()
-        form = self.get_form()
-        form.data = request.POST
-        form.files = request.FILES # 🚨 Crítico para capturar las imágenes
-        
-        if form.is_valid():
-            return self.form_valid(form)
-        return self.form_invalid(form)
+    def form_valid(self, form):
+        print("✅ FORM VALID")
+        print("Nombre:", form.cleaned_data.get("nombre"))
+        return super().form_valid(form)
+
+    def form_valid(self, form):
+        print("ANTES")
+        print("OBJETO:", self.get_object().nombre)
+
+        self.object = form.save()
+
+        print("DESPUES")
+        print("OBJETO:", self.object.nombre)
+
+        from apps.academias.models import Academia
+        refrescado = Academia.objects.get(pk=self.object.pk)
+
+        print("BD:")
+        print(refrescado.nombre)
+
+        return redirect(
+            'academias:configuracion',
+            slug_academia=self.request.tenant.slug
+        )
 
     def get_success_url(self):
-        return reverse('academias:configuracion', kwargs={'slug_academia': self.request.tenant.slug})
-    
+        return reverse(
+            'academias:configuracion',
+            kwargs={
+                'slug_academia': self.request.tenant.slug
+            }
+        )
 
 class LogoutAcademiaView(LogoutView):
     """Cierre de sesión seguro adaptado al slug de la academia actual."""

@@ -14,6 +14,9 @@ from apps.finanzas.models import ReciboIngreso  # 🚀 IMPORTANTE: Importamos el
 from django.contrib import messages
 from django.shortcuts import redirect
 
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+
 class CrearEstudianteView(LoginRequiredMixin, CreateView):
     model = Estudiante
     form_class = EstudianteForm
@@ -213,3 +216,39 @@ class CrearPlanView(LoginRequiredMixin, CreateView):
     def get_success_url(self):
         # Al terminar, lo regresamos al panel de estudiantes
         return reverse('planes_estudiantes:lista_estudiantes', kwargs={'slug_academia': self.request.tenant.slug})
+    
+
+def api_detalle_estudiante(request, slug_academia, est_id):
+    est = get_object_or_404(Estudiante, id=est_id, academia__slug=slug_academia)
+
+    # Traemos solo los últimos 10 planes por defecto para no saturar el JSON
+    ultimos_planes = est.inscripciones.select_related('plan').order_by('-fecha_fin')[:10]
+
+    # Traer últimas 5 asistencias
+    asistencias = est.asistencias.all().order_by('-fecha_hora')[:5]
+    
+    # Preparamos los datos
+    data = {
+        "nombres": est.nombres,
+        "apellidos": est.apellidos,
+        "telefono": est.telefono,
+        "email": est.email,
+        "estado": est.estado,
+        "qr_url": est.qr_code.url if est.qr_code else None,
+        "planes": [
+            {
+                "nombre": p.plan.nombre,
+                "fecha_fin": p.fecha_fin.strftime('%d/%m/%Y'),
+                "clases": p.clases_restantes
+            } for p in ultimos_planes
+        ],
+
+        "asistencias": [
+            {"fecha": a.fecha_hora.strftime('%d/%m/%Y %H:%M'), "tipo": a.tipo_marcado} 
+            for a in asistencias
+        ],
+        
+        "total_planes": est.inscripciones.count() # Para mostrar si tiene más de 10
+        # Aquí podrías añadir un query para traer asistencias recientes
+    }
+    return JsonResponse(data)

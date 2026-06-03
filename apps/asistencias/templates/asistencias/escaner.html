@@ -1,22 +1,35 @@
 {% extends "base_tenant.html" %}
 
 {% block content %}
-<div class="row">
-    <div class="col-md-6 mx-auto text-center">
-        <div class="card border-0 shadow-sm p-4 bg-white">
-            <h3 class="fw-bold text-dark mb-1"><i class="bi bi-camera me-2 text-tenant-primary"></i>Escáner de Clases</h3>
-            <p class="text-muted small mb-4">Apunta la cámara al código QR del estudiante para validar su entrada.</p>
+<ul class="nav nav-tabs mb-4 justify-content-center">
+    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-qr">Escanear QR</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-manual">Manual</button></li>
+</ul>
 
-            <div id="reader" class="mx-auto rounded overflow-hidden shadow-sm bg-light" style="width: 100%; max-width: 350px;"></div>
+<div class="tab-content">
+    <div class="tab-pane fade show active" id="tab-qr">
+        <div id="reader" style="width: 100%; max-width: 350px;" class="mx-auto"></div>
+    </div>
 
-            <div id="resultado-escaner" class="mt-4 d-none">
-                <div id="alerta-box" class="alert p-3 m-0 rounded border">
-                    <h5 id="alerta-titulo" class="fw-bold m-0"></h5>
-                    <p id="alerta-mensaje" class="m-0 small mt-1"></p>
-                </div>
-            </div>
+    <div class="tab-pane fade" id="tab-manual">
+    <div class="card p-4 border-0 shadow-sm">
+        <label class="fw-bold mb-2">Seleccionar Estudiante:</label>
+        <select id="buscador-estudiantes" class="form-select select2">
+            <option value="">Buscar por nombre...</option>
+            {% for est in estudiantes %}
+                <option value="{{ est.id }}">{{ est.nombres }} {{ est.apellidos }}</option>
+            {% endfor %}
+        </select>
+        <button class="btn btn-primary mt-3" onclick="marcarManual()">Registrar Asistencia</button>
+    </div>
+
+    <div id="resultado-manual" class="mt-4 d-none">
+        <div id="alerta-box-manual" class="alert p-3 m-0 rounded border">
+            <h5 id="alerta-titulo-manual" class="fw-bold m-0"></h5>
+            <p id="alerta-mensaje-manual" class="m-0 small mt-1"></p>
         </div>
     </div>
+</div>
 </div>
 
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
@@ -72,5 +85,58 @@
     // Inicializamos el escáner apuntando a la cámara trasera (environment)
     let html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
     html5QrcodeScanner.render(onScanSuccess);
+
+
+function marcarManual() {
+    const estId = $('#buscador-estudiantes').val();
+    if (!estId) {
+        alert("Por favor, selecciona un estudiante de la lista.");
+        return;
+    }
+
+    // Efecto de carga inicial
+    const box = document.getElementById('resultado-manual');
+    box.classList.remove('d-none');
+    const alertaBox = document.getElementById('alerta-box-manual');
+    
+    alertaBox.className = "alert alert-info p-3";
+    document.getElementById('alerta-titulo-manual').innerText = "Procesando...";
+    document.getElementById('alerta-mensaje-manual').innerText = "Registrando asistencia...";
+
+    fetch("{% url 'asistencias:api_manual' request.tenant.slug %}", {
+        method: 'POST',
+        headers: { 
+            'Content-Type': 'application/json', 
+            'X-CSRFToken': csrftoken 
+        },
+        body: JSON.stringify({ estudiante_id: estId })
+    })
+    .then(response => response.json().then(data => ({ status: response.status, body: data })))
+    .then(res => {
+        const isSuccess = res.status === 200;
+        
+        // Estilo según resultado
+        alertaBox.className = isSuccess ? "alert alert-success p-3" : "alert alert-danger p-3";
+        
+        // Título
+        document.getElementById('alerta-titulo-manual').innerText = isSuccess ? "¡Asistencia Registrada!" : "¡Error en registro!";
+        
+        // Cuerpo del mensaje
+        if (isSuccess) {
+            document.getElementById('alerta-mensaje-manual').innerHTML = 
+                `<strong>${res.body.estudiante}</strong> ha sido marcado manualmente.<br>` +
+                `Clases restantes: <strong>${res.body.clases_restantes}</strong>`;
+        } else {
+            // Si el backend envía 'mensaje', lo mostramos, si no, un genérico
+            document.getElementById('alerta-mensaje-manual').innerText = res.body.mensaje || "Ocurrió un error inesperado.";
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alertaBox.className = "alert alert-danger p-3";
+        document.getElementById('alerta-titulo-manual').innerText = "Error de Conexión";
+        document.getElementById('alerta-mensaje-manual').innerText = "No se pudo conectar con el servidor.";
+    });
+}
 </script>
 {% endblock %}

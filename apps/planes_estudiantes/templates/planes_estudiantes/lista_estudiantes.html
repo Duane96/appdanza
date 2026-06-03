@@ -1,6 +1,18 @@
 {% extends "base_tenant.html" %}
 
 {% block content %}
+
+
+<style>
+    .card-item {
+        transition: transform 0.2s;
+        border-left: 4px solid var(--bg-academia-primary, #6f42c1);
+    }
+    .card-item:hover {
+        background-color: #f8f9fa;
+        transform: translateX(5px);
+    }
+</style>
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -37,9 +49,15 @@
                 {% for est in estudiantes %}
                 <tr>
                     <td>
-                        <strong class="text-dark d-block">{{ est.nombres }} {{ est.apellidos }}</strong>
-                        <span class="text-muted small font-monospace">@{{ est.nombres|slugify }}{% if est.apellidos %}{{ est.apellidos|slugify }}{% endif %}</span>
-                    </td>
+    <a href="#" 
+       class="text-decoration-none text-dark" 
+       onclick="cargarDetalle('{{ est.id }}');" 
+       data-bs-toggle="modal" 
+       data-bs-target="#modalDetalleEstudiante">
+       <strong class="text-dark d-block">{{ est.nombres }} {{ est.apellidos }}</strong>
+    </a>
+    <span class="text-muted small font-monospace">@{{ est.nombres|slugify }}{% if est.apellidos %}{{ est.apellidos|slugify }}{% endif %}</span>
+</td>
                     <td>
                         {% if est.estado == 'ACTIVO' %}
                             <span class="badge bg-success-subtle text-success border border-success-subtle">ACTIVO</span>
@@ -101,6 +119,22 @@
     </div>
 </div>
 
+<!-- Modal Único de Detalle -->
+<div class="modal fade" id="modalDetalleEstudiante" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold" id="estTitle">Detalle del Estudiante</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="estBody">
+                <!-- Carga dinámica -->
+                <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
 <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
@@ -126,5 +160,90 @@
             }
         });
     });
+
+
+// En tu lista_estudiantes.html
+function cargarDetalle(estId) {
+    const modalBody = document.getElementById('estBody');
+    // Muestra spinner de carga mientras llega la data
+    modalBody.innerHTML = `
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="text-muted mt-2">Cargando perfil...</p>
+        </div>`;
+    
+    // URL generada con el tag de Django
+    const url = "{% url 'planes_estudiantes:api_estudiante' request.tenant.slug 0 %}".replace('0', estId);
+    
+    fetch(url)
+        .then(res => res.json())
+        .then(data => {
+            modalBody.innerHTML = `
+                <ul class="nav nav-tabs mb-3" id="estTabs">
+                    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#info">Información</button></li>
+                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#pagos">Historial de Planes</button></li>
+                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#asistencias">Asistencias</button></li>
+                </ul>
+                
+                <div class="tab-content" style="min-height: 250px;">
+                    <div class="tab-pane fade show active" id="info">
+                        <div class="row align-items-center">
+                            <div class="col-md-7">
+                                <h4 class="fw-bold mb-3">${data.nombres} ${data.apellidos}</h4>
+                                <p class="mb-2"><i class="bi bi-telephone text-primary me-2"></i> ${data.telefono || 'Sin teléfono'}</p>
+                                <p class="mb-2"><i class="bi bi-envelope text-primary me-2"></i> ${data.email || 'Sin correo'}</p>
+                                <span class="badge ${data.estado === 'ACTIVO' ? 'bg-success' : 'bg-danger'} shadow-sm">Estado: ${data.estado}</span>
+                            </div>
+                            <div class="col-md-5 text-center">
+                                <img src="${data.qr_url}" class="img-fluid rounded border p-2 shadow-sm" style="max-width: 140px;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="pagos">
+                        <div class="list-group list-group-flush" style="max-height: 300px; overflow-y: auto;">
+                            ${data.planes.length > 0 ? 
+                                data.planes.map(p => `
+                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                        <div>
+                                            <div class="fw-bold text-dark">${p.nombre}</div>
+                                            <small class="text-muted"><i class="bi bi-calendar-event me-1"></i>Finaliza: ${p.fecha_fin}</small>
+                                        </div>
+                                        <span class="badge bg-light text-dark border rounded-pill">${p.clases} clases</span>
+                                    </div>
+                                `).join('') 
+                                : '<div class="text-center py-4 text-muted italic">Sin planes registrados.</div>'}
+                        </div>
+                        ${data.total_planes > 10 ? `
+                            <div class="text-center mt-2">
+                                <small class="text-primary font-monospace">...mostrando últimos 10 de ${data.total_planes}</small>
+                            </div>` : ''}
+                    </div>
+
+                    <div class="tab-pane fade" id="asistencias">
+                        <ul class="list-group list-group-flush" style="max-height: 300px; overflow-y: auto;">
+                            ${data.asistencias && data.asistencias.length > 0 ? 
+                                data.asistencias.map(a => `
+                                    <li class="list-group-item d-flex align-items-center py-3">
+                                        <div class="bg-primary bg-opacity-10 text-primary p-2 rounded me-3"><i class="bi bi-check2-circle"></i></div>
+                                        <div>
+                                            <span class="d-block fw-semibold text-dark">${a.fecha}</span>
+                                            <small class="text-muted">Marcado vía: ${a.tipo}</small>
+                                        </div>
+                                    </li>`).join('') 
+                                : '<div class="text-center py-4 text-muted italic">Sin asistencias registradas recientemente.</div>'}
+                        </ul>
+                    </div>
+                </div>
+            `;
+            
+            // Re-inicializamos las pestañas de Bootstrap
+            var triggerTabList = [].slice.call(modalBody.querySelectorAll('.nav-link'));
+            triggerTabList.forEach(triggerEl => new bootstrap.Tab(triggerEl));
+        })
+        .catch(err => {
+            modalBody.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> Error al cargar datos del estudiante.</div>';
+        });
+}
 </script>
 {% endblock %}

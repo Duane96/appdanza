@@ -7,7 +7,6 @@ from .models import Academia
 class ConfigMascaraForm(forms.ModelForm):
     class Meta:
         model = Academia
-        # 🚨 Agregamos 'login_imagen' al final de la lista de campos procesados
         fields = [
             'nombre', 'logo', 'color_primario', 'color_secundario', 'telefono', 'nit',
             'hero_titulo', 'hero_eslogan', 'hero_imagen_1',
@@ -43,11 +42,7 @@ class ConfigMascaraForm(forms.ModelForm):
             'tiktok_url': forms.URLInput(attrs={'class': 'form-control'}),
             'youtube_url': forms.URLInput(attrs={'class': 'form-control'}),
             'whatsapp_url': forms.URLInput(attrs={'class': 'form-control'}),
-
-            # 🚗 NUEVO WIDGET: Campo de archivo para la envoltura del login
             'login_imagen': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
-
-            # Selector Desplegable de los 4 bloques
             'bloque_1_titulo': forms.TextInput(attrs={'class': 'form-control'}),
             'bloque_1_icono': forms.Select(attrs={'class': 'form-select', 'id': 'select-icono-1'}),
             'bloque_2_titulo': forms.TextInput(attrs={'class': 'form-control'}),
@@ -57,3 +52,11 @@ class ConfigMascaraForm(forms.ModelForm):
             'bloque_4_titulo': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Opcional'}),
             'bloque_4_icono': forms.Select(attrs={'class': 'form-select', 'id': 'select-icono-4'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # 🚨 PARCHE DE PRODUCCIÓN 🚨
+        # Esto fuerza a Django a aceptar el formulario aunque el cliente 
+        # deje campos como "Sede" u "Horario" vacíos.
+        for field in self.fields.values():
+            field.required = False

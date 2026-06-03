@@ -184,6 +184,10 @@ CONTENT_SECURITY_POLICY = {
             "https://s.ytimg.com",          # <-- PERMITIDO: Assets estáticos de YouTube (reproductor)
             "https://cdn.jsdelivr.net",
             "https://static.cloudflareinsights.com",
+            "https://code.jquery.com",
+            "https://cdn.datatables.net",
+            "https://unpkg.com",
+
         ),
 
         ####################################################
@@ -194,6 +198,7 @@ CONTENT_SECURITY_POLICY = {
             "'unsafe-inline'",
             "https://cdn.jsdelivr.net",
             "https://fonts.googleapis.com",
+            "https://cdn.datatables.net",
         ),
 
         ####################################################

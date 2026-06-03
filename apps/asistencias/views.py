@@ -8,8 +8,13 @@ from apps.planes_estudiantes.models import Estudiante, InscripcionPlan
 from .models import Asistencia
 
 class PanelEscanerView(LoginRequiredMixin, TemplateView):
-    """Renderiza la pantalla de la cámara del celular del profesor."""
     template_name = "asistencias/escaner.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Traemos todos los estudiantes de la academia actual para el select
+        context['estudiantes'] = Estudiante.objects.filter(academia=self.request.tenant)
+        return context
 
 
 class ProcesarEscaneoQRView(LoginRequiredMixin, View):
@@ -85,3 +90,36 @@ class ProcesarEscaneoQRView(LoginRequiredMixin, View):
             import traceback
             traceback.print_exc()
             return JsonResponse({'status': 'error', 'mensaje': f'Error interno: {str(e)}'}, status=500)
+        
+
+class ProcesarAsistenciaManualView(LoginRequiredMixin, View):
+    def post(self, request, *args, **kwargs):
+        import json
+        data = json.loads(request.body)
+        estudiante_id = data.get('estudiante_id')
+        
+        try:
+            estudiante = Estudiante.objects.get(id=estudiante_id, academia=request.tenant)
+            
+            # Reutilizamos la misma lógica de validación de plan activo que en el QR
+            hoy = timezone.now().date()
+            inscripcion = InscripcionPlan.objects.filter(
+                estudiante=estudiante, fecha_inicio__lte=hoy, fecha_fin__gte=hoy, clases_restantes__gt=0
+            ).first()
+
+            if not inscripcion:
+                return JsonResponse({'status': 'error', 'mensaje': 'El estudiante no tiene plan activo.'}, status=400)
+
+            # Registrar asistencia
+            Asistencia.objects.create(
+                academia=request.tenant, estudiante=estudiante, tipo_marcado='MANUAL', registrado_por=request.user
+            )
+            
+            # Descontar clase
+            inscripcion.clases_restantes -= 1
+            inscripcion.save()
+
+            return JsonResponse({'status': 'success', 'estudiante': f"{estudiante.nombres} {estudiante.apellidos}", 'clases_restantes': inscripcion.clases_restantes})
+
+        except Estudiante.DoesNotExist:
+            return JsonResponse({'status': 'error', 'mensaje': 'Estudiante no encontrado.'}, status=404)

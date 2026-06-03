@@ -57,29 +57,29 @@ class CrearAcademiaSaaSView(UserPassesTestMixin, View):
         slug = request.POST.get('slug')
         plan_id = request.POST.get('plan_id')
         dias_prueba = int(request.POST.get('dias_prueba', 15))
-        
-        # 🎨 CAPTURA EL CAMPO PREMIUM DE MARCA BLANCA
-        template_personalizado = request.POST.get('template_landing_personalizado', '').strip()
-        if not template_personalizado:
-            template_personalizado = None
-
-        # 🎫 CAPTURA MODO PRODUCTORA DE EVENTOS
+        template_personalizado = request.POST.get('template_landing_personalizado', '').strip() or None
         es_productora = request.POST.get('es_solo_eventos') == 'on'
-
         admin_email = request.POST.get('admin_email')
         admin_password = request.POST.get('admin_password')
 
         with transaction.atomic():
+            # 1. Creamos la escuela de baile
             nueva_academia = Academia.unfiltered_objects.create(
                 nombre=nombre,
                 slug=slug,
                 template_landing_personalizado=template_personalizado,
-                es_solo_eventos=es_productora, # 👈 AQUÍ SE GUARDA EL MODO
+                es_solo_eventos=es_productora,
                 activo=True
             )
 
+            # 2. Obtenemos el plan comercial maestro seleccionado
             plan_inicial = PlanSaaS.objects.get(id=plan_id)
             fecha_hoy = timezone.now().date()
+            
+            # 🎯 REPARACIÓN SENIOR: Eliminamos la declaración de los módulos.
+            # Como los módulos son `@property` que heredan los permisos del 'plan', 
+            # no es necesario ni permitido guardarlos explícitamente aquí.
+            # Los campos reales 'bloqueo_manual_*' nacen en False por defecto en tu modelo.
             SuscripcionAcademia.objects.create(
                 academia=nueva_academia,
                 plan=plan_inicial,
@@ -87,9 +87,10 @@ class CrearAcademiaSaaSView(UserPassesTestMixin, View):
                 ya_uso_prueba_gratis=True,
                 dias_regalados_prueba=dias_prueba,
                 fecha_inicio=fecha_hoy,
-                fecha_vencimiento=fecha_hoy + timezone.timedelta(days=dias_prueba) 
+                fecha_vencimiento=fecha_hoy + timezone.timedelta(days=dias_prueba)
             )
 
+            # 3. Credenciales de acceso de su respectivo director técnico
             nuevo_admin = User.objects.create_user(
                 username=admin_email,
                 email=admin_email,
@@ -106,30 +107,38 @@ class CrearAcademiaSaaSView(UserPassesTestMixin, View):
 
         return redirect('panel_maestro_dashboard')
 
+
 class ActualizarLicenciaSaaSView(UserPassesTestMixin, View):
     def test_func(self):
         return self.request.user.is_superuser and self.request.user.is_staff
 
     def post(self, request, *args, **kwargs):
         academia_id = request.POST.get('academia_id')
-        
-        # OBTENEMOS LOS OBJETOS
         suscripcion = get_object_or_404(SuscripcionAcademia, academia_id=academia_id)
-        academia = suscripcion.academia # 👈 Instancia directa de la academia
+        academia = suscripcion.academia
         
-        # 1. ACTUALIZAR ESTADO DE SUSCRIPCIÓN
         suscripcion.estado = request.POST.get('estado')
         
-        # 2. CAPTURAR CHECKBOXES
-        suscripcion.bloqueo_manual_multimedia = request.POST.get('bloqueo_multimedia') == 'on'
-        suscripcion.bloqueo_manual_finanzas = request.POST.get('bloqueo_finanzas') == 'on'
-        suscripcion.bloqueo_manual_asistencias = request.POST.get('bloqueo_asistencias') == 'on'
-        suscripcion.bloqueo_manual_eventos = request.POST.get('bloqueo_eventos') == 'on'
-        suscripcion.bloqueo_manual_estudiantes = request.POST.get('bloqueo_estudiantes') == 'on'
+        # 1. Actualizamos el plan (si se envió uno válido)
+        nuevo_plan_id = request.POST.get('plan_id')
+        if nuevo_plan_id:
+            try:
+                suscripcion.plan = PlanSaaS.objects.get(id=nuevo_plan_id)
+            except PlanSaaS.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'El plan seleccionado no existe.'}, status=400)
+
+        # 2. 🎯 REPARACIÓN SENIOR: El backend confía plenamente en el frontend.
+        # Si el switch llegó 'on', significa que no hay bloqueo (False).
+        # Esto respeta tanto la auto-sincronización del JS como tus overrides manuales.
+        suscripcion.bloqueo_manual_estudiantes = not (request.POST.get('modulo_estudiantes_activo') == 'on')
+        suscripcion.bloqueo_manual_asistencias = not (request.POST.get('modulo_asistencias_activo') == 'on')
+        suscripcion.bloqueo_manual_finanzas = not (request.POST.get('modulo_finanzas_activo') == 'on')
+        suscripcion.bloqueo_manual_multimedia = not (request.POST.get('modulo_multimedia_activo') == 'on')
+        suscripcion.bloqueo_manual_eventos = not (request.POST.get('modulo_eventos_activo') == 'on')
+        
         suscripcion.es_cuenta_partner_gratis = request.POST.get('es_cuenta_partner_gratis') == 'on'
         suscripcion.save()
 
-        # 3. ACTUALIZAR MODO EVENTOS EN EL MODELO ACADEMIA 👈
         academia.es_solo_eventos = request.POST.get('es_solo_eventos') == 'on'
         academia.save()
 
@@ -152,7 +161,8 @@ class CrearPlanSaaSView(UserPassesTestMixin, View):
             permite_estudiantes=request.POST.get('estudiantes') == 'on', # 🚀 NUEVO
             permite_multimedia=request.POST.get('multimedia') == 'on',
             permite_finanzas=request.POST.get('finanzas') == 'on',
-            permite_asistencias_qr=request.POST.get('asistencias') == 'on'
+            permite_asistencias_qr=request.POST.get('asistencias') == 'on',
+            permite_eventos=request.POST.get('eventos') == 'on'
         )
         return redirect('panel_maestro_dashboard')
 

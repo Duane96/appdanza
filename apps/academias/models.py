@@ -184,32 +184,43 @@ class Academia(models.Model):
     def __str__(self):
         return self.nombre
 
+    # apps/academias/models.py (Dentro de la clase Academia)
+
     def save(self, *args, **kwargs):
-        """Intercepta y convierte automáticamente absolutamente todas las imágenes de marca a WebP."""
-        # 🚨 Agregamos 'info_imagen' y 'login_imagen' al radar de conversión automática
-        campos_imagen = ['hero_imagen_1', 'hero_imagen_2', 'logo', 'info_imagen', 'login_imagen']
-        
+        mapeo_divisas = {
+            'CO': 'COP',
+            'US': 'USD',
+            'ES': 'EUR',
+            'MX': 'MXN',
+            'CL': 'CLP',
+            'BR': 'BRL',
+            'PE': 'PEN',
+            'OT': 'USD'
+        }
+
+        self.divisa = mapeo_divisas.get(self.pais, 'USD')
+
+        campos_imagen = [
+            'hero_imagen_1',
+            'hero_imagen_2',
+            'logo',
+            'info_imagen',
+            'login_imagen'
+        ]
+
         for campo in campos_imagen:
             archivo_imagen = getattr(self, campo)
+
             if archivo_imagen and not archivo_imagen.name.endswith('.webp'):
                 try:
-                    img = Image.open(archivo_imagen)
-                    if img.mode in ('RGBA', 'LA', 'P'):
-                        background = Image.new("RGB", img.size, (255, 255, 255))
-                        background.paste(img, mask=img.split()[3] if img.mode == 'RGBA' else None)
-                        img = background
-                    
-                    output_buffer = BytesIO()
-                    img.save(output_buffer, format='WEBP', quality=80)
-                    output_buffer.seek(0)
-                    
-                    nuevo_nombre = f"{os.path.splitext(archivo_imagen.name)[0]}.webp"
-                    setattr(self, campo, ContentFile(output_buffer.read(), name=nuevo_nombre))
-                except Exception:
-                    pass
-                    
+                    ...
+                except Exception as e:
+                    print(f"Error procesando imagen en {campo}: {e}")
+
         super().save(*args, **kwargs)
 
+    def __str__(self):
+        return self.nombre
 
 class PerfilUsuario(models.Model):
     """Extiende el modelo User de Django para manejar roles y pertenencia de empleados."""

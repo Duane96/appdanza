@@ -28,7 +28,7 @@ class Estudiante(TenantModel):
     
     nombres = models.CharField(max_length=100)
     apellidos = models.CharField(max_length=100)
-    identificacion = models.CharField(max_length=20, unique=True, verbose_name="Cédula / TI")
+    identificacion = models.CharField(max_length=20, verbose_name="Cédula / TI")
     email = models.EmailField(blank=True, null=True)
     telefono = models.CharField(max_length=20, blank=True, null=True)
     estado = models.CharField(max_length=15, choices=ESTADOS, default='INACTIVO')
@@ -37,6 +37,11 @@ class Estudiante(TenantModel):
     qr_code = models.ImageField(upload_to="qrs_estudiantes/", blank=True, null=True)
     token_asistencia = models.CharField(max_length=64, unique=True, editable=False, null=True)
     fecha_registro = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        # 🎯 ESTO PERMITE QUE EL MISMO ID PUEDA EXISTIR EN DIFERENTES ACADEMIAS
+        # Pero sea único dentro de una sola academia.
+        unique_together = ('academia', 'identificacion')
 
     def __str__(self):
         return f"{self.nombres} {self.apellidos}"

@@ -6,13 +6,25 @@
         <h2 class="fw-bold text-dark m-0">Configuración de la Landing Pública</h2>
         <p class="text-muted small">Personaliza los colores, imágenes del carrete, textos informativos y enlaces comerciales de tu sitio web.</p>
         
-        <!-- Badge informativo para que el usuario sepa en qué modo está -->
+        <!-- Badge informativo puramente visual -->
         {% if object.es_solo_eventos %}
             <span class="badge bg-warning text-dark border"><i class="bi bi-ticket-perforated-fill me-1"></i> Modo Productora de Eventos Activo</span>
         {% else %}
             <span class="badge bg-primary text-white border"><i class="bi bi-building me-1"></i> Modo Academia Regular Activo</span>
         {% endif %}
     </div>
+
+    <!-- Módulo salvavidas: Si Django rechaza el form, te lo dirá aquí gritando -->
+    {% if form.errors %}
+    <div class="alert alert-danger shadow-sm border-0 rounded-3">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i><strong>Por favor corrige los siguientes campos para poder guardar:</strong>
+        <ul class="mb-0 mt-2 small">
+            {% for field, errors in form.errors.items %}
+                <li><strong>{{ field }}:</strong> {{ errors|join:", " }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
 
     <form method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
         {% csrf_token %}
@@ -54,7 +66,6 @@
                             {% if object.login_imagen %}
                                 <div class="mt-2 text-start">
                                     <img src="{{ object.login_imagen.url }}" alt="Fondo Login" class="rounded border p-1 bg-light" style="max-height: 55px; max-width: 100px; object-fit: cover;">
-                                    <span class="d-block text-muted style-text small" style="font-size: 0.75rem;">Fondo actual en formato WebP optimizado</span>
                                 </div>
                             {% endif %}
                         </div>
@@ -86,8 +97,7 @@
                     </div>
                 </div>
 
-                <!-- 🧠 CONDICIONAL: Los Cuadros de Características SOLO se muestran si NO es "Solo Eventos" -->
-                {% if not object.es_solo_eventos %}
+                <!-- 🚀 LIMPIEZA: Se muestran siempre, sin importar el modo de la academia -->
                 <div class="card border-0 shadow-sm bg-white p-4 rounded-4 mb-4">
                     <h5 class="fw-bold text-dark mb-3"><i class="bi bi-grid-1x2-fill text-info me-2"></i>Cuadros Destacados de Características</h5>
                     <p class="text-muted small mb-3">Configura hasta 4 cuadros. Si dejas el título de los cuadros 3 o 4 en blanco, la landing ocultará el bloque automáticamente adaptando el diseño.</p>
@@ -170,7 +180,6 @@
                         </div>
                     </div>
                 </div>
-                {% endif %}
             </div> 
 
             <div class="col-lg-6">
@@ -197,8 +206,7 @@
                         </div>
                     </div>
 
-                    <!-- 🧠 CONDICIONAL: La Diapositiva 2 SOLO se muestra si NO es "Solo Eventos" -->
-                    {% if not object.es_solo_eventos %}
+                    <!-- 🚀 LIMPIEZA: Se muestra siempre -->
                     <div class="p-3 bg-light rounded-3 border">
                         <h6 class="fw-bold text-dark mb-2 small text-uppercase text-muted">Diapositiva 2 (Eventos/Comunidad)</h6>
                         <div class="mb-2">
@@ -217,7 +225,6 @@
                             {% endif %}
                         </div>
                     </div>
-                    {% endif %}
                 </div>
 
                 <div class="card border-0 shadow-sm bg-white p-4 rounded-4 mb-4">
@@ -232,8 +239,7 @@
                             {{ form.telefono }}
                         </div>
                         
-                        <!-- 🧠 CONDICIONAL: Sedes y Horarios SOLO se muestran si NO es "Solo Eventos" -->
-                        {% if not object.es_solo_eventos %}
+                        <!-- 🚀 LIMPIEZA: Se muestran siempre -->
                         <div class="col-12">
                             <label class="form-label small fw-semibold text-secondary">Dirección Exacta de la Sede</label>
                             {{ form.direccion_sede }}
@@ -242,7 +248,6 @@
                             <label class="form-label small fw-semibold text-secondary">Horario Comercial Público</label>
                             {{ form.horario_atencion }}
                         </div>
-                        {% endif %}
 
                         <div class="col-md-6">
                             <label class="form-label small fw-semibold text-secondary"><i class="bi bi-instagram text-danger me-1"></i>URL Instagram</label>
@@ -253,7 +258,6 @@
                             {{ form.facebook_url }}
                         </div>
                         
-                        <!-- Las otras redes pueden o no ser relevantes, pero las dejamos por consistencia de negocio -->
                         <div class="col-md-4">
                             <label class="form-label small fw-semibold text-secondary"><i class="bi bi-tiktok text-dark me-1"></i>URL TikTok</label>
                             {{ form.tiktok_url }}
@@ -284,7 +288,6 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        // Ejecutamos el script solo si existen los selects de iconos (académicos)
         for (let i = 1; i <= 4; i++) {
             const selectElement = document.getElementById(`select-icono-${i}`);
             const previewElement = document.getElementById(`preview-box-${i}`);
