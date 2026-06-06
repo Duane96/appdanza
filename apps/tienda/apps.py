@@ -1,6 +1,6 @@
 # apps/asistencias/apps.py
 from django.apps import AppConfig
 
-class FinanzasConfig(AppConfig):
+class TiendaConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'apps.finanzas'  # ⚠️ Obligatorio el prefijo 'apps.'
+    name = 'apps.tienda'  # ⚠️ Obligatorio el prefijo 'apps.'

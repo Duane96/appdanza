@@ -33,83 +33,95 @@
 </div>
 </div>
 
-<div class="card border-0 shadow-sm bg-white p-3">
+<div class="card border-0 shadow-sm bg-white p-4 rounded-4">
+    <!-- 🔍 BUSCADOR PERSONALIZADO -->
+    <div class="row mb-4">
+        <div class="col-md-6 col-lg-5">
+            <div class="input-group input-group-lg shadow-sm rounded-pill overflow-hidden border">
+                <span class="input-group-text bg-white border-0 text-muted ps-4">
+                    <i class="bi bi-search"></i>
+                </span>
+                <input type="text" id="buscadorPersonalizado" class="form-control border-0 ps-2" placeholder="Buscar por nombre, documento o @usuario..." autocomplete="off">
+            </div>
+            <small class="text-muted ms-3 mt-1 d-block"><i class="bi bi-info-circle me-1"></i>Búsqueda en tiempo real activa</small>
+        </div>
+    </div>
+
+    <!-- TABLA DE DATOS -->
     <div class="table-responsive style-scroll" style="max-height: 600px;">
-        <table id="tabla-estudiantes" class="table table-striped table-hover align-middle m-0 w-100">
-            <thead class="table-light">
+        <table id="tabla-estudiantes" class="table table-hover align-middle m-0 w-100 border-top">
+            <thead class="table-light text-uppercase text-secondary small font-monospace">
                 <tr>
-                    <th>Estudiante / Username</th>
-                    <th>Estado</th>
-                    <th>Vigencia Plan</th>
-                    <th>Contacto</th>
-                    <th class="text-center">Código QR</th>
+                    <th class="border-0 ps-3">Estudiante / Username</th>
+                    <th class="border-0">Estado</th>
+                    <th class="border-0">Vigencia Plan</th>
+                    <th class="border-0">Contacto</th>
+                    <th class="text-center border-0">Código QR</th>
                 </tr>
             </thead>
             <tbody>
+                <!-- EL CONTENIDO DE TU BUCLE FOR SE MANTIENE EXACTAMENTE IGUAL -->
                 {% for est in estudiantes %}
-                <tr>
-                    <td>
-    <a href="#" 
-       class="text-decoration-none text-dark" 
-       onclick="cargarDetalle('{{ est.id }}');" 
-       data-bs-toggle="modal" 
-       data-bs-target="#modalDetalleEstudiante">
-       <strong class="text-dark d-block">{{ est.nombres }} {{ est.apellidos }}</strong>
-    </a>
-    <span class="text-muted small font-monospace">@{{ est.nombres|slugify }}{% if est.apellidos %}{{ est.apellidos|slugify }}{% endif %}</span>
-</td>
+                <tr class="card-item">
+                    <td class="ps-3">
+                        <a href="#" class="text-decoration-none text-dark hover-primary" onclick="cargarDetalle('{{ est.id }}');" data-bs-toggle="modal" data-bs-target="#modalDetalleEstudiante">
+                           <strong class="fw-bold d-block">{{ est.nombres }} {{ est.apellidos }}</strong>
+                        </a>
+                        <span class="text-muted small font-monospace">@{{ est.nombres|slugify }}{% if est.apellidos %}{{ est.apellidos|slugify }}{% endif %}</span>
+                    </td>
                     <td>
                         {% if est.estado == 'ACTIVO' %}
-                            <span class="badge bg-success-subtle text-success border border-success-subtle">ACTIVO</span>
+                            <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2 fw-bold">ACTIVO</span>
                         {% else %}
-                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle">INACTIVO</span>
+                            <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-2 fw-bold">INACTIVO</span>
                         {% endif %}
                     </td>
                     <td>
-    {% with ultima_ins=est.inscripciones.last %}
-        {% if ultima_ins %}
-            <span class="d-block small text-dark fw-semibold">
-                <i class="bi bi-calendar-check me-1 text-success"></i>Fin: {{ ultima_ins.fecha_fin|date:"d/m/Y" }}
-            </span>
-            <span class="badge bg-light text-dark border small">Clases: {{ ultima_ins.clases_restantes }}</span>
-            
-            {% if ultima_ins.saldo_pendiente > 0 %}
-                <span class="badge bg-warning-subtle text-warning border border-warning-subtle d-block mt-1 w-100 text-start">
-                    <i class="bi bi-cash me-1"></i>Debe: ${{ ultima_ins.saldo_pendiente|floatformat:0 }} COP
-                </span>
-            {% endif %}
-        {% else %}
-            <span class="text-muted small italic">Sin plan asignado</span>
-        {% endif %}
-    {% endwith %}
-</td>
+                        {% with ultima_ins=est.inscripciones.last %}
+                            {% if ultima_ins %}
+                                <span class="d-block small text-dark fw-bold">
+                                    <i class="bi bi-calendar-check me-1 text-success"></i>Fin: {{ ultima_ins.fecha_fin|date:"d/m/Y" }}
+                                </span>
+                                <span class="badge bg-secondary bg-opacity-10 text-dark border-0 small mt-1">Clases: {{ ultima_ins.clases_restantes }}</span>
+                                
+                                {% if ultima_ins.saldo_pendiente > 0 %}
+                                    <span class="badge bg-warning bg-opacity-10 text-warning-dark border-0 d-block mt-1 w-100 text-start fw-bold">
+                                        <i class="bi bi-cash me-1"></i>Debe: ${{ ultima_ins.saldo_pendiente|floatformat:0 }} COP
+                                    </span>
+                                {% endif %}
+                            {% else %}
+                                <span class="badge bg-light text-muted border-0 small italic">Sin plan asignado</span>
+                            {% endif %}
+                        {% endwith %}
+                    </td>
                     <td>
-                        <span class="d-block small text-dark"><i class="bi bi-telephone me-1"></i>{{ est.telefono|default:"--" }}</span>
+                        <span class="d-block small fw-semibold text-dark"><i class="bi bi-telephone text-primary me-1"></i>{{ est.telefono|default:"Sin registro" }}</span>
                     </td>
                     <td class="text-center">
                         {% if est.qr_code %}
-                            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modalQR{{ est.id }}">
-                                <i class="bi bi-qr-code me-1"></i> Abrir QR
+                            <button type="button" class="btn btn-sm btn-light rounded-pill px-3 text-primary fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalQR{{ est.id }}">
+                                <i class="bi bi-qr-code me-1"></i> Ver QR
                             </button>
 
+                            <!-- TU MODAL QR SE MANTIENE IGUAL AQUÍ -->
                             <div class="modal fade" id="modalQR{{ est.id }}" tabindex="-1" aria-hidden="true">
                                 <div class="modal-dialog modal-dialog-centered modal-sm">
-                                    <div class="modal-content">
+                                    <div class="modal-content rounded-4 border-0 shadow-lg">
                                         <div class="modal-header border-0 pb-0">
                                             <button type="button" class="btn-close" data-bs-toggle="modal" data-bs-target="#modalQR{{ est.id }}"></button>
                                         </div>
                                         <div class="modal-body text-center pt-0">
                                             <h5 class="fw-bold mb-3">{{ est.nombres }}</h5>
                                             <img src="{{ est.qr_code.url }}" alt="QR" class="img-fluid rounded border p-2 mb-2 bg-white" style="max-width: 180px;">
-                                            <a href="{{ est.qr_code.url }}" download="QR_{{ est.identificacion }}.png" class="btn btn-sm btn-tenant-primary mt-3 w-100">
-                                                <i class="bi bi-download me-1"></i> Descargar QR
+                                            <a href="{{ est.qr_code.url }}" download="QR_{{ est.identificacion }}.png" class="btn btn-tenant-primary mt-3 w-100 rounded-pill fw-bold">
+                                                <i class="bi bi-download me-1"></i> Descargar
                                             </a>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         {% else %}
-                            <span class="text-muted small">Sin QR</span>
+                            <span class="text-muted small italic">Pendiente</span>
                         {% endif %}
                     </td>
                 </tr>
@@ -135,115 +147,137 @@
     </div>
 </div>
 
-<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
-<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
-
 <script>
-    $(document).ready(function() {
-        $('#tabla-estudiantes').DataTable({
-            "pageLength": 10,        // Muestra máximo 10 registros por pestaña
-            "lengthChange": false,   // Oculta el menú pesado de cambiar a 25/50 registros
-            "ordering": true,        // Permite ordenar columnas al dar clic
-            "language": {            // Traduce el plugin al español de una
-                "search": "Buscar alumno:",
-                "zeroRecords": "No se encontraron alumnos con ese criterio",
-                "info": "Mostrando página _PAGE_ de _PAGES_",
-                "infoEmpty": "No hay registros disponibles",
-                "infoFiltered": "(filtrado de un total de _MAX_ estudiantes)",
-                "paginate": {
-                    "first": "Primero",
-                    "last": "Último",
-                    "next": "Siguiente",
-                    "previous": "Anterior"
-                }
-            }
-        });
-    });
+    // 1. Función para inyectar scripts en el HTML solo cuando los necesitemos
+    function cargarScriptDinamicamente(url, callback) {
+        var script = document.createElement("script");
+        script.type = "text/javascript";
+        script.src = url;
+        script.onload = callback;
+        document.body.appendChild(script);
+    }
 
-
-// En tu lista_estudiantes.html
-function cargarDetalle(estId) {
-    const modalBody = document.getElementById('estBody');
-    // Muestra spinner de carga mientras llega la data
-    modalBody.innerHTML = `
-        <div class="text-center py-5">
-            <div class="spinner-border text-primary" role="status"></div>
-            <p class="text-muted mt-2">Cargando perfil...</p>
-        </div>`;
-    
-    // URL generada con el tag de Django
-    const url = "{% url 'planes_estudiantes:api_estudiante' request.tenant.slug 0 %}".replace('0', estId);
-    
-    fetch(url)
-        .then(res => res.json())
-        .then(data => {
-            modalBody.innerHTML = `
-                <ul class="nav nav-tabs mb-3" id="estTabs">
-                    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#info">Información</button></li>
-                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#pagos">Historial de Planes</button></li>
-                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#asistencias">Asistencias</button></li>
-                </ul>
-                
-                <div class="tab-content" style="min-height: 250px;">
-                    <div class="tab-pane fade show active" id="info">
-                        <div class="row align-items-center">
-                            <div class="col-md-7">
-                                <h4 class="fw-bold mb-3">${data.nombres} ${data.apellidos}</h4>
-                                <p class="mb-2"><i class="bi bi-telephone text-primary me-2"></i> ${data.telefono || 'Sin teléfono'}</p>
-                                <p class="mb-2"><i class="bi bi-envelope text-primary me-2"></i> ${data.email || 'Sin correo'}</p>
-                                <span class="badge ${data.estado === 'ACTIVO' ? 'bg-success' : 'bg-danger'} shadow-sm">Estado: ${data.estado}</span>
-                            </div>
-                            <div class="col-md-5 text-center">
-                                <img src="${data.qr_url}" class="img-fluid rounded border p-2 shadow-sm" style="max-width: 140px;">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="tab-pane fade" id="pagos">
-                        <div class="list-group list-group-flush" style="max-height: 300px; overflow-y: auto;">
-                            ${data.planes.length > 0 ? 
-                                data.planes.map(p => `
-                                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-                                        <div>
-                                            <div class="fw-bold text-dark">${p.nombre}</div>
-                                            <small class="text-muted"><i class="bi bi-calendar-event me-1"></i>Finaliza: ${p.fecha_fin}</small>
-                                        </div>
-                                        <span class="badge bg-light text-dark border rounded-pill">${p.clases} clases</span>
-                                    </div>
-                                `).join('') 
-                                : '<div class="text-center py-4 text-muted italic">Sin planes registrados.</div>'}
-                        </div>
-                        ${data.total_planes > 10 ? `
-                            <div class="text-center mt-2">
-                                <small class="text-primary font-monospace">...mostrando últimos 10 de ${data.total_planes}</small>
-                            </div>` : ''}
-                    </div>
-
-                    <div class="tab-pane fade" id="asistencias">
-                        <ul class="list-group list-group-flush" style="max-height: 300px; overflow-y: auto;">
-                            ${data.asistencias && data.asistencias.length > 0 ? 
-                                data.asistencias.map(a => `
-                                    <li class="list-group-item d-flex align-items-center py-3">
-                                        <div class="bg-primary bg-opacity-10 text-primary p-2 rounded me-3"><i class="bi bi-check2-circle"></i></div>
-                                        <div>
-                                            <span class="d-block fw-semibold text-dark">${a.fecha}</span>
-                                            <small class="text-muted">Marcado vía: ${a.tipo}</small>
-                                        </div>
-                                    </li>`).join('') 
-                                : '<div class="text-center py-4 text-muted italic">Sin asistencias registradas recientemente.</div>'}
-                        </ul>
-                    </div>
-                </div>
-            `;
+    // 2. Esperamos pacientemente a que tu base_tenant.html cargue jQuery
+    var esperaJquery = setInterval(function() {
+        if (window.jQuery) {
+            clearInterval(esperaJquery); // jQuery detectado, detenemos el reloj
             
-            // Re-inicializamos las pestañas de Bootstrap
-            var triggerTabList = [].slice.call(modalBody.querySelectorAll('.nav-link'));
-            triggerTabList.forEach(triggerEl => new bootstrap.Tab(triggerEl));
-        })
-        .catch(err => {
-            modalBody.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> Error al cargar datos del estudiante.</div>';
-        });
-}
+            // 3. Cargamos DataTables Core
+            cargarScriptDinamicamente("https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js", function() {
+                // 4. Cargamos la integración de DataTables con Bootstrap 5
+                cargarScriptDinamicamente("https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js", function() {
+                    
+                    // 5. ¡AHORA SÍ! Todo está en memoria, inicializamos la tabla sin errores
+                    var tabla = $('#tabla-estudiantes').DataTable({
+                        "dom": '<"top">rt<"d-flex justify-content-between align-items-center mt-3"ip><"clear">',
+                        "pageLength": 10,
+                        "lengthChange": false,
+                        "ordering": true,
+                        "language": {
+                            "zeroRecords": "<div class='text-center py-4'><i class='bi bi-search fs-1 text-muted d-block mb-2'></i>No se encontraron estudiantes con ese nombre o documento.</div>",
+                            "info": "<span class='text-muted small fw-semibold'>Mostrando _START_ a _END_ de _TOTAL_ alumnos</span>",
+                            "infoEmpty": "<span class='text-muted small'>No hay registros disponibles</span>",
+                            "infoFiltered": "<span class='text-muted small'>(filtrado de _MAX_ en total)</span>",
+                            "paginate": {
+                                "first": "Primero",
+                                "last": "Último",
+                                "next": "Siguiente <i class='bi bi-chevron-right ms-1'></i>",
+                                "previous": "<i class='bi bi-chevron-left me-1'></i> Anterior"
+                            }
+                        }
+                    });
+
+                    // Conexión del buscador personalizado
+                    $('#buscadorPersonalizado').on('keyup', function() {
+                        tabla.search(this.value).draw();
+                    });
+
+                });
+            });
+        }
+    }, 50); // Revisa si jQuery existe cada 50 milisegundos
+
+    // ==========================================
+    // FUNCIÓN DE DETALLE (Intacta)
+    // ==========================================
+    function cargarDetalle(estId) {
+        const modalBody = document.getElementById('estBody');
+        modalBody.innerHTML = `
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="text-muted mt-2">Cargando perfil...</p>
+            </div>`;
+        
+        const url = "{% url 'planes_estudiantes:api_estudiante' request.tenant.slug 0 %}".replace('0', estId);
+        
+        fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                modalBody.innerHTML = `
+                    <ul class="nav nav-tabs mb-3" id="estTabs">
+                        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#info">Información</button></li>
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#pagos">Historial de Planes</button></li>
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#asistencias">Asistencias</button></li>
+                    </ul>
+                    
+                    <div class="tab-content" style="min-height: 250px;">
+                        <div class="tab-pane fade show active" id="info">
+                            <div class="row align-items-center">
+                                <div class="col-md-7">
+                                    <h4 class="fw-bold mb-3">${data.nombres} ${data.apellidos}</h4>
+                                    <p class="mb-2"><i class="bi bi-telephone text-primary me-2"></i> ${data.telefono || 'Sin teléfono'}</p>
+                                    <p class="mb-2"><i class="bi bi-envelope text-primary me-2"></i> ${data.email || 'Sin correo'}</p>
+                                    <span class="badge ${data.estado === 'ACTIVO' ? 'bg-success' : 'bg-danger'} shadow-sm">Estado: ${data.estado}</span>
+                                </div>
+                                <div class="col-md-5 text-center">
+                                    <img src="${data.qr_url}" class="img-fluid rounded border p-2 shadow-sm" style="max-width: 140px;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="pagos">
+                            <div class="list-group list-group-flush" style="max-height: 300px; overflow-y: auto;">
+                                ${data.planes.length > 0 ? 
+                                    data.planes.map(p => `
+                                        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                            <div>
+                                                <div class="fw-bold text-dark">${p.nombre}</div>
+                                                <small class="text-muted"><i class="bi bi-calendar-event me-1"></i>Finaliza: ${p.fecha_fin}</small>
+                                            </div>
+                                            <span class="badge bg-light text-dark border rounded-pill">${p.clases} clases</span>
+                                        </div>
+                                    `).join('') 
+                                    : '<div class="text-center py-4 text-muted italic">Sin planes registrados.</div>'}
+                            </div>
+                            ${data.total_planes > 10 ? `
+                                <div class="text-center mt-2">
+                                    <small class="text-primary font-monospace">...mostrando últimos 10 de ${data.total_planes}</small>
+                                </div>` : ''}
+                        </div>
+
+                        <div class="tab-pane fade" id="asistencias">
+                            <ul class="list-group list-group-flush" style="max-height: 300px; overflow-y: auto;">
+                                ${data.asistencias && data.asistencias.length > 0 ? 
+                                    data.asistencias.map(a => `
+                                        <li class="list-group-item d-flex align-items-center py-3">
+                                            <div class="bg-primary bg-opacity-10 text-primary p-2 rounded me-3"><i class="bi bi-check2-circle"></i></div>
+                                            <div>
+                                                <span class="d-block fw-semibold text-dark">${a.fecha}</span>
+                                                <small class="text-muted">Marcado vía: ${a.tipo}</small>
+                                            </div>
+                                        </li>`).join('') 
+                                    : '<div class="text-center py-4 text-muted italic">Sin asistencias registradas recientemente.</div>'}
+                            </ul>
+                        </div>
+                    </div>
+                `;
+                
+                var triggerTabList = [].slice.call(modalBody.querySelectorAll('.nav-link'));
+                triggerTabList.forEach(triggerEl => new bootstrap.Tab(triggerEl));
+            })
+            .catch(err => {
+                modalBody.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> Error al cargar datos del estudiante.</div>';
+            });
+    }
 </script>
 {% endblock %}

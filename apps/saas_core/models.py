@@ -16,6 +16,7 @@ class PlanSaaS(models.Model):
     permite_asistencias_qr = models.BooleanField(default=True, verbose_name="Acceso a Escáner QR")
     permite_eventos = models.BooleanField(default=False, verbose_name="Acceso a Módulo Eventos")
     permite_estudiantes = models.BooleanField(default=True, verbose_name="Acceso a Módulo Estudiantes")
+    permite_tienda = models.BooleanField(default=False, verbose_name="Acceso a Módulo Tienda/POS")
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     
@@ -42,6 +43,7 @@ class SuscripcionAcademia(models.Model):
     bloqueo_manual_asistencias = models.BooleanField(default=False, verbose_name="Bloquear Asistencias Manualmente")
     bloqueo_manual_eventos = models.BooleanField(default=False, verbose_name="Bloquear Eventos Manualmente")
     bloqueo_manual_estudiantes = models.BooleanField(default=False, verbose_name="Bloquear Estudiantes Manualmente")
+    bloqueo_manual_tienda = models.BooleanField(default=False, verbose_name="Bloquear Tienda Manualmente")
 
     # Evita que apliquen al plan gratis más de una vez en la vida de la academia
     ya_uso_prueba_gratis = models.BooleanField(
@@ -103,6 +105,12 @@ class SuscripcionAcademia(models.Model):
         if self.bloqueo_manual_estudiantes: return False
         if self.es_cuenta_partner_gratis: return True
         return self.plan.permite_estudiantes
+    
+    @property
+    def modulo_tienda_activo(self):
+        if self.bloqueo_manual_tienda: return False
+        if self.es_cuenta_partner_gratis: return True
+        return self.plan.permite_tienda
     
 
 

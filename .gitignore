@@ -22,3 +22,5 @@ ENV/
 staticfiles/
 
 client_secrets.json
+
+seed.py

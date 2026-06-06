@@ -1,0 +1,549 @@
+{% extends "base_tenant.html" %}
+
+{% block content %}
+<style>
+    .carrito-sticky {
+        position: sticky;
+        top: 20px;
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
+    }
+    .product-card {
+        cursor: pointer;
+        transition: transform 0.1s ease, box-shadow 0.1s ease;
+    }
+    .product-card:active {
+        transform: scale(0.95);
+    }
+    .product-card.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        filter: grayscale(100%);
+    }
+    .fs-7 { font-size: 0.85rem !important; }
+    .fs-8 { font-size: 0.75rem !important; }
+
+    .modal-header-primary { background-color: var(--bg-academia-primary) !important; color: white; }
+    .modal-header-secondary { background-color: var(--bg-academia-secondary) !important; color: white; }
+    .btn-tenant-primary { background-color: var(--bg-academia-primary) !important; color: white; }
+
+    /* Pestañas (Tabs) Dinámicas */
+    .nav-pills .nav-link {
+        color: #495057; /* Color cuando NO está activo */
+    }
+    
+    .nav-pills .nav-link.active {
+        background-color: var(--bg-academia-primary) !important;
+        color: white !important;
+    }
+</style>
+
+<div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center mb-4 gap-2">
+    <div>
+        <h2 class="fw-bold text-dark m-0"><i class="bi bi-shop me-2 text-tenant-primary"></i>Punto de Venta (POS)</h2>
+        <p class="text-muted m-0 small">Control operativo de caja registradora e inventario unificado.</p>
+    </div>
+
+    
+    <div class="d-flex gap-2 flex-wrap justify-content-sm-end">
+        <button type="button" class="btn btn-outline-info fw-bold btn-sm" data-bs-toggle="modal" data-bs-target="#modalReporte">
+            <i class="bi bi-calendar-check me-1"></i> Reporte
+        </button>
+        <button type="button" class="btn btn-outline-primary fw-bold btn-sm" data-bs-toggle="modal" data-bs-target="#modalCrearCategoria">
+            <i class="bi bi-tags me-1"></i> + Categoría
+        </button>
+        <a href="{% url 'tienda:panel_inventario' request.tenant.slug %}" class="btn btn-outline-dark fw-bold btn-sm">
+            <i class="bi bi-boxes me-1"></i> Ir al Inventario
+        </a>
+        <button type="button" class="btn btn-outline-success fw-bold btn-sm" data-bs-toggle="modal" data-bs-target="#modalCrearProducto">
+            <i class="bi bi-box-seam me-1"></i> + Producto
+        </button>
+        <div class="vr mx-1 d-none d-sm-block"></div>
+        <button type="button" class="btn btn-outline-dark fw-bold btn-sm" data-bs-toggle="modal" data-bs-target="#modalInventarioGlobal">
+            <i class="bi bi-clipboard-data me-1"></i> Kardex
+        </button>
+        <button type="button" class="btn btn-dark fw-bold btn-sm" data-bs-toggle="modal" data-bs-target="#modalEntradaStock">
+            <i class="bi bi-truck me-1"></i> + Stock
+        </button>
+    </div>
+</div>
+
+{% if messages %}
+    {% for msg in messages %}
+        <div class="alert alert-{{ msg.tags }} alert-dismissible fade show small shadow-sm border-0" role="alert">
+            {{ msg }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm p-3 bg-white text-center">
+            <p class="text-muted small fw-bold text-uppercase mb-1">Venta del Día</p>
+            <h4 class="fw-bold text-primary m-0">${{ total_diario|floatformat:0 }}</h4>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm p-3 bg-white text-center">
+            <p class="text-muted small fw-bold text-uppercase mb-1">Ganancia Hoy</p>
+            <h4 class="fw-bold text-success m-0">${{ ganancia_diaria|floatformat:0 }}</h4>
+        </div>
+    </div>
+
+    
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <ul class="nav nav-pills mb-4 gap-2 bg-white p-2 rounded shadow-sm border" id="pills-tab" role="tablist">
+    <li class="nav-item">
+        <button class="nav-link active fw-bold small" 
+                data-bs-toggle="pill" 
+                data-bs-target="#cat-todas" 
+                type="button">Todas</button>
+    </li>
+    {% for cat in categorias %}
+    <li class="nav-item">
+        <button class="nav-link fw-bold small" 
+                data-bs-toggle="pill" 
+                data-bs-target="#cat-{{ cat.id }}" 
+                type="button">{{ cat.nombre }}</button>
+    </li>
+    {% endfor %}
+</ul>
+
+        <div class="tab-content" id="pills-tabContent">
+            <div class="tab-pane fade show active" id="cat-todas" role="tabpanel">
+                <div class="row g-3">
+                    {% for prod in productos %}
+                    <div class="col-6 col-md-4 col-xl-3">
+                        <div class="card h-100 border-0 shadow-sm product-card {% if prod.stock <= 0 %}disabled{% endif %}" 
+                             onclick="{% if prod.stock > 0 %}agregarAlCarrito({{ prod.id }}, '{{ prod.nombre|escapejs }}', '{{ prod.precio_venta_actual|floatformat:0 }}', {{ prod.stock }}){% endif %}">
+                            <div class="card-body text-center p-3 d-flex flex-column justify-content-between">
+                                <div>
+                                    <span class="badge bg-light text-secondary border w-100 mb-2 text-truncate" style="font-size: 0.65rem;">{{ prod.categoria.nombre|default:"General" }}</span>
+                                    <h6 class="card-title fw-bold text-dark lh-sm mb-1" style="font-size: 0.9rem;">{{ prod.nombre }}</h6>
+                                </div>
+                                <div class="mt-2">
+                                    <strong class="text-success d-block fs-5">${{ prod.precio_venta_actual|floatformat:0 }}</strong>
+                                    {% if prod.stock > 0 %}
+                                        <small class="text-muted fs-8">Disponibles: <span>{{ prod.stock }}</span></small>
+                                    {% else %}
+                                        <small class="text-danger fw-bold fs-8">AGOTADO</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="col-12 text-center py-5"><p class="text-muted">No hay productos registrados o activos para la venta.</p></div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            {% for cat in categorias %}
+            <div class="tab-pane fade" id="cat-{{ cat.id }}" role="tabpanel">
+                <div class="row g-3">
+                    {% for prod in productos %}
+                        {% if prod.categoria.id == cat.id %}
+                        <div class="col-6 col-md-4 col-xl-3">
+                            <div class="card h-100 border-0 shadow-sm product-card {% if prod.stock <= 0 %}disabled{% endif %}" 
+                                 onclick="{% if prod.stock > 0 %}agregarAlCarrito({{ prod.id }}, '{{ prod.nombre|escapejs }}', '{{ prod.precio_venta_actual|floatformat:0 }}', {{ prod.stock }}){% endif %}">
+                                <div class="card-body text-center p-3 d-flex flex-column justify-content-between">
+                                    <h6 class="card-title fw-bold text-dark lh-sm mb-1" style="font-size: 0.9rem;">{{ prod.nombre }}</h6>
+                                    <div class="mt-2">
+                                        <strong class="text-success d-block fs-5">${{ prod.precio_venta_actual|floatformat:0 }}</strong>
+                                        {% if prod.stock > 0 %}
+                                            <small class="text-muted fs-8">Disp: {{ prod.stock }}</small>
+                                        {% else %}
+                                            <small class="text-danger fw-bold fs-8">AGOTADO</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm carrito-sticky">
+            <div class="card-header bg-dark text-white border-0 py-3">
+                <h5 class="fw-bold m-0"><i class="bi bi-cart3 me-2"></i>Caja Actual</h5>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush" id="lista-carrito">
+                    <li class="list-group-item text-center text-muted py-4 small">Aún no has seleccionado productos.</li>
+                </ul>
+            </div>
+            <div class="card-footer bg-light border-0 p-3">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="fw-bold text-secondary text-uppercase font-monospace fs-8">Total Cuenta:</span>
+                    <h3 class="fw-bold text-success m-0" id="total-carrito">$0</h3>
+                </div>
+                <div class="mb-3">
+                    <select class="form-select form-select-lg fw-bold" id="medio-pago">
+                        <option value="EFECTIVO">Efectivo (Caja Menor)</option>
+                        <option value="TRANSFERENCIA">Transferencia (Nequi/Daviplata)</option>
+                        <option value="TARJETA">Datáfono (Tarjeta)</option>
+                    </select>
+                </div>
+                <button class="btn btn-tenant-primary w-100 fw-bold py-3 shadow-sm fs-5" id="btn-pagar" onclick="procesarPago()" disabled>Cobrar Ya</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalInventarioGlobal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-light border-0">
+                <h5 class="fw-bold m-0"><i class="bi bi-box-seam me-2"></i>Kardex / Estado del Inventario</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                    <table class="table table-hover align-middle mb-0 small">
+                        <thead class="table-light position-sticky top-0 shadow-sm" style="z-index: 2;">
+                            <tr>
+                                <th class="ps-3">Producto</th>
+                                <th>Categoría</th>
+                                <th>Costo Compra</th>
+                                <th>Venta Alumno</th>
+                                <th class="text-center">Existencia</th>
+                                <th class="text-center pe-3">Visibilidad</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in inventario_global %}
+                            <tr>
+                                <td class="ps-3">
+                                    <strong class="text-dark d-block">{{ item.nombre }}</strong>
+                                    {% if item.codigo_barras %}<small class="text-muted font-monospace fs-8">{{ item.codigo_barras }}</small>{% endif %}
+                                </td>
+                                <td><span class="badge bg-light text-secondary border">{{ item.categoria.nombre|default:"General" }}</span></td>
+                                <td class="font-monospace text-muted">${{ item.precio_compra_actual|floatformat:0 }}</td>
+                                <td class="font-monospace fw-bold text-dark">${{ item.precio_venta_actual|floatformat:0 }}</td>
+                                <td class="text-center font-monospace">
+                                    {% if item.stock <= 0 %}
+                                        <span class="badge bg-danger">AGOTADO</span>
+                                    {% elif item.stock <= item.stock_minimo %}
+                                        <span class="badge bg-warning text-dark">{{ item.stock }}</span>
+                                    {% else %}
+                                        <span class="badge bg-success-subtle text-success">{{ item.stock }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center pe-3">
+                                    {% if item.estado %}<span class="text-success fs-8 fw-bold">Público</span>{% else %}<span class="text-muted fs-8">Oculto</span>{% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light">
+                <button type="button" class="btn btn-sm btn-secondary fw-bold" data-bs-dismiss="modal">Cerrar Monitor</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalEntradaStock" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header modal-header-primary text-white border-0">
+                <h5 class="fw-bold m-0"><i class="bi bi-truck me-2"></i>Ingresar Compra / Lote</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'tienda:registrar_entrada' request.tenant.slug %}" class="modal-body p-4 overflow-auto" style="max-height: 65vh;">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-secondary">Seleccionar Artículo</label>
+                    {{ entrada_form.producto }}
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label small fw-bold text-secondary">Cantidad Adquirida</label>
+                        {{ entrada_form.cantidad }}
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold text-secondary">Costo Compra Unitario ($)</label>
+                        {{ entrada_form.precio_compra }}
+                    </div>
+                </div>
+                <p class="text-muted fst-italic" style="font-size:0.7rem;">* Al guardar, el sistema incrementará las existencias del POS y recalculará la ganancia contable automática.</p>
+                <div class="text-end border-top pt-3 mt-3 position-sticky bottom-0 bg-white" style="z-index: 10;">
+                    <button type="button" class="btn btn-sm btn-light border me-1" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-sm btn-tenant-primary fw-bold px-3">Efectuar Entrada</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalCrearCategoria" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header modal-header-primary text-white border-0">
+                <h5 class="fw-bold m-0"><i class="bi bi-tags me-2"></i>Nueva Categoría</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'tienda:crear_categoria' request.tenant.slug %}" class="modal-body p-4 overflow-auto" style="max-height: 65vh;">
+                {% csrf_token %}
+                {{ categoria_form.as_p }}
+                <div class="text-end border-top pt-3 mt-3 position-sticky bottom-0 bg-white" style="z-index: 10;">
+                    <button type="button" class="btn btn-sm btn-light border me-1" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-sm btn-tenant-primary fw-bold px-3">Guardar Categoría</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalCrearProducto" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header modal-header-primary text-white border-0">
+                <h5 class="fw-bold m-0"><i class="bi bi-box-seam me-2"></i>Registrar Nuevo Producto</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'tienda:crear_producto' request.tenant.slug %}" class="modal-body p-4 overflow-auto" style="max-height: 65vh;">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-6">{{ producto_form.nombre.label_tag }}{{ producto_form.nombre }}</div>
+                    <div class="col-md-6">{{ producto_form.categoria.label_tag }}{{ producto_form.categoria }}</div>
+                    <div class="col-md-6">{{ producto_form.precio_compra_actual.label_tag }}{{ producto_form.precio_compra_actual }}</div>
+                    <div class="col-md-6">{{ producto_form.precio_venta_actual.label_tag }}{{ producto_form.precio_venta_actual }}</div>
+                    <div class="col-md-6">{{ producto_form.codigo_barras.label_tag }}{{ producto_form.codigo_barras }}</div>
+                    <div class="col-md-6">{{ producto_form.stock_minimo.label_tag }}{{ producto_form.stock_minimo }}</div>
+                    
+                    <div class="col-12 mt-2">
+                        <div class="form-check form-switch">
+                            {{ producto_form.estado }}
+                            <label class="form-check-label fw-bold" for="{{ producto_form.estado.id_for_label }}">
+                                Producto Activo y visible en el POS
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="col-12 mt-3 text-muted small">
+                        * Recuerda que el inventario inicial es 0. Debes usar "Ingresar Stock" después de crearlo para habilitarlo en el POS.
+                    </div>
+                </div>
+                <div class="text-end border-top pt-3 mt-3 position-sticky bottom-0 bg-white" style="z-index: 10;">
+                    <button type="button" class="btn btn-light border me-1" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-tenant-primary fw-bold px-4">Guardar Producto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% csrf_token %}
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1080;">
+    <div id="posToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body fw-bold" id="posToastBody">
+                </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalReporte" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header modal-header-primary text-white border-0">
+                <h5 class="fw-bold m-0"><i class="bi bi-calendar-check me-2"></i>Detalle de Ventas</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="date" id="inputFechaReporte" class="form-control mb-3">
+                <button class="btn btn-tenant-primary w-100 fw-bold text-white mb-3" onclick="consultarReporte()">Consultar</button>
+                
+                <div id="resumenReporte" class="d-none">
+                    <div class="row g-2 mb-3">
+                        <div class="col-6 bg-light p-2 rounded text-center">Ventas: <strong id="repTotal">$0</strong></div>
+                        <div class="col-6 bg-light p-2 rounded text-center">Ganancia: <strong id="repGanancia">$0</strong></div>
+                    </div>
+                    <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                        <table class="table table-sm table-hover small">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>Producto</th>
+                                    <th class="text-center">Cant</th>
+                                    <th class="text-end">Total</th>
+                                    <th class="text-end">Ganancia</th>
+                                </tr>
+                            </thead>
+                            <tbody id="listaDetalleReporte"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let carrito = {}; 
+    const formatoCOP = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
+
+    function agregarAlCarrito(id, nombre, precioBruto, stockMax) {
+        // Blindaje contra comas o puntos decimales del idioma (ej: 4000,00 -> 4000)
+        let precio = parseInt(precioBruto.toString().replace(/\./g, '').replace(/,/g, ''));
+
+        if (!carrito[id]) {
+            carrito[id] = { nombre: nombre, precio: precio, cantidad: 1, stockMax: stockMax };
+        } else {
+            if (carrito[id].cantidad < stockMax) {
+                carrito[id].cantidad++;
+            } else {
+                alert(`Límite máximo alcanzado en base a stock (${stockMax} unidades).`);
+                return;
+            }
+        }
+        renderizarCarrito();
+    }
+
+    function restarDelCarrito(id) {
+        if (carrito[id]) {
+            carrito[id].cantidad--;
+            if (carrito[id].cantidad === 0) delete carrito[id];
+        }
+        renderizarCarrito();
+    }
+
+    function renderizarCarrito() {
+        const lista = document.getElementById('lista-carrito');
+        const totalSpan = document.getElementById('total-carrito');
+        const btnPagar = document.getElementById('btn-pagar');
+        lista.innerHTML = '';
+        let total = 0; let count = 0;
+
+        for (let id in carrito) {
+            let item = carrito[id];
+            let sub = item.cantidad * item.precio;
+            total += sub; count++;
+            let row = `
+                <li class="list-group-item d-flex justify-content-between align-items-center py-2">
+                    <div class="me-auto lh-sm" style="max-width: 60%;">
+                        <span class="d-block fw-semibold text-dark fs-7">${item.nombre}</span>
+                        <small class="text-muted fs-8">${formatoCOP.format(item.precio)}</small>
+                    </div>
+                    <div class="d-flex align-items-center bg-light border rounded px-1">
+                        <button class="btn btn-sm btn-link text-danger p-1 text-decoration-none" onclick="restarDelCarrito(${id})"><i class="bi bi-dash"></i></button>
+                        <span class="fw-bold px-2 fs-7">${item.cantidad}</span>
+                        <button class="btn btn-sm btn-link text-success p-1 text-decoration-none" onclick="agregarAlCarrito(${id}, '${item.nombre}', ${item.precio}, ${item.stockMax})"><i class="bi bi-plus"></i></button>
+                    </div>
+                    <div class="text-end fw-bold text-dark ps-2 style-font-monospace fs-7">${formatoCOP.format(sub)}</div>
+                </li>`;
+            lista.insertAdjacentHTML('beforeend', row);
+        }
+        lista.innerHTML = count === 0 ? '<li class="list-group-item text-center text-muted py-4 small">Aún no has seleccionado productos.</li>' : lista.innerHTML;
+        btnPagar.disabled = count === 0;
+        totalSpan.innerText = formatoCOP.format(total);
+    }
+
+    function procesarPago() {
+        const btnPagar = document.getElementById('btn-pagar');
+        btnPagar.disabled = true;
+        btnPagar.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Despachando...';
+
+        const payload = {
+            carrito: Object.keys(carrito).map(id => ({ id: parseInt(id), cantidad: carrito[id].cantidad })),
+            medio_pago: document.getElementById('medio-pago').value,
+            cliente_nombre: 'Cliente General (POS)',
+            cliente_nit: '222222222222' // NIT genérico cuantías menores
+        };
+
+        fetch(`/${"{{ request.tenant.slug }}"}/tienda/pos/pagar/`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json', 
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value 
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json().then(data => ({ status: res.status, body: data })))
+        .then(res => {
+            const toastEl = document.getElementById('posToast');
+            const toastBody = document.getElementById('posToastBody');
+            const toast = new bootstrap.Toast(toastEl, { delay: 3000 }); // Dura 3 segundos en pantalla
+
+            if (res.status === 200) {
+                // Éxito: Toast Verde
+                toastEl.classList.remove('bg-danger');
+                toastEl.classList.add('bg-success');
+                toastBody.innerHTML = `<i class="bi bi-check-circle me-2"></i>Venta procesada. Recibo: ${res.body.numero_recibo}`;
+                toast.show();
+
+                // Limpiamos el carrito instantáneamente para dar sensación de fluidez
+                carrito = {};
+                renderizarCarrito();
+                btnPagar.innerHTML = '<i class="bi bi-check2-all me-1"></i> Listo';
+
+                // Recargamos la página después de 1.5 segundos para refrescar el stock visual
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+
+            } else {
+                // Error: Toast Rojo
+                toastEl.classList.remove('bg-success');
+                toastEl.classList.add('bg-danger');
+                toastBody.innerHTML = `<i class="bi bi-exclamation-triangle me-2"></i>Error: ${res.body.error}`;
+                toast.show();
+                
+                // Restauramos el botón
+                btnPagar.disabled = false;
+                btnPagar.innerHTML = 'Cobrar Ya';
+            }
+        }).catch(() => { 
+            // Error Crítico (Caída de red o servidor)
+            const toastEl = document.getElementById('posToast');
+            toastEl.classList.remove('bg-success');
+            toastEl.classList.add('bg-danger');
+            document.getElementById('posToastBody').innerHTML = `<i class="bi bi-wifi-off me-2"></i>Error de red. Intenta de nuevo.`;
+            new bootstrap.Toast(toastEl).show();
+
+            btnPagar.disabled = false; 
+            btnPagar.innerHTML = 'Cobrar Ya';
+        });
+    }
+
+    function consultarReporte() {
+        const fecha = document.getElementById('inputFechaReporte').value;
+        if (!fecha) return alert("Selecciona una fecha");
+
+        fetch(`/${"{{ request.tenant.slug }}"}/tienda/reporte-dia/?fecha=${fecha}`)
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('repTotal').innerText = formatoCOP.format(data.total);
+            document.getElementById('repGanancia').innerText = formatoCOP.format(data.ganancia);
+        
+            const lista = document.getElementById('listaDetalleReporte');
+            lista.innerHTML = '';
+        
+            data.detalles.forEach(item => {
+                lista.innerHTML += `
+                    <tr>
+                        <td>${item.producto__nombre}</td>
+                        <td class="text-center">${item.total_qty}</td>
+                        <td class="text-end">${formatoCOP.format(item.total_sub)}</td>
+                        <td class="text-end text-success fw-bold">${formatoCOP.format(item.total_gan)}</td>
+                    </tr>`;
+            });
+            document.getElementById('resumenReporte').classList.remove('d-none');
+        });
+    }
+</script>
+{% endblock %}

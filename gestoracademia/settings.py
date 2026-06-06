@@ -69,6 +69,7 @@ INSTALLED_APPS = [
     'multimedia',
     "csp",
     'saas_core',
+    'tienda',
 ]
 
 MIDDLEWARE = [

@@ -1,0 +1,48 @@
+{% extends "base_tenant.html" %}
+
+{% block content %}
+<style>
+
+    .modal-header-primary { background-color: var(--bg-academia-primary) !important; color: white; }
+    .modal-header-secondary { background-color: var(--bg-academia-secondary) !important; color: white; }
+    .btn-tenant-primary { background-color: var(--bg-academia-primary) !important; color: white; }
+</style>
+<div class="row justify-content-center">
+    <div class="col-12 col-md-8 col-lg-6">
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-header modal-header-primary text-white border-0 py-3">
+                <h5 class="fw-bold m-0"><i class="bi bi-truck me-2"></i>Registrar Entrada de Stock</h5>
+            </div>
+            <div class="card-body p-4">
+                <p class="text-muted small mb-4">Selecciona el producto y registra cuántas unidades llegaron. Si el proveedor cambió el precio, actualiza el precio de compra aquí para no alterar tu margen de ganancia histórico.</p>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary small">Producto existente</label>
+                        {{ form.producto }}
+                    </div>
+                    
+                    <div class="row g-3 mb-4">
+                        <div class="col-6">
+                            <label class="form-label fw-bold text-secondary small">Cantidad que ingresa</label>
+                            {{ form.cantidad }}
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold text-secondary small">Costo Unitario ($)</label>
+                            {{ form.precio_compra }}
+                            <small class="text-muted" style="font-size: 0.65rem;">A cómo te costó a ti cada unidad.</small>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'tienda:panel_inventario' request.tenant.slug %}" class="btn btn-light border fw-bold text-secondary">Cancelar</a>
+                        <button type="submit" class="btn btn-primary fw-bold px-4">Guardar Entrada</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -108,44 +108,9 @@ class CrearAcademiaSaaSView(UserPassesTestMixin, View):
         return redirect('panel_maestro_dashboard')
 
 
-class ActualizarLicenciaSaaSView(UserPassesTestMixin, View):
-    def test_func(self):
-        return self.request.user.is_superuser and self.request.user.is_staff
-
-    def post(self, request, *args, **kwargs):
-        academia_id = request.POST.get('academia_id')
-        suscripcion = get_object_or_404(SuscripcionAcademia, academia_id=academia_id)
-        academia = suscripcion.academia
-        
-        suscripcion.estado = request.POST.get('estado')
-        
-        # 1. Actualizamos el plan (si se envió uno válido)
-        nuevo_plan_id = request.POST.get('plan_id')
-        if nuevo_plan_id:
-            try:
-                suscripcion.plan = PlanSaaS.objects.get(id=nuevo_plan_id)
-            except PlanSaaS.DoesNotExist:
-                return JsonResponse({'status': 'error', 'message': 'El plan seleccionado no existe.'}, status=400)
-
-        # 2. 🎯 REPARACIÓN SENIOR: El backend confía plenamente en el frontend.
-        # Si el switch llegó 'on', significa que no hay bloqueo (False).
-        # Esto respeta tanto la auto-sincronización del JS como tus overrides manuales.
-        suscripcion.bloqueo_manual_estudiantes = not (request.POST.get('modulo_estudiantes_activo') == 'on')
-        suscripcion.bloqueo_manual_asistencias = not (request.POST.get('modulo_asistencias_activo') == 'on')
-        suscripcion.bloqueo_manual_finanzas = not (request.POST.get('modulo_finanzas_activo') == 'on')
-        suscripcion.bloqueo_manual_multimedia = not (request.POST.get('modulo_multimedia_activo') == 'on')
-        suscripcion.bloqueo_manual_eventos = not (request.POST.get('modulo_eventos_activo') == 'on')
-        
-        suscripcion.es_cuenta_partner_gratis = request.POST.get('es_cuenta_partner_gratis') == 'on'
-        suscripcion.save()
-
-        academia.es_solo_eventos = request.POST.get('es_solo_eventos') == 'on'
-        academia.save()
-
-        return JsonResponse({'status': 'success'})
+# apps/saas_core/views.py
 
 class CrearPlanSaaSView(UserPassesTestMixin, View):
-    """Crea un nuevo nivel de plan comercial para el SaaS."""
     def test_func(self):
         return self.request.user.is_superuser and self.request.user.is_staff
 
@@ -154,18 +119,57 @@ class CrearPlanSaaSView(UserPassesTestMixin, View):
         precio = request.POST.get('precio')
         max_estudiantes = request.POST.get('max_estudiantes')
         
+        # Evaluamos listas de valores positivos por seguridad ('on', 'True', 'true', '1')
         PlanSaaS.objects.create(
             nombre=nombre,
             precio_mensual=precio,
             max_estudiantes=max_estudiantes,
-            permite_estudiantes=request.POST.get('estudiantes') == 'on', # 🚀 NUEVO
-            permite_multimedia=request.POST.get('multimedia') == 'on',
-            permite_finanzas=request.POST.get('finanzas') == 'on',
-            permite_asistencias_qr=request.POST.get('asistencias') == 'on',
-            permite_eventos=request.POST.get('eventos') == 'on'
+            permite_estudiantes=request.POST.get('estudiantes') in ['on', 'True', 'true', '1'],
+            permite_multimedia=request.POST.get('multimedia') in ['on', 'True', 'true', '1'],
+            permite_finanzas=request.POST.get('finanzas') in ['on', 'True', 'true', '1'],
+            permite_asistencias_qr=request.POST.get('asistencias') in ['on', 'True', 'true', '1'],
+            permite_eventos=request.POST.get('eventos') in ['on', 'True', 'true', '1'],
+            # 🚀 AQUÍ GUARDAMOS EL ESTADO DE LA TIENDA EN EL PLAN
+            permite_tienda=request.POST.get('tienda') in ['on', 'True', 'true', '1']
         )
         return redirect('panel_maestro_dashboard')
 
+
+class ActualizarLicenciaSaaSView(UserPassesTestMixin, View):
+    def test_func(self):
+        return self.request.user.is_superuser and self.request.user.is_staff
+
+    def post(self, request, *args, **kwargs):
+        academia_id = request.POST.get('academia_id')
+        suscripcion = get_object_or_404(SuscripcionAcademia, academia_id=academia_id)
+        
+        suscripcion.estado = request.POST.get('estado')
+        
+        nuevo_plan_id = request.POST.get('plan_id')
+        if nuevo_plan_id:
+            try:
+                suscripcion.plan = PlanSaaS.objects.get(id=nuevo_plan_id)
+            except PlanSaaS.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'El plan no existe.'}, status=400)
+
+        # 🚀 LÓGICA INVERSA: Si el frontend dice "Módulo Activo = True", el Bloqueo es "False"
+        suscripcion.bloqueo_manual_estudiantes = not (request.POST.get('modulo_estudiantes_activo') in ['on', 'True', 'true', '1'])
+        suscripcion.bloqueo_manual_asistencias = not (request.POST.get('modulo_asistencias_activo') in ['on', 'True', 'true', '1'])
+        suscripcion.bloqueo_manual_finanzas = not (request.POST.get('modulo_finanzas_activo') in ['on', 'True', 'true', '1'])
+        suscripcion.bloqueo_manual_multimedia = not (request.POST.get('modulo_multimedia_activo') in ['on', 'True', 'true', '1'])
+        suscripcion.bloqueo_manual_eventos = not (request.POST.get('modulo_eventos_activo') in ['on', 'True', 'true', '1'])
+        
+        # 🚀 LA CLAVE ESTÁ AQUÍ: Interceptar la tienda
+        suscripcion.bloqueo_manual_tienda = not (request.POST.get('modulo_tienda_activo') in ['on', 'True', 'true', '1'])
+        
+        suscripcion.es_cuenta_partner_gratis = request.POST.get('es_cuenta_partner_gratis') in ['on', 'True', 'true', '1']
+        suscripcion.save()
+
+        academia = suscripcion.academia
+        academia.es_solo_eventos = request.POST.get('es_solo_eventos') in ['on', 'True', 'true', '1']
+        academia.save()
+
+        return JsonResponse({'status': 'success'})
 
 class APIObtenerEstudiantesAcademiaView(UserPassesTestMixin, View):
     """API de Soporte: Retorna los alumnos de un inquilino para el Súper Admin."""

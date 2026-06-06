@@ -52,6 +52,11 @@ class TenantLicensingMiddleware:
                         messages.error(request, "Acceso restringido al módulo de gestión de eventos.")
                         return redirect('academias:dashboard', slug_academia=request.tenant.slug)
                     
+                if 'tienda' in request.path:
+                    if not suscripcion.plan.permite_tienda or suscripcion.bloqueo_manual_tienda:
+                        messages.error(request, "El módulo de Tienda e Inventarios no está habilitado en su licencia actual.")
+                        return redirect('academias:dashboard', slug_academia=request.tenant.slug)
+                    
                     # Filtro Anti-Fraude: Obligados a registrar su tarjeta de respaldo/garantía para crear eventos,
                     # excepto si están navegando justamente en la pantalla de configuración intentando ponerla.
                     if not request.tenant.tarjeta_respaldo_configurada and not 'configuracion' in request.path:

@@ -10,4 +10,9 @@ urlpatterns = [
     path('<slug:slug_academia>/finanzas/ingreso/nuevo/', views.RegistrarIngresoExtraView.as_view(), name='registrar_ingreso'),
     path('<slug:slug_academia>/finanzas/profesor/liquidar/', views.LiquidarProfesorView.as_view(), name='liquidar_profesor'),
     path('<slug:slug_academia>/finanzas/anular/<str:tipo>/<int:pk>/', views.AnularTransaccionView.as_view(), name='anular_transaccion'),
+
+    # 🆕 NUEVAS RUTAS AJAX Y REPORTES
+    path('<slug:slug_academia>/finanzas/transaccion/ajax/<str:tipo>/<int:pk>/', views.ObtenerDetalleTransaccionView.as_view(), name='detalle_transaccion_ajax'),
+    path('<slug:slug_academia>/finanzas/reportes/exportar/', views.ExportarReporteContableView.as_view(), name='exportar_reporte_contable'),
+    path('<slug:slug_academia>/finanzas/reportes/resumen-ajax/', views.ResumenReporteAjaxView.as_view(), name='resumen_reporte_ajax'),
 ]

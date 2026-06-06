@@ -3,19 +3,61 @@
 {% block content %}
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
 
-<div class="d-flex justify-content-between align-items-center mb-4">
+<style>
+    /* Estilos para el visor del recibo individual estilo Voucher Comercial */
+    .recibo-voucher {
+        border: 2px dashed #dee2e6;
+        background-color: #fffdf9;
+    }
+    .fs-7 { font-size: 0.85rem !important; }
+    .fs-8 { font-size: 0.75rem !important; }
+
+    /* Contenedor con scroll interno para el listado de los reportes por periodo */
+    .scroll-reporte-contable {
+        max-height: 280px; 
+        overflow-y: auto;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        background-color: #ffffff;
+    }
+
+    /* Encabezado fijo (Sticky) para que no se pierda al hacer scroll en el modal */
+    .table-sticky-header thead th {
+        position: sticky;
+        top: 0;
+        background-color: #f8f9fa;
+        box-shadow: inset 0 -1px 0 #dee2e6;
+        z-index: 2;
+    }
+
+    /* Reglas de inyección CSS para la impresión física o guardado en PDF limpio */
+    @media print {
+        body * { visibility: hidden; }
+        #modal-recibo-print, #modal-recibo-print * { visibility: visible; }
+        #modal-recibo-print { position: absolute; left: 0; top: 0; width: 100%; padding: 0; }
+        .no-print { display: none !important; }
+    }
+</style>
+
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
     <div>
         <h2 class="fw-bold text-dark m-0"><i class="bi bi-wallet2 me-2 text-tenant-primary"></i>Finanzas y Soportes</h2>
-        <p class="text-muted m-0 small">Control contable de ingresos, egresos y documentos soporte para la DIAN.</p>
+        <p class="text-muted m-0 small">Control contable de ingresos, egresos y documentos soporte para la academia.</p>
     </div>
-    <div class="d-flex gap-2">
-        <a href="{% url 'finanzas:registrar_ingreso' request.tenant.slug %}" class="btn btn-success fw-bold">
+    <div class="d-flex flex-wrap gap-2">
+        <button type="button" class="btn btn-outline-dark fw-bold btn-sm py-2" data-bs-toggle="modal" data-bs-target="#modalReporteDiario">
+            <i class="bi bi-calendar-event me-1"></i> Reporte Diario
+        </button>
+        <button type="button" class="btn btn-outline-dark fw-bold btn-sm py-2" data-bs-toggle="modal" data-bs-target="#modalReporteMensual">
+            <i class="bi bi-calendar-range me-1"></i> Reporte Mensual
+        </button>
+        <a href="{% url 'finanzas:registrar_ingreso' request.tenant.slug %}" class="btn btn-success fw-bold btn-sm py-2">
             <i class="bi bi-plus-circle me-1"></i> Ingreso Varios
         </a>
-        <a href="{% url 'finanzas:registrar_gasto' request.tenant.slug %}" class="btn btn-danger fw-bold">
+        <a href="{% url 'finanzas:registrar_gasto' request.tenant.slug %}" class="btn btn-danger fw-bold btn-sm py-2">
             <i class="bi bi-dash-circle me-1"></i> Registrar Gasto
         </a>
-        <a href="{% url 'finanzas:liquidar_profesor' request.tenant.slug %}" class="btn btn-dark fw-bold">
+        <a href="{% url 'finanzas:liquidar_profesor' request.tenant.slug %}" class="btn btn-dark fw-bold btn-sm py-2">
             <i class="bi bi-person-badge me-1"></i> Liquidar Profesor
         </a>
     </div>
@@ -30,84 +72,130 @@
     {% endfor %}
 {% endif %}
 
-<ul class="nav nav-tabs mb-4" id="finanzasTabs" role="tablist">
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm p-3 bg-white text-center border-start border-success border-4 h-100">
+            <p class="text-muted small fw-bold text-uppercase mb-1">Ingresos Totales (Mes Actual)</p>
+            <h3 class="fw-bold text-success m-0">${{ ingresos_totales_mes|floatformat:0 }}</h3>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm p-3 bg-white text-center border-start border-danger border-4 h-100">
+            <p class="text-muted small fw-bold text-uppercase mb-1">Gastos Totales (Mes Actual)</p>
+            <h3 class="fw-bold text-danger m-0">${{ gastos_totales_mes|floatformat:0 }}</h3>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm p-3 bg-white text-center border-start border-primary border-4 h-100">
+            <p class="text-muted small fw-bold text-uppercase mb-1">Balance del Mes</p>
+            <h3 class="fw-bold {% if balance_mes >= 0 %}text-primary{% else %}text-danger{% endif %} m-0">
+                ${{ balance_mes|floatformat:0 }}
+            </h3>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6 col-lg-5">
+        <div class="input-group input-group-lg shadow-sm rounded-pill overflow-hidden border bg-white">
+            <span class="input-group-text bg-white border-0 text-muted ps-4">
+                <i class="bi bi-search"></i>
+            </span>
+            <input type="text" id="buscadorFinanzas" class="form-control border-0 ps-2" placeholder="Buscar por referencia, NIT, tercero o concepto..." autocomplete="off">
+        </div>
+        <small class="text-muted ms-3 mt-1 d-block"><i class="bi bi-lightning-charge-fill text-warning me-1"></i>Filtra ingresos y gastos en tiempo real</small>
+    </div>
+</div>
+
+<ul class="nav nav-tabs mb-4 border-0" id="finanzasTabs" role="tablist">
     <li class="nav-item" role="presentation">
-        <button class="nav-link active fw-bold text-success" id="ingresos-tab" data-bs-toggle="tab" data-bs-target="#ingresos-pane" type="button" role="tab">
+        <button class="nav-link active fw-bold text-success border-0 bg-transparent" id="ingresos-tab" data-bs-toggle="tab" data-bs-target="#ingresos-pane" type="button" role="tab" style="border-bottom: 3px solid transparent !important;">
             <i class="bi bi-arrow-down-left-circle me-1"></i> Recibos de Caja (Ingresos)
         </button>
     </li>
     <li class="nav-item" role="presentation">
-        <button class="nav-link fw-bold text-danger" id="gastos-tab" data-bs-toggle="tab" data-bs-target="#gastos-pane" type="button" role="tab">
+        <button class="nav-link fw-bold text-danger border-0 bg-transparent" id="gastos-tab" data-bs-toggle="tab" data-bs-target="#gastos-pane" type="button" role="tab" style="border-bottom: 3px solid transparent !important;">
             <i class="bi bi-arrow-up-right-circle me-1"></i> Comprobantes de Egreso (Gastos)
         </button>
     </li>
 </ul>
 
 <div class="tab-content" id="finanzasTabsContent">
-    
     <div class="tab-pane fade show active" id="ingresos-pane" role="tabpanel" tabindex="0">
-        <div class="card border-0 shadow-sm bg-white p-3">
-            <div class="table-responsive">
-                <table id="tabla-ingresos" class="table table-hover align-middle w-100">
-                    <thead class="table-light">
+        <div class="card border-0 shadow-sm bg-white p-3 rounded-4">
+            <div class="table-responsive style-scroll" style="max-height: 550px;">
+                <table id="tabla-ingresos" class="table table-hover align-middle w-100 border-top m-0">
+                    <thead class="table-light text-uppercase text-secondary small font-monospace" style="position: sticky; top: 0; z-index: 10;">
                         <tr>
-                            <th>Recibo</th>
-                            <th>Fecha</th>
-                            <th>Cliente (NIT)</th>
-                            <th>Concepto / Tipo</th>
-                            <th>Medio</th>
-                            <th>Monto</th>
-                            <th class="text-center">Acciones</th>
+                            <th class="border-0">Recibo</th>
+                            <th class="border-0">Fecha</th>
+                            <th class="border-0">Cliente (NIT)</th>
+                            <th class="border-0">Concepto / Tipo</th>
+                            <th class="border-0">Medio</th>
+                            <th class="border-0">Monto</th>
+                            <th class="text-center border-0">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for ing in ingresos %}
                         <tr class="{% if ing.estado == 'ANULADO' %}table-danger opacity-50{% endif %}">
-                            <td><strong class="font-monospace text-dark">{{ ing.numero_recibo }}</strong></td>
-                            <td><small class="text-muted">{{ ing.fecha|date:"d/m/Y" }}</small></td>
                             <td>
-                                <span class="d-block fw-semibold text-dark">{{ ing.cliente_nombre }}</span>
-                                <span class="text-muted small font-monospace">CC: {{ ing.cliente_nit }}</span>
+                                <button type="button" onclick="abrirVisorRecibo('ingreso', {{ ing.id }})" class="btn btn-link p-0 fw-bold font-monospace text-decoration-none text-success hover-lift">
+                                    {{ ing.numero_recibo }}
+                                </button>
+                            </td>
+                            <td><small class="text-muted fw-semibold">{{ ing.fecha|date:"d/m/Y" }}</small></td>
+                            <td>
+                                <span class="d-block fw-bold text-dark">{{ ing.cliente_nombre }}</span>
+                                <span class="text-muted small font-monospace">CC/NIT: {{ ing.cliente_nit }}</span>
                             </td>
                             <td>
-                                <span class="badge bg-light text-dark border small">{{ ing.get_tipo_income_display|default:ing.tipo_ingreso }}</span>
-                                <small class="d-block text-muted text-truncate" style="max-width: 200px;">{{ ing.concepto }}</small>
+                                <span class="badge bg-secondary bg-opacity-10 text-dark border-0 small mb-1">{{ ing.get_tipo_ingreso_display|default:ing.tipo_ingreso }}</span>
+                                <small class="d-block text-muted text-truncate" style="max-width: 250px;" title="{{ ing.concepto }}">{{ ing.concepto }}</small>
                             </td>
-                            <td><small class="badge bg-secondary-subtle text-secondary">{{ ing.get_medio_pago_display }}</small></td>
-                            <td><strong class="text-success">${{ ing.monto|floatformat:0 }}</strong></td>
+                            <td><small class="badge bg-light text-secondary border">{{ ing.get_medio_pago_display }}</small></td>
+                            <td><strong class="text-success fs-6">${{ ing.monto|floatformat:0 }}</strong></td>
                             <td class="text-center">
-                                {% if ing.estado == 'ACTIVO' %}
-                                    <button class="btn btn-sm btn-outline-danger border-0" data-bs-toggle="modal" data-bs-target="#modalAnularIngreso{{ ing.id }}">
-                                        <i class="bi bi-x-circle"></i> Anular
+                                <div class="d-flex justify-content-center gap-2">
+                                    <button type="button" class="btn btn-sm btn-light rounded-pill px-3 shadow-sm text-primary fw-bold" onclick="abrirVisorRecibo('ingreso', {{ ing.id }})">
+                                        <i class="bi bi-eye"></i> Ver
                                     </button>
                                     
-                                    <div class="modal fade" id="modalAnularIngreso{{ ing.id }}" tabindex="-1" aria-hidden="true">
-                                        <div class="modal-dialog modal-dialog-centered">
-                                            <form method="post" action="{% url 'finanzas:anular_transaccion' request.tenant.slug 'ingreso' ing.id %}">
-                                                {% csrf_token %}
-                                                <div class="modal-content text-start">
-                                                    <div class="modal-header border-0 pb-0">
-                                                        <h5 class="fw-bold text-dark m-0">Anular Recibo {{ ing.numero_recibo }}</h5>
-                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                    </div>
-                                                    <div class="modal-body">
-                                                        <p class="text-muted small">Al anular este recibo, su valor se restará del flujo de caja. Esta acción es irreversible.</p>
-                                                        <div class="mb-3">
-                                                            <label class="form-label small fw-bold text-secondary">Motivo de Anulación (Requerido por Auditoría)</label>
-                                                            <textarea name="motivo_anulacion" class="form-control" rows="2" required placeholder="Ej: Error en el monto digitado o retractación del alumno"></textarea>
+                                    {% if ing.estado == 'ACTIVO' %}
+                                        <button type="button" class="btn btn-sm btn-light bg-opacity-10 text-danger border-0 rounded-pill px-3 fw-bold" data-bs-toggle="modal" data-bs-target="#modalAnularIngreso{{ ing.id }}">
+                                            <i class="bi bi-x-circle"></i> Anular
+                                        </button>
+                                        
+                                        <div class="modal fade" id="modalAnularIngreso{{ ing.id }}" tabindex="-1" aria-hidden="true">
+                                            <div class="modal-dialog modal-dialog-centered">
+                                                <form method="post" action="{% url 'finanzas:anular_transaccion' request.tenant.slug 'ingreso' ing.id %}">
+                                                    {% csrf_token %}
+                                                    <div class="modal-content text-start rounded-4 border-0 shadow-lg">
+                                                        <div class="modal-header border-0 pb-0">
+                                                            <h5 class="fw-bold text-dark m-0">Anular Recibo {{ ing.numero_recibo }}</h5>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                        </div>
+                                                        <div class="modal-body">
+                                                            <div class="alert alert-warning small border-0 bg-warning bg-opacity-10 text-dark">
+                                                                <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>Al anular este recibo, su valor se restará del flujo de caja. <strong>Esta acción es irreversible.</strong>
+                                                            </div>
+                                                            <div class="mb-2">
+                                                                <label class="form-label small fw-bold text-secondary">Motivo de Anulación (Requerido por Auditoría)</label>
+                                                                <textarea name="motivo_anulacion" class="form-control bg-light border-0" rows="3" required placeholder="Ej: Error en el monto digitado o retractación del alumno"></textarea>
+                                                            </div>
+                                                        </div>
+                                                        <div class="modal-footer border-0 pt-0 bg-white rounded-bottom-4">
+                                                            <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                                                            <button type="submit" class="btn btn-danger rounded-pill px-4 fw-bold">Confirmar Anulación</button>
                                                         </div>
                                                     </div>
-                                                    <div class="modal-footer border-0 pt-0">
-                                                        <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Cancelar</button>
-                                                        <button type="submit" class="btn btn-sm btn-danger fw-bold">Confirmar Anulación</button>
-                                                    </div>
-                                                </div>
-                                            </form>
+                                                </form>
+                                            </div>
                                         </div>
-                                    </div>
-                                {% else %}
-                                    <span class="badge bg-danger small" data-bs-toggle="tooltip" title="Motivo: {{ ing.motivo_anulacion }}">ANULADO</span>
-                                {% endif %}
+                                    {% else %}
+                                        <span class="badge bg-danger bg-opacity-10 text-danger border-0 small px-3 py-2 rounded-pill" data-bs-toggle="tooltip" title="Motivo: {{ ing.motivo_anulacion }}">ANULADO</span>
+                                    {% endif %}
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -118,78 +206,90 @@
     </div>
 
     <div class="tab-pane fade" id="gastos-pane" role="tabpanel" tabindex="0">
-        <div class="card border-0 shadow-sm bg-white p-3">
-            <div class="table-responsive">
-                <table id="tabla-gastos" class="table table-hover align-middle w-100">
-                    <thead class="table-light">
+        <div class="card border-0 shadow-sm bg-white p-3 rounded-4">
+            <div class="table-responsive style-scroll" style="max-height: 550px;">
+                <table id="tabla-gastos" class="table table-hover align-middle w-100 border-top m-0">
+                    <thead class="table-light text-uppercase text-secondary small font-monospace" style="position: sticky; top: 0; z-index: 10;">
                         <tr>
-                            <th>Egreso</th>
-                            <th>Factura Proveedor</th>
-                            <th>Fecha</th>
-                            <th>Tercero / Beneficiario</th>
-                            <th>Concepto / Categoría</th>
-                            <th>Soporte</th>
-                            <th>Monto</th>
-                            <th class="text-center">Acciones</th>
+                            <th class="border-0">Egreso</th>
+                            <th class="border-0">Factura</th>
+                            <th class="border-0">Fecha</th>
+                            <th class="border-0">Beneficiario / NIT</th>
+                            <th class="border-0">Concepto / Categoría</th>
+                            <th class="border-0">Soporte</th>
+                            <th class="border-0">Monto</th>
+                            <th class="text-center border-0">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for gas in gastos %}
                         <tr class="{% if gas.estado == 'ANULADO' %}table-danger opacity-50{% endif %}">
-                            <td><strong class="font-monospace text-dark">{{ gas.numero_egreso }}</strong></td>
-                            <td><span class="font-monospace text-muted small">{{ gas.numero_factura_proveedor|default:"-- Interno --" }}</span></td>
-                            <td><small class="text-muted">{{ gas.fecha|date:"d/m/Y" }}</small></td>
                             <td>
-                                <span class="d-block fw-semibold text-dark">{{ gas.proveedor_nombre }}</span>
+                                <button type="button" onclick="abrirVisorRecibo('gasto', {{ gas.id }})" class="btn btn-link p-0 fw-bold font-monospace text-decoration-none text-danger hover-lift">
+                                    {{ gas.numero_egreso }}
+                                </button>
+                            </td>
+                            <td><span class="badge bg-light text-muted border small">{{ gas.numero_factura_proveedor|default:"-- Interno --" }}</span></td>
+                            <td><small class="text-muted fw-semibold">{{ gas.fecha|date:"d/m/Y" }}</small></td>
+                            <td>
+                                <span class="d-block fw-bold text-dark">{{ gas.proveedor_nombre }}</span>
                                 <span class="text-muted small font-monospace">NIT/CC: {{ gas.proveedor_nit }}</span>
                             </td>
                             <td>
-                                <span class="badge bg-light text-dark border small">{{ gas.get_categoria_display }}</span>
-                                <small class="d-block text-muted text-truncate" style="max-width: 200px;">{{ gas.concepto }}</small>
+                                <span class="badge bg-secondary bg-opacity-10 text-dark border-0 small mb-1">{{ gas.get_categoria_display }}</span>
+                                <small class="d-block text-muted text-truncate" style="max-width: 200px;" title="{{ gas.concepto }}">{{ gas.concepto }}</small>
                             </td>
                             <td>
                                 {% if gas.soporte_digital %}
-                                    <a href="{{ gas.soporte_digital.url }}" target="_blank" class="btn btn-xs btn-outline-secondary p-1 py-0 fs-7">
-                                        <i class="bi bi-paperclip"></i> Ver adjunto
+                                    <a href="{{ gas.soporte_digital.url }}" target="_blank" class="badge bg-info bg-opacity-10 text-info border-0 text-decoration-none p-2">
+                                        <i class="bi bi-paperclip"></i> Adjunto
                                     </a>
                                 {% else %}
                                     <span class="text-muted small italic">Ninguno</span>
                                 {% endif %}
                             </td>
-                            <td><strong class="text-danger">${{ gas.monto|floatformat:0 }}</strong></td>
+                            <td><strong class="text-danger fs-6">${{ gas.monto|floatformat:0 }}</strong></td>
                             <td class="text-center">
-                                {% if gas.estado == 'ACTIVO' %}
-                                    <button class="btn btn-sm btn-outline-danger border-0" data-bs-toggle="modal" data-bs-target="#modalAnularGasto{{ gas.id }}">
-                                        <i class="bi bi-x-circle"></i> Anular
+                                <div class="d-flex justify-content-center gap-2">
+                                    <button type="button" class="btn btn-sm btn-light rounded-pill px-3 shadow-sm text-primary fw-bold" onclick="abrirVisorRecibo('gasto', {{ gas.id }})">
+                                        <i class="bi bi-eye"></i> Ver
                                     </button>
                                     
-                                    <div class="modal fade" id="modalAnularGasto{{ gas.id }}" tabindex="-1" aria-hidden="true">
-                                        <div class="modal-dialog modal-dialog-centered">
-                                            <form method="post" action="{% url 'finanzas:anular_transaccion' request.tenant.slug 'gasto' gas.id %}">
-                                                {% csrf_token %}
-                                                <div class="modal-content text-start">
-                                                    <div class="modal-header border-0 pb-0">
-                                                        <h5 class="fw-bold text-dark m-0">Anular Egreso {{ gas.numero_egreso }}</h5>
-                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                    </div>
-                                                    <div class="modal-body">
-                                                        <p class="text-muted small">Al anular este egreso, se anulará su rastro en los costos del mes de la academia.</p>
-                                                        <div class="mb-3">
-                                                            <label class="form-label small fw-bold text-secondary">Motivo de Anulación</label>
-                                                            <textarea name="motivo_anulacion" class="form-control" rows="2" required placeholder="Ej: Error en la liquidación o factura duplicada"></textarea>
+                                    {% if gas.estado == 'ACTIVO' %}
+                                        <button type="button" class="btn btn-sm btn-light bg-opacity-10 text-danger border-0 rounded-pill px-3 fw-bold" data-bs-toggle="modal" data-bs-target="#modalAnularGasto{{ gas.id }}">
+                                            <i class="bi bi-x-circle"></i> Anular
+                                        </button>
+                                        
+                                        <div class="modal fade" id="modalAnularGasto{{ gas.id }}" tabindex="-1" aria-hidden="true">
+                                            <div class="modal-dialog modal-dialog-centered">
+                                                <form method="post" action="{% url 'finanzas:anular_transaccion' request.tenant.slug 'gasto' gas.id %}">
+                                                    {% csrf_token %}
+                                                    <div class="modal-content text-start rounded-4 border-0 shadow-lg">
+                                                        <div class="modal-header border-0 pb-0">
+                                                            <h5 class="fw-bold text-dark m-0">Anular Egreso {{ gas.numero_egreso }}</h5>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                        </div>
+                                                        <div class="modal-body">
+                                                            <div class="alert alert-warning small border-0 bg-warning bg-opacity-10 text-dark">
+                                                                <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>Al anular este egreso, se eliminará su rastro contable en los costos globales del mes.
+                                                            </div>
+                                                            <div class="mb-2">
+                                                                <label class="form-label small fw-bold text-secondary">Motivo de Anulación</label>
+                                                                <textarea name="motivo_anulacion" class="form-control bg-light border-0" rows="3" required placeholder="Ej: Error en la liquidación o factura duplicada"></textarea>
+                                                            </div>
+                                                        </div>
+                                                        <div class="modal-footer border-0 pt-0 bg-white rounded-bottom-4">
+                                                            <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                                                            <button type="submit" class="btn btn-danger rounded-pill px-4 fw-bold">Confirmar Anulación</button>
                                                         </div>
                                                     </div>
-                                                    <div class="modal-footer border-0 pt-0">
-                                                        <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Cancelar</button>
-                                                        <button type="submit" class="btn btn-sm btn-danger fw-bold">Confirmar Anulación</button>
-                                                    </div>
-                                                </div>
-                                            </form>
+                                                </form>
+                                            </div>
                                         </div>
-                                    </div>
-                                {% else %}
-                                    <span class="badge bg-danger small" data-bs-toggle="tooltip" title="Motivo: {{ gas.motivo_anulacion }}">ANULADO</span>
-                                {% endif %}
+                                    {% else %}
+                                        <span class="badge bg-danger bg-opacity-10 text-danger border-0 small px-3 py-2 rounded-pill" data-bs-toggle="tooltip" title="Motivo: {{ gas.motivo_anulacion }}">ANULADO</span>
+                                    {% endif %}
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -198,17 +298,350 @@
             </div>
         </div>
     </div>
-
 </div>
 
-<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
-<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+<div class="modal fade" id="modalVisorRecibo" tabindex="-1" aria-labelledby="modalVisorReciboLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white border-0">
+                <h5 class="modal-title fw-bold" id="modalVisorReciboLabel"><i class="bi bi-receipt me-2"></i>Soporte Contable</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4" id="modal-recibo-print">
+                <div class="recibo-voucher p-4 rounded text-dark position-relative">
+                    <div class="text-center mb-3">
+                        <h4 class="fw-bold text-uppercase tracking-wider m-0" id="recibo-academia-nombre">{{ request.tenant.nombre }}</h4>
+                        <small class="text-muted font-monospace">Soporte Operativo de Caja</small>
+                        <hr class="my-2 border-secondary opacity-25">
+                    </div>
+
+                    <div class="row g-2 mb-3 small">
+                        <div class="col-6">
+                            <span class="text-muted d-block text-uppercase font-monospace fs-8">Tipo Documento:</span>
+                            <strong id="recibo-tipo-transaccion">--</strong>
+                        </div>
+                        <div class="col-6 text-end">
+                            <span class="text-muted d-block text-uppercase font-monospace fs-8">Nº Consecutivo:</span>
+                            <span class="badge bg-dark fs-6 font-monospace" id="recibo-consecutivo">--</span>
+                        </div>
+                        <div class="col-6">
+                            <span class="text-muted d-block text-uppercase font-monospace fs-8">Fecha Registro:</span>
+                            <strong id="recibo-fecha">--</strong>
+                        </div>
+                        <div class="col-6 text-end">
+                            <span class="text-muted d-block text-uppercase font-monospace fs-8">Estado Legal:</span>
+                            <span class="badge" id="recibo-estado-badge">--</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-3 rounded border mb-3 small">
+                        <div class="mb-2">
+                            <span class="text-muted font-monospace text-uppercase fs-8 d-block">Tercero / Razón Social:</span>
+                            <strong id="recibo-tercero-nombre" class="text-uppercase text-dark">--</strong>
+                        </div>
+                        <div>
+                            <span class="text-muted font-monospace text-uppercase fs-8 d-block">Cédula o NIT:</span>
+                            <strong id="recibo-tercero-nit" class="font-monospace">--</strong>
+                        </div>
+                    </div>
+
+                    <div class="mb-3 small">
+                        <span class="text-muted font-monospace text-uppercase fs-8 d-block">Por Concepto de:</span>
+                        <div class="p-2 bg-light rounded text-muted border-start border-3 border-dark font-monospace" id="recibo-concepto" style="min-height: 45px;">
+                            --
+                        </div>
+                    </div>
+
+                    <div class="row align-items-center mb-2 small">
+                        <div class="col-6">
+                            <span class="text-muted font-monospace text-uppercase fs-8">Medio de Pago:</span>
+                            <span class="d-block fw-semibold" id="recibo-medio-pago">--</span>
+                        </div>
+                        <div class="col-6 text-end">
+                            <span class="text-muted font-monospace text-uppercase fs-8 d-block">Total Registrado:</span>
+                            <h3 class="fw-bold text-dark m-0 font-monospace" id="recibo-monto">$0</h3>
+                        </div>
+                    </div>
+
+                    <div class="text-center mt-4 pt-3 border-top border-secondary border-opacity-10">
+                        <p class="text-muted fs-8 mb-0 fw-bold">Plataforma SaaS Multi-Academia • Recibo de Caja - Control Interno</p>
+                        <p class="text-muted fs-8 mb-0" style="font-size: 0.65rem !important;">(Documento de soporte administrativo, no equivalente a factura de venta o documento equivalente)</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light justify-content-between no-print">
+                <button type="button" class="btn btn-sm btn-secondary font-monospace" data-bs-dismiss="modal">Cerrar Visor</button>
+                <button type="button" class="btn btn-sm btn-dark font-monospace fw-bold" onclick="window.print();">
+                    <i class="bi bi-printer-fill me-1"></i> Imprimir / Guardar Voucher
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalReporteDiario" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="fw-bold m-0"><i class="bi bi-calendar-check me-2 text-primary"></i>Reporte Diario</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small">Selecciona una fecha específica para realizar arqueos y visualizar el listado cronológico de movimientos.</p>
+                <div class="mb-3 d-flex gap-2">
+                    <input type="date" id="fecha_diario" class="form-control" value="{{ today|date:'Y-m-d' }}">
+                    <button type="button" class="btn btn-primary fw-bold px-4" onclick="cargarPrevisualizacion('diario')">Ver</button>
+                </div>
+                
+                <div id="resumen_diario_box" class="d-none mt-3">
+                    <div class="bg-light p-3 rounded border text-center mb-3 shadow-sm">
+                        <div class="row">
+                            <div class="col-4"><small class="d-block text-muted small text-uppercase font-monospace">Ingresos</small><strong class="text-success fs-5" id="tot_ing_diario">$0</strong></div>
+                            <div class="col-4"><small class="d-block text-muted small text-uppercase font-monospace">Gastos</small><strong class="text-danger fs-5" id="tot_gas_diario">$0</strong></div>
+                            <div class="col-4 border-start"><small class="d-block text-muted small text-uppercase font-monospace">Balance</small><strong class="text-dark fs-5" id="bal_diario">$0</strong></div>
+                        </div>
+                    </div>
+                    
+                    <div class="scroll-reporte-contable">
+                        <table class="table table-sm table-hover mb-0 text-start align-middle table-sticky-header">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3 text-muted font-monospace fs-8">Ref</th>
+                                    <th class="text-muted font-monospace fs-8">Tercero / Concepto</th>
+                                    <th class="text-end pe-3 text-muted font-monospace fs-8">Monto</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lista_tx_diario">
+                                </tbody>
+                        </table>
+                    </div>
+
+                    <form method="get" action="{% url 'finanzas:exportar_reporte_contable' request.tenant.slug %}" class="mt-3">
+                        <input type="hidden" name="tipo" value="diario">
+                        <input type="hidden" name="fecha_inicio" id="export_fecha_diario">
+                        <button type="submit" class="btn btn-dark w-100 fw-bold py-2"><i class="bi bi-filetype-csv me-2 text-warning"></i> Descargar CSV Contable</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalReporteMensual" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="fw-bold m-0"><i class="bi bi-calendar-range me-2 text-primary"></i>Reporte por Períodos</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small">Especifica el rango de auditoría. El sistema consolidará un listado unificado ideal para la revisión de revisores o contadores.</p>
+                <div class="row g-2 mb-3">
+                    <div class="col-5">
+                        <input type="date" id="fecha_inicio_mensual" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-5">
+                        <input type="date" id="fecha_fin_mensual" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-2">
+                        <button type="button" class="btn btn-primary btn-sm w-100 h-100 fw-bold" onclick="cargarPrevisualizacion('mensual')">Ver</button>
+                    </div>
+                </div>
+
+                <div id="resumen_mensual_box" class="d-none mt-3">
+                    <div class="bg-light p-3 rounded border text-center mb-3 shadow-sm">
+                        <div class="row">
+                            <div class="col-4"><small class="d-block text-muted small text-uppercase font-monospace">Ingresos</small><strong class="text-success fs-5" id="tot_ing_mensual">$0</strong></div>
+                            <div class="col-4"><small class="d-block text-muted small text-uppercase font-monospace">Gastos</small><strong class="text-danger fs-5" id="tot_gas_mensual">$0</strong></div>
+                            <div class="col-4 border-start"><small class="d-block text-muted small text-uppercase font-monospace">Utilidad</small><strong class="text-dark fs-5" id="bal_mensual">$0</strong></div>
+                        </div>
+                    </div>
+                    
+                    <div class="scroll-reporte-contable">
+                        <table class="table table-sm table-hover mb-0 text-start align-middle table-sticky-header">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3 text-muted font-monospace fs-8">Fecha / Ref</th>
+                                    <th class="text-muted font-monospace fs-8">Detalle</th>
+                                    <th class="text-end pe-3 text-muted font-monospace fs-8">Monto</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lista_tx_mensual">
+                                </tbody>
+                        </table>
+                    </div>
+
+                    <form method="get" action="{% url 'finanzas:exportar_reporte_contable' request.tenant.slug %}" class="mt-3">
+                        <input type="hidden" name="tipo" value="mensual">
+                        <input type="hidden" name="fecha_inicio" id="export_fecha_inicio_mensual">
+                        <input type="hidden" name="fecha_fin" id="export_fecha_fin_mensual">
+                        <button type="submit" class="btn btn-dark w-100 fw-bold py-2"><i class="bi bi-filetype-csv me-2 text-warning"></i> Descargar Consolidado CSV</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
-    $(document).ready(function() {
-        $('#tabla-ingresos').DataTable({ "pageLength": 10, "lengthChange": false, "ordering": false, "language": { "search": "Filtrar ingresos:", "paginate": { "next": "Sig", "previous": "Ant" }, "info": "Mostrando _START_ a _END_ de _TOTAL_", "infoEmpty": "", "zeroRecords": "Ningún recibo coincide" } });
-        $('#tabla-gastos').DataTable({ "pageLength": 10, "lengthChange": false, "ordering": false, "language": { "search": "Filtrar gastos:", "paginate": { "next": "Sig", "previous": "Ant" }, "info": "Mostrando _START_ a _END_ de _TOTAL_", "infoEmpty": "", "zeroRecords": "Ningún egreso coincide" } });
-    });
+    // =========================================================================
+    // 1. FUNCIONES CONTABLES Y GLOBALES (Deben estar disponibles para los OnClick)
+    // =========================================================================
+    const formatoCOP = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
+
+    function abrirVisorRecibo(tipo, id) {
+        const slugTenant = "{{ request.tenant.slug }}";
+        const url = `/${slugTenant}/finanzas/transaccion/ajax/${tipo}/${id}/`; 
+
+        fetch(url)
+            .then(res => {
+                if (!res.ok) throw new Error(`Error en servidor status: ${res.status}`);
+                return res.json();
+            })
+            .then(data => {
+                document.getElementById('recibo-tipo-transaccion').innerText = data.tipo_transaccion;
+                document.getElementById('recibo-consecutivo').innerText = data.consecutivo;
+                document.getElementById('recibo-fecha').innerText = data.fecha;
+                document.getElementById('recibo-tercero-nombre').innerText = data.tercero_nombre;
+                document.getElementById('recibo-tercero-nit').innerText = data.tercero_nit;
+                document.getElementById('recibo-concepto').innerText = data.concepto;
+                document.getElementById('recibo-medio-pago').innerText = data.medio_pago;
+                document.getElementById('recibo-monto').innerText = formatoCOP.format(data.monto);
+
+                const badge = document.getElementById('recibo-estado-badge');
+                badge.innerText = data.estado;
+                badge.className = data.estado === 'ACTIVO' ? "badge bg-success-subtle text-success text-uppercase" : "badge bg-danger-subtle text-danger text-uppercase";
+
+                new bootstrap.Modal(document.getElementById('modalVisorRecibo')).show();
+            })
+            .catch(e => {
+                console.error("Error cargando el voucher:", e);
+                alert("No se pudo cargar la información del recibo.");
+            });
+    }
+
+    function cargarPrevisualizacion(tipo) {
+        const slugTenant = "{{ request.tenant.slug }}";
+        let url = `/${slugTenant}/finanzas/reportes/resumen-ajax/?tipo=${tipo}`;
+
+        if(tipo === 'diario') {
+            const fecha = document.getElementById('fecha_diario').value;
+            if(!fecha) return alert("Selecciona una fecha");
+            url += `&fecha_inicio=${fecha}`;
+            document.getElementById('export_fecha_diario').value = fecha;
+        } else {
+            const f_ini = document.getElementById('fecha_inicio_mensual').value;
+            const f_fin = document.getElementById('fecha_fin_mensual').value;
+            if(!f_ini || !f_fin) return alert("Selecciona ambas fechas");
+            url += `&fecha_inicio=${f_ini}&fecha_fin=${f_fin}`;
+            document.getElementById('export_fecha_inicio_mensual').value = f_ini;
+            document.getElementById('export_fecha_fin_mensual').value = f_fin;
+        }
+
+        fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById(`resumen_${tipo}_box`).classList.remove('d-none');
+                document.getElementById(`tot_ing_${tipo}`).innerText = formatoCOP.format(data.ingresos);
+                document.getElementById(`tot_gas_${tipo}`).innerText = formatoCOP.format(data.gastos);
+                
+                const bal = document.getElementById(`bal_${tipo}`);
+                bal.innerText = formatoCOP.format(data.balance);
+                
+                if(data.balance < 0) {
+                    bal.classList.remove('text-dark', 'text-success');
+                    bal.classList.add('text-danger');
+                } else {
+                    bal.classList.remove('text-dark', 'text-danger');
+                    bal.classList.add('text-success');
+                }
+
+                const tbody = document.getElementById(`lista_tx_${tipo}`);
+                tbody.innerHTML = ''; 
+
+                if(data.transacciones.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-muted small"><i class="bi bi-inbox fs-4 d-block mb-1"></i>No existen movimientos.</td></tr>`;
+                    return;
+                }
+
+                data.transacciones.forEach(tx => {
+                    const esIngreso = tx.tipo === 'ingreso';
+                    const colorTexto = esIngreso ? 'text-success' : 'text-danger';
+                    const signo = esIngreso ? '+' : '-';
+                    const badgeTipo = esIngreso ? '<span class="badge bg-success-subtle text-success me-1 fs-8">IN</span>' : '<span class="badge bg-danger-subtle text-danger me-1 fs-8">EG</span>';
+                    const refVisual = tipo === 'mensual' ? `<span class="d-block text-muted small font-monospace" style="font-size: 0.65rem;">${tx.fecha}</span>${tx.consecutivo}` : tx.consecutivo;
+
+                    const filaHTML = `
+                        <tr>
+                            <td class="ps-3 small font-monospace lh-1">${refVisual}</td>
+                            <td class="small py-2 lh-sm">
+                                ${badgeTipo} <strong class="text-dark">${tx.tercero}</strong>
+                                <span class="d-block text-muted text-truncate mt-1" style="max-width: 220px; font-size: 0.75rem;" title="${tx.concepto}">${tx.concepto}</span>
+                            </td>
+                            <td class="pe-3 text-end small fw-bold ${colorTexto}">${signo}${formatoCOP.format(tx.monto)}</td>
+                        </tr>
+                    `;
+                    tbody.insertAdjacentHTML('beforeend', filaHTML);
+                });
+            })
+            .catch(error => alert("Ocurrió un error al procesar el consolidado."));
+    }
+
+    // =========================================================================
+    // 2. INYECCIÓN DINÁMICA DE DATATABLES (Anti-Conflictos jQuery)
+    // =========================================================================
+    function cargarScriptDinamicamente(url, callback) {
+        var script = document.createElement("script");
+        script.type = "text/javascript";
+        script.src = url;
+        script.onload = callback;
+        document.body.appendChild(script);
+    }
+
+    var esperaJquery = setInterval(function() {
+        if (window.jQuery) {
+            clearInterval(esperaJquery); // jQuery está listo
+            
+            cargarScriptDinamicamente("https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js", function() {
+                cargarScriptDinamicamente("https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js", function() {
+                    
+                    // Configuración base compartida para ambas tablas
+                    const dtConfig = {
+                        "dom": '<"top">rt<"d-flex justify-content-between align-items-center mt-3"ip><"clear">',
+                        "pageLength": 15,
+                        "lengthChange": false,
+                        "ordering": true, // Permite ordenar por columnas (ej. Monto o Fecha)
+                        "language": {
+                            "zeroRecords": "<div class='text-center py-4'><i class='bi bi-search fs-1 text-muted d-block mb-2'></i>No se encontraron transacciones.</div>",
+                            "info": "<span class='text-muted small fw-semibold'>Mostrando _START_ a _END_ de _TOTAL_ registros</span>",
+                            "infoEmpty": "<span class='text-muted small'>No hay registros disponibles</span>",
+                            "infoFiltered": "<span class='text-muted small'>(filtrado de _MAX_)</span>",
+                            "paginate": {
+                                "first": "Primero",
+                                "last": "Último",
+                                "next": "Siguiente <i class='bi bi-chevron-right ms-1'></i>",
+                                "previous": "<i class='bi bi-chevron-left me-1'></i> Anterior"
+                            }
+                        }
+                    };
+
+                    // Inicializamos ambas tablas
+                    var tablaIngresos = $('#tabla-ingresos').DataTable(dtConfig);
+                    var tablaGastos = $('#tabla-gastos').DataTable(dtConfig);
+
+                    // 🔗 MAGIA SENIOR: Un solo input filtra las DOS tablas al mismo tiempo
+                    $('#buscadorFinanzas').on('keyup', function() {
+                        tablaIngresos.search(this.value).draw();
+                        tablaGastos.search(this.value).draw();
+                    });
+
+                    // Corrección de bug ARIA-HIDDEN en modales
+                    $('.modal').on('hidden.bs.modal', function () {
+                        $(this).find('.btn-close').blur(); 
+                    });
+                });
+            });
+        }
+    }, 50); // Revisa cada 50ms
 </script>
 {% endblock %}

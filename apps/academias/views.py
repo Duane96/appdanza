@@ -13,7 +13,8 @@ from apps.asistencias.models import Asistencia
 from apps.finanzas.models import ReciboIngreso, Gasto
 
 from django.utils import timezone
-from django.db.models import Sum
+from django.db.models import Sum, Max, Prefetch
+import json
 
 from .forms import ConfigMascaraForm
 
@@ -98,172 +99,128 @@ class LoginAcademiaView(LoginView):
         return reverse('academias:index', kwargs={'slug_academia': slug})
 
 
+
 class DashboardAdminView(LoginRequiredMixin, TemplateView):
     """Renderiza el panel de control administrativo de la academia específica."""
     template_name = "academias/dashboard.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        
-        # 🏢 El request.tenant fue inyectado de forma segura por el Middleware Multi-tenant
         academia = self.request.tenant
         context['academia'] = academia
-        # PASAMOS EL ESTADO DE PARTNER AL CONTEXTO
+        
         suscripcion = academia.suscripcion_saas
         context['es_partner'] = suscripcion.es_cuenta_partner_gratis
 
-        context['eventos_activos'] = Evento.objects.filter(
-            academia=academia,
-            estado__in=['REGISTRO_ONLINE', 'REGISTRO_PUERTA']
-        ).order_by('fecha')
-
-
-        # 📅 OBTENEMOS EL AÑO, MES Y DÍA ACTUAL (Manejo ultra-tolerante del tiempo)
+        # 📅 MANEJO DE FECHAS
         ahora = timezone.localtime(timezone.now())
-        año_actual = ahora.year
-        mes_actual = ahora.month
+        año_actual, mes_actual = ahora.year, ahora.month
         hoy_fecha = ahora.date()
+        
+        año_anterior = año_actual - 1 if mes_actual == 1 else año_actual
+        mes_anterior = 12 if mes_actual == 1 else mes_actual - 1
 
-        estado_activo = 'ACTIVO'
+        # 👥 KPI DE ESTUDIANTES Y EVENTOS
+        context['eventos_activos'] = Evento.objects.filter(
+            academia=academia, estado__in=['REGISTRO_ONLINE', 'REGISTRO_PUERTA']
+        ).order_by('fecha')[:5] # Limitamos a 5 para no saturar la vista
 
-        # Cómputo inteligente de fechas para el mes anterior (Comparativa financiera)
-        if mes_actual == 1:
-            año_anterior = año_actual - 1
-            mes_anterior = 12
-        else:
-            año_anterior = año_actual
-            mes_anterior = mes_actual - 1
-
-        # 👥 KPI DE ESTUDIANTES (Filtros por Tenant)
         context['estudiantes_totales'] = Estudiante.objects.filter(academia=academia).count()
         context['estudiantes_activos'] = Estudiante.objects.filter(academia=academia, estado='ACTIVO').count()
-        
-        # Estudiantes cuya fecha_registro cae en el mes actual
-        context['registrados_este_mes'] = Estudiante.objects.filter(
-            academia=academia, 
-            fecha_registro__year=año_actual,
-            fecha_registro__month=mes_actual
-        ).count()
-
-        # ⏱️ KPI DE ASISTENCIAS (Registros QR del día de hoy)
         context['asistencias_hoy'] = Asistencia.objects.filter(academia=academia, fecha_hora__date=hoy_fecha).count()
 
-        # 💵 TOTAL DE INGRESOS MENSUALES
-        # El filtro es dinámico y soporta variaciones comunes en el string del estado activo ('ACTIVE' o 'ACTIVO')
-        estado_activo = 'ACTIVE' if hasattr(ReciboIngreso, 'estado') else 'ACTIVO'
-        
-        # Filtro alternativo si el mes falla
+        # 💵 KPI FINANCIEROS
         ingresos_mes = ReciboIngreso.objects.filter(
-            academia=academia, 
-            estado='ACTIVO',
-            fecha__gte=ahora.replace(day=1, hour=0, minute=0, second=0),
+            academia=academia, estado='ACTIVO',
+            fecha__gte=ahora.replace(day=1, hour=0, minute=0, second=0)
         ).aggregate(total=Sum('monto'))['total'] or 0
         
-        context['ingresos_mes'] = ingresos_mes
-        
-        # Histórico histórico de ingresos de la academia
-        context['ingresos_totales'] = ReciboIngreso.objects.filter(academia=academia, estado='ACTIVO').aggregate(total=Sum('monto'))['total'] or 0
-
-        # 🔴 TOTAL DE GASTOS MENSUALES Y HISTÓRICOS
         gastos_mes = Gasto.objects.filter(
-            academia=academia, 
-            estado='ACTIVO', 
-            fecha__year=año_actual,
-            fecha__month=mes_actual
+            academia=academia, estado='ACTIVO', 
+            fecha__year=año_actual, fecha__month=mes_actual
         ).aggregate(total=Sum('monto'))['total'] or 0
-        context['gastos_mes'] = gastos_mes
-        
-        context['gastos_totales'] = Gasto.objects.filter(academia=academia, estado='ACTIVO').aggregate(total=Sum('monto'))['total'] or 0
 
-        # 📈 UTILIDAD NETA DEL MES EN CURSO (Ingresos menos Gastos)
+        context['ingresos_mes'] = ingresos_mes
         context['utilidad_mes'] = ingresos_mes - gastos_mes
 
-        # 📊 AUDITORÍA MAESTRA: Distribución de dinero por medio de pago (Efectivo vs Nequi/Bancos)
+        # 📊 AUDITORÍA MAESTRA (Cajas)
         caja_efectivo = ReciboIngreso.objects.filter(
-            academia=academia, 
-            estado='ACTIVO', 
-            medio_pago='EFECTIVO', 
-            fecha__year=año_actual, 
-            fecha__month=mes_actual
+            academia=academia, estado='ACTIVO', medio_pago='EFECTIVO', 
+            fecha__year=año_actual, fecha__month=mes_actual
         ).aggregate(total=Sum('monto'))['total'] or 0
         
         caja_transferencia = ReciboIngreso.objects.filter(
-            academia=academia, 
-            estado='ACTIVO', 
-            medio_pago='TRANSFERENCIA', 
-            fecha__year=año_actual, 
-            fecha__month=mes_actual
+            academia=academia, estado='ACTIVO', medio_pago='TRANSFERENCIA', 
+            fecha__year=año_actual, fecha__month=mes_actual
         ).aggregate(total=Sum('monto'))['total'] or 0
 
         context['caja_efectivo'] = caja_efectivo
         context['caja_transferencia'] = caja_transferencia
 
-        # Cálculo dinámico de porcentajes relativos para pintar las barras de progreso en el HTML
         total_cajas = caja_efectivo + caja_transferencia
-        if total_cajas > 0:
-            context['porcentaje_efectivo'] = (caja_efectivo / total_cajas) * 100
-            context['porcentaje_transferencia'] = (caja_transferencia / total_cajas) * 100
-        else:
-            context['porcentaje_efectivo'] = 0
-            context['porcentaje_transferencia'] = 0
+        context['porcentaje_efectivo'] = (caja_efectivo / total_cajas * 100) if total_cajas > 0 else 0
+        context['porcentaje_transferencia'] = (caja_transferencia / total_cajas * 100) if total_cajas > 0 else 0
 
-        # 🚨 ALERTA OPERATIVA 1: Mapeo detallado de Alumnos en Riesgo de Deserción (> 7 días ausentes)
+        # 🚨 ALERTA 1: ALUMNOS EN RIESGO (OPTIMIZADO PARA EVITAR N+1)
         hace_7_dias = ahora - timezone.timedelta(days=7)
-        estudiantes_activos_objs = Estudiante.objects.filter(academia=academia, estado='ACTIVO')
         
+        # 🛠️ CORRECCIÓN: Usamos 'asistencias' e 'inscripciones' según tus related_names
+        estudiantes_activos = Estudiante.objects.filter(
+            academia=academia, estado='ACTIVO'
+        ).annotate(
+            ultima_asistencia=Max('asistencias__fecha_hora')  # Cambiado a 'asistencias'
+        ).prefetch_related(
+            Prefetch('inscripciones', queryset=InscripcionPlan.objects.order_by('-id')) # Cambiado a 'inscripciones'
+        )
+
         lista_alumnos_riesgo = []
-        for est in estudiantes_activos_objs:
-            # Buscamos el registro de su asistencia más reciente
-            ultima_as_obj = Asistencia.objects.filter(estudiante=est, academia=academia).order_by('-fecha_hora').first()
-            
-            # Buscamos el plan actual/último asignado al alumno para inyectarlo en la fila del modal
-            inscripcion_actual = InscripcionPlan.objects.filter(estudiante=est, academia=academia).order_by('-id').first()
-            nombre_plan = inscripcion_actual.plan.nombre if (inscripcion_actual and inscripcion_actual.plan) else "Sin Plan Activo"
-            
-            if ultima_as_obj:
-                # Si asistió alguna vez pero fue hace más de 7 días
-                if ultima_as_obj.fecha_hora < hace_7_dias:
-                    est.ultima_asistencia_str = ultima_as_obj.fecha_hora.strftime('%d/%m/%Y')
-                    est.plan_nombre = nombre_plan
-                    lista_alumnos_riesgo.append(est)
-            else:
-                # Si nunca ha venido a clase y lleva más de 7 días registrado en el sistema
-                # Se aplica la corrección .date() para equiparar con hace_7_dias.date()
-                if est.fecha_registro and est.fecha_registro.date() < hace_7_dias.date():
-                    est.ultima_asistencia_str = "Nunca ha asistido"
-                    est.plan_nombre = nombre_plan
-                    lista_alumnos_riesgo.append(est)
-                    
+        for est in estudiantes_activos:
+            # Filtramos si la última asistencia fue hace más de 7 días, o si nunca vino y se registró hace más de 7 días
+            if (est.ultima_asistencia and est.ultima_asistencia < hace_7_dias) or \
+               (not est.ultima_asistencia and est.fecha_registro.date() < hace_7_dias.date()):
+                
+                est.ultima_asistencia_str = est.ultima_asistencia.strftime('%d/%m/%Y') if est.ultima_asistencia else "Nunca ha asistido"
+                
+                # Extraemos el plan del prefetch para no hacer consultas extra
+                # Cambiado a est.inscripciones.all()
+                planes_alumno = list(est.inscripciones.all())
+                est.plan_nombre = planes_alumno[0].plan.nombre if planes_alumno else "Sin Plan Activo"
+                
+                lista_alumnos_riesgo.append(est)
+
         context['alumnos_en_riesgo_lista'] = lista_alumnos_riesgo
         context['alumnos_en_riesgo'] = len(lista_alumnos_riesgo)
 
-        # 🚨 ALERTA OPERATIVA 2: Mapeo detallado de Planes por Vencer (Próximos 5 días)
+        # 🚨 ALERTA 2: PLANES POR VENCER
         dentro_de_5_dias = hoy_fecha + timezone.timedelta(days=5)
-        
-        # Filtramos inscripciones cuyo vencimiento esté entre hoy y los siguientes 5 días
-        # Usamos select_related para evitar el problema de consultas N+1 en la base de datos al renderizar nombres y planes
-        inscripciones_por_vencer = InscripcionPlan.objects.filter(
-            academia=academia,
-            fecha_fin__gte=hoy_fecha,
-            fecha_fin__lte=dentro_de_5_dias
+        context['planes_por_vencer_lista'] = InscripcionPlan.objects.filter(
+            academia=academia, fecha_fin__gte=hoy_fecha, fecha_fin__lte=dentro_de_5_dias
         ).select_related('estudiante', 'plan')
-        
-        context['planes_por_vencer_lista'] = inscripciones_por_vencer
-        context['planes_por_vencer'] = inscripciones_por_vencer.count()
+        context['planes_por_vencer'] = context['planes_por_vencer_lista'].count()
 
-        # ⚖️ ANÁLISIS COMPARATIVO DE CRECIMIENTO MENSUAL
+        # ⚖️ ANÁLISIS COMPARATIVO
         ingresos_mes_anterior = ReciboIngreso.objects.filter(
-            academia=academia, 
-            estado='ACTIVO', 
-            fecha__year=año_anterior, 
-            fecha__month=mes_anterior
+            academia=academia, estado='ACTIVO', fecha__year=año_anterior, fecha__month=mes_anterior
         ).aggregate(total=Sum('monto'))['total'] or 0
         
-        if ingresos_mes_anterior > 0:
-            crecimiento = ((ingresos_mes - ingresos_mes_anterior) / ingresos_mes_anterior) * 100
-            context['comparativa_ingresos'] = round(crecimiento, 1)
-        else:
-            context['comparativa_ingresos'] = 100.0 # Valor base si no se registran facturas el mes anterior
+        context['comparativa_ingresos'] = round(((ingresos_mes - ingresos_mes_anterior) / ingresos_mes_anterior) * 100, 1) if ingresos_mes_anterior > 0 else 100.0
+
+        # 📈 GRÁFICOS (Pasados como JSON para JavaScript)
+        datos_ingresos = ReciboIngreso.objects.filter(
+            academia=academia, estado='ACTIVO', fecha__year=año_actual
+        ).values('fecha__month').annotate(total=Sum('monto'))
+        
+        datos_gastos = Gasto.objects.filter(
+            academia=academia, estado='ACTIVO', fecha__year=año_actual
+        ).values('fecha__month').annotate(total=Sum('monto'))
+
+        # 🛠️ CORRECCIÓN: Envolvemos el resultado en float() para que json.dumps lo acepte
+        chart_ingresos = [float(next((d['total'] for d in datos_ingresos if d['fecha__month'] == m), 0)) for m in range(1, 13)]
+        chart_gastos = [float(next((d['total'] for d in datos_gastos if d['fecha__month'] == m), 0)) for m in range(1, 13)]
+
+        # Convertimos a JSON para que JS pueda leerlo sin errores de sintaxis
+        context['chart_ingresos'] = json.dumps(chart_ingresos)
+        context['chart_gastos'] = json.dumps(chart_gastos)
 
         return context
 

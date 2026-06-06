@@ -43,26 +43,26 @@
     <div class="container py-5">
         
         <div class="d-flex justify-content-between align-items-center mb-5">
-    <div>
-        <h1 class="fw-black text-dark m-0">Consola de Control Core</h1>
-        <p class="text-muted mb-0">Gestión global de inquilinos y configuración comercial.</p>
-    </div>
-    <div class="gap-2 d-flex">
-        
-        <button type="button" class="btn btn-success rounded-3 fw-bold shadow-sm d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#crearPlanModal">
-            <i class="bi bi-tags-fill"></i> Crear Plan SaaS
-        </button>
+            <div>
+                <h1 class="fw-black text-dark m-0">Consola de Control Core</h1>
+                <p class="text-muted mb-0">Gestión global de inquilinos y configuración comercial.</p>
+            </div>
+            <div class="gap-2 d-flex">
+                
+                <button type="button" class="btn btn-success rounded-3 fw-bold shadow-sm d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#crearPlanModal">
+                    <i class="bi bi-tags-fill"></i> Crear Plan SaaS
+                </button>
 
-        <button type="button" class="btn btn-info rounded-3 fw-bold shadow-sm d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#configuracionLandingModal">
-            <i class="bi bi-display"></i> Configurar Landing
-        </button>
-        
-        <button type="button" class="btn btn-primary rounded-3 fw-bold shadow-sm d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#crearAcademiaModal">
-            <i class="bi bi-plus-circle-fill"></i> Registrar Inquilino
-        </button>
-        
-    </div>
-</div>
+                <button type="button" class="btn btn-info rounded-3 fw-bold shadow-sm d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#configuracionLandingModal">
+                    <i class="bi bi-display"></i> Configurar Landing
+                </button>
+                
+                <button type="button" class="btn btn-primary rounded-3 fw-bold shadow-sm d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#crearAcademiaModal">
+                    <i class="bi bi-plus-circle-fill"></i> Registrar Inquilino
+                </button>
+                
+            </div>
+        </div>
 
         <div class="row g-4 mb-5">
             <div class="col-md-4">
@@ -125,6 +125,7 @@
                             <th class="text-center">Finanzas</th>
                             <th class="text-center">Multimed</th>
                             <th class="text-center">Eventos</th>
+                            <th class="text-center">Tienda POS</th>
                             <th class="text-end">Acciones</th>
                         </tr>
                     </thead>
@@ -159,11 +160,12 @@
                                 </td>
                                 <td class="text-secondary fw-medium">{{ aca.suscripcion_saas.fecha_vencimiento|date:"d/m/Y"|default:"--" }}</td>
                                 
-                                <td class="text-center"><i class="bi {% if aca.suscripcion_saas.bloqueo_manual_estudiantes %}bi-lock-fill text-danger{% else %}bi-unlock-fill text-success{% endif %} fs-5"></i></td>
-                                <td class="text-center"><i class="bi {% if aca.suscripcion_saas.bloqueo_manual_asistencias %}bi-lock-fill text-danger{% else %}bi-unlock-fill text-success{% endif %} fs-5"></i></td>
-                                <td class="text-center"><i class="bi {% if aca.suscripcion_saas.bloqueo_manual_finanzas %}bi-lock-fill text-danger{% else %}bi-unlock-fill text-success{% endif %} fs-5"></i></td>
-                                <td class="text-center"><i class="bi {% if aca.suscripcion_saas.bloqueo_manual_multimedia %}bi-lock-fill text-danger{% else %}bi-unlock-fill text-success{% endif %} fs-5"></i></td>
-                                <td class="text-center"><i class="bi {% if aca.suscripcion_saas.bloqueo_manual_eventos %}bi-lock-fill text-danger{% else %}bi-unlock-fill text-success{% endif %} fs-5"></i></td>
+                                <td class="text-center"><i class="bi {% if aca.suscripcion_saas.modulo_estudiantes_activo %}bi-unlock-fill text-success{% else %}bi-lock-fill text-danger{% endif %} fs-5"></i></td>
+                                <td class="text-center"><i class="bi {% if aca.suscripcion_saas.modulo_asistencias_activo %}bi-unlock-fill text-success{% else %}bi-lock-fill text-danger{% endif %} fs-5"></i></td>
+                                <td class="text-center"><i class="bi {% if aca.suscripcion_saas.modulo_finanzas_activo %}bi-unlock-fill text-success{% else %}bi-lock-fill text-danger{% endif %} fs-5"></i></td>
+                                <td class="text-center"><i class="bi {% if aca.suscripcion_saas.modulo_multimedia_activo %}bi-unlock-fill text-success{% else %}bi-lock-fill text-danger{% endif %} fs-5"></i></td>
+                                <td class="text-center"><i class="bi {% if aca.suscripcion_saas.modulo_eventos_activo %}bi-unlock-fill text-success{% else %}bi-lock-fill text-danger{% endif %} fs-5"></i></td>
+                                <td class="text-center"><i class="bi {% if aca.suscripcion_saas.modulo_tienda_activo %}bi-unlock-fill text-success{% else %}bi-lock-fill text-danger{% endif %} fs-5"></i></td>
                                 
                                 <td class="text-end">
                                     <div class="btn-group btn-group-sm shadow-sm rounded-2">
@@ -174,27 +176,28 @@
                                         </button>
                                         {% endif %}
                                         <button type="button" class="btn btn-outline-light border text-dark" title="Editar Licencia / Módulos" 
-        onclick="abrirModalGestion(
-            '{{ aca.id }}', 
-            '{{ aca.nombre }}', 
-            '{{ aca.suscripcion_saas.estado|default:'PRUEBA' }}', 
-            '{{ aca.suscripcion_saas.plan.id|default:'' }}',  <!-- 🚀 NUEVO PARÁMETRO: ID DEL PLAN -->
-            '{{ aca.suscripcion_saas.modulo_estudiantes_activo }}', 
-            '{{ aca.suscripcion_saas.modulo_asistencias_activo }}', 
-            '{{ aca.suscripcion_saas.modulo_finanzas_activo }}', 
-            '{{ aca.suscripcion_saas.modulo_multimedia_activo }}', 
-            '{{ aca.suscripcion_saas.modulo_eventos_activo }}', 
-            '{{ aca.suscripcion_saas.es_cuenta_partner_gratis }}', 
-            '{{ aca.es_solo_eventos }}'
-        )">
-    <i class="bi bi-sliders"></i>
-</button>
+                                            onclick="abrirModalGestion(
+                                                '{{ aca.id }}', 
+                                                '{{ aca.nombre }}', 
+                                                '{{ aca.suscripcion_saas.estado|default:'PRUEBA' }}', 
+                                                '{{ aca.suscripcion_saas.plan.id|default:'' }}',  
+                                                '{{ aca.suscripcion_saas.modulo_estudiantes_activo }}', 
+                                                '{{ aca.suscripcion_saas.modulo_asistencias_activo }}', 
+                                                '{{ aca.suscripcion_saas.modulo_finanzas_activo }}', 
+                                                '{{ aca.suscripcion_saas.modulo_multimedia_activo }}', 
+                                                '{{ aca.suscripcion_saas.modulo_eventos_activo }}', 
+                                                '{{ aca.suscripcion_saas.modulo_tienda_activo }}', 
+                                                '{{ aca.suscripcion_saas.es_cuenta_partner_gratis }}', 
+                                                '{{ aca.es_solo_eventos }}'
+                                            )">
+                                            <i class="bi bi-sliders"></i>
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
                         {% empty %}
                             <tr>
-                                <td colspan="11" class="text-center text-muted py-5">
+                                <td colspan="12" class="text-center text-muted py-5">
                                     <i class="bi bi-exclamation-circle display-6 d-block mb-2"></i>
                                     No hay inquilinos registrados en el ecosistema.
                                 </td>
@@ -207,95 +210,100 @@
     </div>
 
     <div class="modal fade" id="gestionLicenciaModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow rounded-4">
-            <div class="modal-header border-0 pt-4 px-4">
-                <h5 class="modal-title fw-bold text-dark" id="modalAcademiaNombre">Gestionar Módulos y Licencia</h5>
-                <button type="button" class="btn-close" data-bs-toggle="modal"></button>
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header border-0 pt-4 px-4">
+                    <h5 class="modal-title fw-bold text-dark" id="modalAcademiaNombre">Gestionar Módulos y Licencia</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="form-licencia-saas" class="modal-body px-4 py-2">
+                    {% csrf_token %}
+                    <input type="hidden" id="modal-academia-id" name="academia_id">
+                    
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold">Estado de la Suscripción</label>
+                        <select class="form-select rounded-3" id="modal-estado" name="estado">
+                            <option value="ACTIVO">Activo / Al Día</option>
+                            <option value="SUSPENDIDO">Suspendido (Bloqueo Total)</option>
+                            <option value="PRUEBA">Período de Prueba</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold">Plan Comercial Asignado</label>
+                        <select class="form-select rounded-3" id="modal-plan" name="plan_id" required>
+                            <option value="" disabled>-- Selecciona un Plan --</option>
+                            {% for plan in planes_saas %}
+                                <option value="{{ plan.id }}"
+                                        data-est="{{ plan.permite_estudiantes|yesno:'true,false' }}"
+                                        data-asi="{{ plan.permite_asistencias_qr|yesno:'true,false' }}"
+                                        data-fin="{{ plan.permite_finanzas|yesno:'true,false' }}"
+                                        data-mul="{{ plan.permite_multimedia|yesno:'true,false' }}"
+                                        data-eve="{{ plan.permite_eventos|yesno:'true,false' }}"
+                                        data-tie="{{ plan.permite_tienda|yesno:'true,false' }}">
+                                    {{ plan.nombre }} (${{ plan.precio_mensual|floatformat:0 }} COP)
+                                </option>
+                            {% empty %}
+                                <option value="" disabled>No hay planes creados</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text text-xs text-muted">El cambio de plan no afecta la facturación anterior.</div>
+                    </div>
+
+                    <h6 class="text-uppercase text-xs text-primary fw-bold mb-3">Configuraciones Especiales</h6>
+                    <div class="p-3 mb-2 border rounded-3 bg-light">
+                        <div class="form-check form-switch m-0">
+                            <input class="form-check-input" type="checkbox" id="switchProductoraEdit" name="es_solo_eventos" value="True">
+                            <label class="form-check-label small fw-bold text-dark" for="switchProductoraEdit">
+                                🎫 Modo Productora de Eventos (Oculta membresías)
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="p-3 bg-light rounded-3 mb-4 border">
+                        <div class="form-check form-switch m-0">
+                            <input class="form-check-input" type="checkbox" id="switchPartnerVIP" name="es_cuenta_partner_gratis" value="True">
+                            <label class="form-check-label small fw-bold" for="switchPartnerVIP" style="color: #4338ca;">
+                                🌟 Cuenta Partner VIP (Gratis Permanente)
+                            </label>
+                        </div>
+                    </div>
+
+                    <label class="form-label small fw-bold d-block border-bottom pb-2 mb-3 text-uppercase tracking-wider text-secondary">Activar / Desactivar Módulos en la Academia</label>
+                    
+                    <div class="form-check form-switch mb-2.5">
+                        <input class="form-check-input" type="checkbox" id="switchEstudiantes" name="modulo_estudiantes_activo" value="True">
+                        <label class="form-check-label small fw-semibold" for="switchEstudiantes">👥 Módulo de Estudiantes y Planes</label>
+                    </div>
+                    <div class="form-check form-switch mb-2.5">
+                        <input class="form-check-input" type="checkbox" id="switchAsistencias" name="modulo_asistencias_activo" value="True">
+                        <label class="form-check-label small fw-semibold" for="switchAsistencias">🔍 Control de Asistencias por QR</label>
+                    </div>
+                    <div class="form-check form-switch mb-2.5">
+                        <input class="form-check-input" type="checkbox" id="switchFinanzas" name="modulo_finanzas_activo" value="True">
+                        <label class="form-check-label small fw-semibold" for="switchFinanzas">💼 Contabilidad Financiera e Ingresos</label>
+                    </div>
+                    <div class="form-check form-switch mb-2.5">
+                        <input class="form-check-input" type="checkbox" id="switchMultimedia" name="modulo_multimedia_activo" value="True">
+                        <label class="form-check-label small fw-semibold" for="switchMultimedia">🎬 Aula Virtual / Gestor Multimedia</label>
+                    </div>
+                    <div class="form-check form-switch mb-2.5">
+                        <input class="form-check-input" type="checkbox" id="switchEventos" name="modulo_eventos_activo" value="True">
+                        <label class="form-check-label small fw-semibold" for="switchEventos">📅 Gestión de Eventos y Venta de Tickets</label>
+                    </div>
+                    <div class="form-check form-switch mb-4">
+                        <input class="form-check-input" type="checkbox" id="switchTienda" name="modulo_tienda_activo" value="True">
+                        <label class="form-check-label small fw-semibold" for="switchTienda">🏪 Módulo Tienda POS e Inventario</label>
+                    </div>
+
+                    <div class="text-end border-top pt-3 pb-2">
+                        <button type="button" class="btn btn-light rounded-3 px-3 me-2" data-bs-dismiss="modal">Cerrar</button>
+                        <button type="submit" class="btn btn-primary rounded-3 px-4 fw-bold">Actualizar Academia</button>
+                    </div>
+                </form>
             </div>
-            <form id="form-licencia-saas" class="modal-body px-4 py-2">
-                {% csrf_token %}
-                <input type="hidden" id="modal-academia-id" name="academia_id">
-                
-                <div class="mb-4">
-                    <label class="form-label small fw-bold">Estado de la Suscripción</label>
-                    <select class="form-select rounded-3" id="modal-estado" name="estado">
-                        <option value="ACTIVO">Activo / Al Día</option>
-                        <option value="SUSPENDIDO">Suspendido (Bloqueo Total)</option>
-                        <option value="PRUEBA">Período de Prueba</option>
-                    </select>
-                </div>
-
-                <div class="mb-4">
-    <label class="form-label small fw-bold">Plan Comercial Asignado</label>
-    <select class="form-select rounded-3" id="modal-plan" name="plan_id" required>
-    <option value="" disabled>-- Selecciona un Plan --</option>
-    {% for plan in planes_saas %}
-        <option value="{{ plan.id }}"
-                data-est="{{ plan.permite_estudiantes|yesno:'true,false' }}"
-                data-asi="{{ plan.permite_asistencias_qr|yesno:'true,false' }}"
-                data-fin="{{ plan.permite_finanzas|yesno:'true,false' }}"
-                data-mul="{{ plan.permite_multimedia|yesno:'true,false' }}"
-                data-eve="{{ plan.permite_eventos|yesno:'true,false' }}">
-            {{ plan.nombre }} (${{ plan.precio_mensual|floatformat:0 }} COP)
-        </option>
-    {% empty %}
-        <option value="" disabled>No hay planes creados</option>
-    {% endfor %}
-</select>
-    <div class="form-text text-xs text-muted">El cambio de plan no afecta la facturación anterior.</div>
-</div>
-
-                <h6 class="text-uppercase text-xs text-primary fw-bold mb-3">Configuraciones Especiales</h6>
-                <div class="p-3 mb-2 border rounded-3 bg-light">
-                    <div class="form-check form-switch m-0">
-                        <input class="form-check-input" type="checkbox" id="switchProductoraEdit" name="es_solo_eventos">
-                        <label class="form-check-label small fw-bold text-dark" for="switchProductoraEdit">
-                            🎫 Modo Productora de Eventos (Oculta membresías)
-                        </label>
-                    </div>
-                </div>
-
-                <div class="p-3 bg-light rounded-3 mb-4 border">
-                    <div class="form-check form-switch m-0">
-                        <input class="form-check-input" type="checkbox" id="switchPartnerVIP" name="es_cuenta_partner_gratis">
-                        <label class="form-check-label small fw-bold" for="switchPartnerVIP" style="color: #4338ca;">
-                            🌟 Cuenta Partner VIP (Gratis Permanente)
-                        </label>
-                    </div>
-                </div>
-
-                <label class="form-label small fw-bold d-block border-bottom pb-2 mb-3 text-uppercase tracking-wider text-secondary">Activar / Desactivar Módulos en la Academia</label>
-                
-                <div class="form-check form-switch mb-2.5">
-                    <input class="form-check-input" type="checkbox" id="switchEstudiantes" name="modulo_estudiantes_activo">
-                    <label class="form-check-label small fw-semibold" for="switchEstudiantes">👥 Módulo de Estudiantes y Planes</label>
-                </div>
-                <div class="form-check form-switch mb-2.5">
-                    <input class="form-check-input" type="checkbox" id="switchAsistencias" name="modulo_asistencias_activo">
-                    <label class="form-check-label small fw-semibold" for="switchAsistencias">🔍 Control de Asistencias por QR</label>
-                </div>
-                <div class="form-check form-switch mb-2.5">
-                    <input class="form-check-input" type="checkbox" id="switchFinanzas" name="modulo_finanzas_activo">
-                    <label class="form-check-label small fw-semibold" for="switchFinanzas">💼 Contabilidad Financiera e Ingresos</label>
-                </div>
-                <div class="form-check form-switch mb-2.5">
-                    <input class="form-check-input" type="checkbox" id="switchMultimedia" name="modulo_multimedia_activo">
-                    <label class="form-check-label small fw-semibold" for="switchMultimedia">🎬 Aula Virtual / Gestor Multimedia (YouTube)</label>
-                </div>
-                <div class="form-check form-switch mb-4">
-                    <input class="form-check-input" type="checkbox" id="switchEventos" name="modulo_eventos_activo">
-                    <label class="form-check-label small fw-semibold" for="switchEventos">📅 Gestión de Eventos y Venta de Tickets</label>
-                </div>
-
-                <div class="text-end border-top pt-3 pb-2">
-                    <button type="button" class="btn btn-light rounded-3 px-3 me-2" data-bs-dismiss="modal">Cerrar</button>
-                    <button type="submit" class="btn btn-primary rounded-3 px-4 fw-bold">Actualizar Academia</button>
-                </div>
-            </form>
         </div>
     </div>
-</div>
 
     <div class="modal fade" id="crearPlanModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -330,24 +338,28 @@
                     
                     <label class="form-label small fw-bold d-block mb-2">Módulos Permitidos por Defecto</label>
                     <div class="form-check form-switch mb-1">
-                        <input class="form-check-input" type="checkbox" id="p_estudiantes" name="estudiantes" checked>
+                        <input class="form-check-input" type="checkbox" id="p_estudiantes" name="estudiantes" value="True" checked>
                         <label class="form-check-label small" for="p_estudiantes">Acceso a Módulo Estudiantes</label>
                     </div>
                     <div class="form-check form-switch mb-1">
-                        <input class="form-check-input" type="checkbox" id="p_multimedia" name="multimedia" checked>
+                        <input class="form-check-input" type="checkbox" id="p_multimedia" name="multimedia" value="True" checked>
                         <label class="form-check-label small" for="p_multimedia">Acceso a Multimedia</label>
                     </div>
                     <div class="form-check form-switch mb-1">
-                        <input class="form-check-input" type="checkbox" id="p_finanzas" name="finanzas" checked>
+                        <input class="form-check-input" type="checkbox" id="p_finanzas" name="finanzas" value="True" checked>
                         <label class="form-check-label small" for="p_finanzas">Acceso a Finanzas / DIAN</label>
                     </div>
                     <div class="form-check form-switch mb-1">
-                        <input class="form-check-input" type="checkbox" id="p_asistencias" name="asistencias" checked>
+                        <input class="form-check-input" type="checkbox" id="p_asistencias" name="asistencias" value="True" checked>
                         <label class="form-check-label small" for="p_asistencias">Acceso a Asistencias QR</label>
                     </div>
-                    <div class="form-check form-switch mb-3">
-                        <input class="form-check-input" type="checkbox" id="p_eventos" name="eventos" checked>
+                    <div class="form-check form-switch mb-1">
+                        <input class="form-check-input" type="checkbox" id="p_eventos" name="eventos" value="True" checked>
                         <label class="form-check-label small" for="p_eventos">Acceso a Gestión de Eventos</label>
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="p_tienda" name="tienda" value="True">
+                        <label class="form-check-label small" for="p_tienda">Acceso a Módulo Tienda POS</label>
                     </div>
                 </div>
                 <div class="modal-footer border-0 pb-4 px-4">
@@ -371,7 +383,7 @@
                     
                     <div class="p-3 mb-3 border rounded-3 text-center" style="background-color: #fffbeb; border-color: #fde68a !important;">
                         <div class="form-check form-switch d-inline-block m-0">
-                            <input class="form-check-input" type="checkbox" id="switchCrearProductora" name="es_solo_eventos">
+                            <input class="form-check-input" type="checkbox" id="switchCrearProductora" name="es_solo_eventos" value="True">
                             <label class="form-check-label small fw-bold text-dark ms-2" for="switchCrearProductora">
                                 🎫 Empresa Productora (Solo vende Eventos)
                             </label>
@@ -478,235 +490,206 @@
         </div>
     </div>
 
+    <div class="modal fade" id="configuracionLandingModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header border-0 pt-4 px-4">
+                    <h5 class="modal-title fw-bold">Centro de Control de Landing</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                
+                <div class="px-4">
+                    <ul class="nav nav-tabs" id="masterTabs" role="tablist">
+                        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-general">General</button></li>
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-capturas">Capturas</button></li>
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-testimonios">Testimonios</button></li>
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-faq">FAQ</button></li>
+                    </ul>
+                </div>
 
-<!-- 🚀 MODAL DINÁMICO DE CONFIGURACIÓN DE LANDING -->
-<div class="modal fade" id="configuracionLandingModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content border-0 shadow rounded-4">
-            <div class="modal-header border-0 pt-4 px-4">
-                <h5 class="modal-title fw-bold">Centro de Control de Landing</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="tab-content px-4 py-3">
+                    <div class="tab-pane fade show active" id="tab-general">
+                        <form class="landing-action-form">
+                            <input type="hidden" name="action" value="general">
+                            <div class="mb-3">
+                                <label>Título Principal</label>
+                                <input type="text" name="titulo_principal" class="form-control" value="{{ config.titulo_principal }}">
+                            </div>
+                            <button type="submit" class="btn btn-primary">Guardar General</button>
+                        </form>
+                    </div>
+
+                    <div class="tab-pane fade" id="tab-capturas">
+                        <form class="landing-action-form" enctype="multipart/form-data">
+                            <input type="hidden" name="action" value="captura_add">
+                            <div class="mb-3">
+                                <input type="text" name="titulo" class="form-control mb-2" placeholder="Título de la imagen" required>
+                                <input type="file" name="imagen" class="form-control" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Subir Captura</button>
+                        </form>
+                    </div>
+
+                    <div class="tab-pane fade" id="tab-testimonios">
+                        <form class="landing-action-form" enctype="multipart/form-data">
+                            <input type="hidden" name="action" value="testimonio_add">
+                            <div class="mb-3">
+                                <input type="text" name="nombre" class="form-control mb-2" placeholder="Nombre del autor" required>
+                                <textarea name="comentario" class="form-control mb-2" placeholder="Comentario"></textarea>
+                                <input type="file" name="foto" class="form-control">
+                            </div>
+                            <button type="submit" class="btn btn-primary">Añadir Testimonio</button>
+                        </form>
+                    </div>
+                </div>
             </div>
-            
-            <div class="px-4">
-                <ul class="nav nav-tabs" id="masterTabs" role="tablist">
-                    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-general">General</button></li>
-                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-capturas">Capturas</button></li>
-                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-testimonios">Testimonios</button></li>
-                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-faq">FAQ</button></li>
-                </ul>
-            </div>
-
-            <div class="tab-pane fade show active" id="tab-general">
-    <form class="landing-action-form">
-        <input type="hidden" name="action" value="general">
-        <div class="mb-3">
-            <label>Título Principal</label>
-            <input type="text" name="titulo_principal" class="form-control" value="{{ config.titulo_principal }}">
-        </div>
-        <button type="submit" class="btn btn-primary">Guardar General</button>
-    </form>
-</div>
-
-<div class="tab-pane fade" id="tab-capturas">
-    <form class="landing-action-form" enctype="multipart/form-data">
-        <input type="hidden" name="action" value="captura_add">
-        <div class="mb-3">
-            <input type="text" name="titulo" class="form-control mb-2" placeholder="Título de la imagen" required>
-            <input type="file" name="imagen" class="form-control" required>
-        </div>
-        <button type="submit" class="btn btn-primary">Subir Captura</button>
-    </form>
-</div>
-
-<div class="tab-pane fade" id="tab-testimonios">
-    <form class="landing-action-form" enctype="multipart/form-data">
-        <input type="hidden" name="action" value="testimonio_add">
-        <div class="mb-3">
-            <input type="text" name="nombre" class="form-control mb-2" placeholder="Nombre del autor" required>
-            <textarea name="comentario" class="form-control mb-2" placeholder="Comentario"></textarea>
-            <input type="file" name="foto" class="form-control">
-        </div>
-        <button type="submit" class="btn btn-primary">Añadir Testimonio</button>
-    </form>
-</div>
         </div>
     </div>
-</div>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-    let modalLicencia = null;
 
-    // 🚀 ACTUALIZADO: Añadimos 'esProductora' como parámetro y configuramos el switch
-    function abrirModalGestion(id, nombre, estado, blqEstudiantes, blqAsistencias, blqFinanzas, blqMultimedia, blqEventos, esPartnerVIP, esProductora) {
-        document.getElementById('modalAcademiaNombre').innerText = "Licencia Especial: " + nombre;
-        document.getElementById('modal-academia-id').value = id;
-        document.getElementById('modal-estado').value = estado;
-        
-        // Bloqueos
-        document.getElementById('switchEstudiantes').checked = blqEstudiantes === 'True';
-        document.getElementById('switchAsistencias').checked = blqAsistencias === 'True';
-        document.getElementById('switchFinanzas').checked = blqFinanzas === 'True';
-        document.getElementById('switchMultimedia').checked = blqMultimedia === 'True';
-        document.getElementById('switchEventos').checked = blqEventos === 'True';
-        
-        // Switches Especiales
-        document.getElementById('switchPartnerVIP').checked = esPartnerVIP === 'True';
-        document.getElementById('switchProductoraEdit').checked = esProductora === 'True';
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let modalLicencia = null;
 
-        modalLicencia = new bootstrap.Modal(document.getElementById('gestionLicenciaModal'));
-        modalLicencia.show();
-    }
-
-    function cargarSoporteEstudiantes(academiaId, academiaNombre) {
-        document.getElementById('visorEstudiantesTitulo').innerText = "Alumnos en Sistema: " + academiaNombre;
-        const tablaCuerpo = document.getElementById('tabla-soporte-estudiantes-cuerpo');
-        tablaCuerpo.innerHTML = `<tr><td colspan="4" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div> Cargando datos...</td></tr>`;
-        
-        var modalVisor = new bootstrap.Modal(document.getElementById('visorEstudiantesSoporteModal'));
-        modalVisor.show();
-
-        fetch(`{% url 'api_estudiantes_academia' %}?academia_id=${academiaId}`)
-        .then(response => {
-            if (!response.ok) throw new Error("HTTP error " + response.status);
-            return response.json();
-        })
-        .then(data => {
-            if(data.status === 'success') {
-                tablaCuerpo.innerHTML = "";
-                if(data.estudiantes.length === 0) {
-                    tablaCuerpo.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4">Esta academia aún no registra estudiantes.</td></tr>`;
-                    return;
-                }
-                data.estudiantes.forEach(est => {
-                    let badgeEstado = est.estado === 'ACTIVO' 
-                        ? `<span class="badge bg-success bg-opacity-10 text-success">Activo</span>`
-                        : `<span class="badge bg-danger bg-opacity-10 text-danger">Inactivo</span>`;
-                    let nombreCompleto = `${est.nombres} ${est.apellidos || ''}`.trim();
-                    let fila = `
-                        <tr>
-                            <td class="fw-bold text-dark">${nombreCompleto}</td>
-                            <td class="text-secondary fw-medium">${est.identificacion || '--'}</td>
-                            <td>${badgeEstado}</td>
-                            <td class="text-muted">${new Date(est.fecha_registro).toLocaleDateString('es-CO')}</td>
-                        </tr>`;
-                    tablaCuerpo.insertAdjacentHTML('beforeend', fila);
-                });
-            }
-        })
-        .catch(error => {
-            tablaCuerpo.innerHTML = `<tr><td colspan="4" class="text-center text-danger py-4">Error al conectar con la base de datos.</td></tr>`;
-        });
-    }
-
-    if (document.getElementById('form-licencia-saas')) {
-        document.getElementById('form-licencia-saas').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const formData = new FormData(this);
-            const csrfToken = this.querySelector('[name=csrfmiddlewaretoken]').value;
+        // 🚀 SOLUCIÓN DEL DESFASE: Firma de parámetros 100% simétrica con las variables del HTML
+        function abrirModalGestion(id, nombre, estado, planId, actEstudiantes, actAsistencias, actFinanzas, actMultimedia, actEventos, actTienda, esPartnerVIP, esProductora) {
+            document.getElementById('modalAcademiaNombre').innerText = "Panel de Licencia: " + nombre;
+            document.getElementById('modal-academia-id').value = id;
+            document.getElementById('modal-estado').value = estado;
             
-            fetch("{% url 'actualizar_licencia' %}", {
-                method: "POST",
-                body: formData,
-                headers: { 
-                    "X-Requested-With": "XMLHttpRequest",
-                    "X-CSRFToken": csrfToken
-                }
-            })
+            // Asignar el ID del Plan en el Select
+            if (planId) {
+                document.getElementById('modal-plan').value = planId;
+            } else {
+                document.getElementById('modal-plan').selectedIndex = 0;
+            }
+            
+            // Inicialización correcta de estados booleanos en los switches
+            document.getElementById('switchEstudiantes').checked = actEstudiantes === 'True';
+            document.getElementById('switchAsistencias').checked = actAsistencias === 'True';
+            document.getElementById('switchFinanzas').checked = actFinanzas === 'True';
+            document.getElementById('switchMultimedia').checked = actMultimedia === 'True';
+            document.getElementById('switchEventos').checked = actEventos === 'True';
+            document.getElementById('switchTienda').checked = actTienda === 'True'; // 🚀 ¡Sincronizado!
+            
+            // Atributos de cuentas VIP e índices públicos
+            document.getElementById('switchPartnerVIP').checked = esPartnerVIP === 'True';
+            document.getElementById('switchProductoraEdit').checked = esProductora === 'True';
+
+            modalLicencia = new bootstrap.Modal(document.getElementById('gestionLicenciaModal'));
+            modalLicencia.show();
+        }
+
+        function cargarSoporteEstudiantes(academiaId, academiaNombre) {
+            document.getElementById('visorEstudiantesTitulo').innerText = "Alumnos en Sistema: " + academiaNombre;
+            const tablaCuerpo = document.getElementById('tabla-soporte-estudiantes-cuerpo');
+            tablaCuerpo.innerHTML = `<tr><td colspan="4" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div> Cargando datos...</td></tr>`;
+            
+            var modalVisor = new bootstrap.Modal(document.getElementById('visorEstudiantesSoporteModal'));
+            modalVisor.show();
+
+            fetch(`{% url 'api_estudiantes_academia' %}?academia_id=${academiaId}`)
             .then(response => {
-                if (!response.ok) throw new Error("Error en servidor.");
+                if (!response.ok) throw new Error("HTTP error " + response.status);
                 return response.json();
             })
             .then(data => {
                 if(data.status === 'success') {
-                    window.location.reload(); 
-                } else {
-                    alert("Error al actualizar.");
+                    tablaCuerpo.innerHTML = "";
+                    if(data.estudiantes.length === 0) {
+                        tablaCuerpo.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4">Esta academia aún no registra estudiantes.</td></tr>`;
+                        return;
+                    }
+                    data.estudiantes.forEach(est => {
+                        let badgeEstado = est.estado === 'ACTIVO' 
+                            ? `<span class="badge bg-success bg-opacity-10 text-success">Activo</span>`
+                            : `<span class="badge bg-danger bg-opacity-10 text-danger">Inactivo</span>`;
+                        let nombreCompleto = `${est.nombres} ${est.apellidos || ''}`.trim();
+                        let fila = `
+                            <tr>
+                                <td class="fw-bold text-dark">${nombreCompleto}</td>
+                                <td class="text-secondary fw-medium">${est.identificacion || '--'}</td>
+                                <td>${badgeEstado}</td>
+                                <td class="text-muted">${new Date(est.fecha_registro).toLocaleDateString('es-CO')}</td>
+                            </tr>`;
+                        tablaCuerpo.insertAdjacentHTML('beforeend', fila);
+                    });
                 }
             })
-            .catch(error => alert("Ocurrió un error. Asegúrate de estar autenticado."));
-        });
-    }
-</script>
-
-<script>
-    // Usamos delegación de eventos para capturar cualquier submit en los formularios del modal
-    document.addEventListener('submit', function(e) {
-        if (e.target.classList.contains('landing-action-form')) {
-            e.preventDefault();
-            const form = e.target;
-            const formData = new FormData(form);
-            
-            fetch("{% url 'master_actualizar_landing' %}", {
-                method: "POST",
-                body: formData,
-                headers: { "X-CSRFToken": "{{ csrf_token }}" }
-            })
-            .then(res => res.json())
-            .then(data => {
-                if(data.status === 'success') {
-                    window.location.reload();
-                } else {
-                    alert("Error: " + data.message);
-                }
-            })
-            .catch(err => console.error("Error:", err));
+            .catch(error => {
+                tablaCuerpo.innerHTML = `<tr><td colspan="4" class="text-center text-danger py-4">Error al conectar con la base de datos.</td></tr>`;
+            });
         }
-    });
-</script>
 
-<script>
-    // Ajustamos la función constructora del modal para capturar los estados de activación reales
-    // 🚀 ACTUALIZADO: Añadimos 'planId' como cuarto parámetro
-function abrirModalGestion(id, nombre, estado, planId, actEstudiantes, actAsistencias, actFinanzas, actMultimedia, actEventos, esPartnerVIP, esProductora) {
-    document.getElementById('modalAcademiaNombre').innerText = "Panel de Licencia: " + nombre;
-    document.getElementById('modal-academia-id').value = id;
-    document.getElementById('modal-estado').value = estado;
-    
-    // 🚀 NUEVO: Seleccionar el plan actual de la academia en el dropdown
-    if (planId) {
-        document.getElementById('modal-plan').value = planId;
-    } else {
-        document.getElementById('modal-plan').selectedIndex = 0; // Vuelve al placeholder si no tiene plan
-    }
-    
-    // Mapeamos los switches según el booleano real enviado desde la fila de la tabla de Django
-    document.getElementById('switchEstudiantes').checked = actEstudiantes === 'True';
-    document.getElementById('switchAsistencias').checked = actAsistencias === 'True';
-    document.getElementById('switchFinanzas').checked = actFinanzas === 'True';
-    document.getElementById('switchMultimedia').checked = actMultimedia === 'True';
-    document.getElementById('switchEventos').checked = actEventos === 'True';
-    
-    // Opciones VIP y Módulos de vitrina pública
-    document.getElementById('switchPartnerVIP').checked = esPartnerVIP === 'True';
-    document.getElementById('switchProductoraEdit').checked = esProductora === 'True';
+        if (document.getElementById('form-licencia-saas')) {
+            document.getElementById('form-licencia-saas').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const formData = new FormData(this);
+                const csrfToken = this.querySelector('[name=csrfmiddlewaretoken]').value;
+                
+                fetch("{% url 'actualizar_licencia' %}", {
+                    method: "POST",
+                    body: formData,
+                    headers: { 
+                        "X-Requested-With": "XMLHttpRequest",
+                        "X-CSRFToken": csrfToken
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error("Error en servidor.");
+                    return response.json();
+                })
+                .then(data => {
+                    if(data.status === 'success') {
+                        window.location.reload(); 
+                    } else {
+                        alert("Error al actualizar.");
+                    }
+                })
+                .catch(error => alert("Ocurrió un error. Asegúrate de estar autenticado."));
+            });
+        }
 
-    modalLicencia = new bootstrap.Modal(document.getElementById('gestionLicenciaModal'));
-    modalLicencia.show();
-}
-</script>
+        // Delegación de eventos para actualización estática de la landing
+        document.addEventListener('submit', function(e) {
+            if (e.target.classList.contains('landing-action-form')) {
+                e.preventDefault();
+                const form = e.target;
+                const formData = new FormData(form);
+                
+                fetch("{% url 'master_actualizar_landing' %}", {
+                    method: "POST",
+                    body: formData,
+                    headers: { "X-CSRFToken": "{{ csrf_token }}" }
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.status === 'success') {
+                        window.location.reload();
+                    } else {
+                        alert("Error: " + data.message);
+                    }
+                })
+                .catch(err => console.error("Error:", err));
+            }
+        });
 
-<script>
-    // 🎯 REPARACIÓN SENIOR: Auto-sincronización visual de switches al cambiar de plan
-    document.getElementById('modal-plan').addEventListener('change', function() {
-        // Obtenemos la opción que el usuario acaba de seleccionar
-        const selectedOption = this.options[this.selectedIndex];
-        
-        if (!selectedOption.value) return; // Ignora el placeholder
+        // Auto-sincronización visual de switches al cambiar de plan comercial
+        document.getElementById('modal-plan').addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            if (!selectedOption.value) return; 
 
-        // Auto-activar o desactivar switches según los datos (data-*) del plan
-        document.getElementById('switchEstudiantes').checked = selectedOption.getAttribute('data-est') === 'true';
-        document.getElementById('switchAsistencias').checked = selectedOption.getAttribute('data-asi') === 'true';
-        document.getElementById('switchFinanzas').checked = selectedOption.getAttribute('data-fin') === 'true';
-        document.getElementById('switchMultimedia').checked = selectedOption.getAttribute('data-mul') === 'true';
-        document.getElementById('switchEventos').checked = selectedOption.getAttribute('data-eve') === 'true';
-        
-        // Un pequeño efecto visual para indicar que el sistema hizo el trabajo
-        document.getElementById('switchEstudiantes').parentElement.classList.add('bg-warning', 'bg-opacity-10', 'rounded', 'px-2');
-        setTimeout(() => {
-            document.querySelectorAll('.form-check').forEach(el => el.classList.remove('bg-warning', 'bg-opacity-10', 'rounded', 'px-2'));
-        }, 800);
-    });
-</script>
+            document.getElementById('switchEstudiantes').checked = selectedOption.getAttribute('data-est') === 'true';
+            document.getElementById('switchAsistencias').checked = selectedOption.getAttribute('data-asi') === 'true';
+            document.getElementById('switchFinanzas').checked = selectedOption.getAttribute('data-fin') === 'true';
+            document.getElementById('switchMultimedia').checked = selectedOption.getAttribute('data-mul') === 'true';
+            document.getElementById('switchEventos').checked = selectedOption.getAttribute('data-eve') === 'true';
+            document.getElementById('switchTienda').checked = selectedOption.getAttribute('data-tie') === 'true'; 
+            
+            document.getElementById('switchEstudiantes').parentElement.classList.add('bg-warning', 'bg-opacity-10', 'rounded', 'px-2');
+            setTimeout(() => {
+                document.querySelectorAll('.form-check').forEach(el => el.classList.remove('bg-warning', 'bg-opacity-10', 'rounded', 'px-2'));
+            }, 800);
+        });
+    </script>
 </body>
 </html>

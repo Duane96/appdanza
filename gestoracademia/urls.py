@@ -53,6 +53,7 @@ urlpatterns = [
     path('', include('apps.finanzas.urls', namespace='finanzas')),
     path('', include('apps.eventos.urls')), # 👈 ENGANCHAMOS LAS URLS DE EVENTOS DE UNA
     path('', include('apps.multimedia.urls')),
+    path('', include('apps.tienda.urls')),
 ]
 
 if settings.DEBUG:

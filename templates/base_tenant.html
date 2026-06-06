@@ -135,6 +135,14 @@
             </li>
             {% endif %}
 
+            {% if request.tenant.suscripcion_saas.modulo_tienda_activo %}
+                <li class="nav-item">
+                    <a class="nav-link text-white-50 {% if 'tienda' in request.path %}active-menu{% endif %}" href="{% url 'tienda:pos' request.tenant.slug %}">
+                        <i class="bi bi-shop me-2"></i> Tienda POS
+                    </a>
+                </li>
+            {% endif %}
+
             {% if request.tenant.suscripcion_saas.modulo_finanzas_activo %}
             <li class="nav-item">
                 <a class="nav-link text-white-50 {% if 'finanzas' in request.path %}active-menu{% endif %}" href="{% url 'finanzas:panel_finanzas' request.tenant.slug %}">
