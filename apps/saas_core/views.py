@@ -203,7 +203,7 @@ class CrearAcademiaSaaSView(UserPassesTestMixin, View):
                 destinatarios=[admin_email]
             )
 
-        return redirect('panel_maestro_dashboard')
+        return redirect('saas_core:panel_maestro_dashboard')
 
 
 # apps/saas_core/views.py
@@ -230,7 +230,7 @@ class CrearPlanSaaSView(UserPassesTestMixin, View):
             # 🚀 AQUÍ GUARDAMOS EL ESTADO DE LA TIENDA EN EL PLAN
             permite_tienda=request.POST.get('tienda') in ['on', 'True', 'true', '1']
         )
-        return redirect('panel_maestro_dashboard')
+        return redirect('saas_core:panel_maestro_dashboard')
 
 
 class ActualizarLicenciaSaaSView(UserPassesTestMixin, View):
@@ -471,7 +471,7 @@ class GuardarConfigPagoGlobalView(UserPassesTestMixin, View):
         else:
             messages.error(request, "Error al procesar el formulario de pagos.")
             
-        return redirect('panel_maestro_dashboard')
+        return redirect('saas_core:panel_maestro_dashboard')
     
 
 class ToggleBloqueoSaaSView(UserPassesTestMixin, View):
