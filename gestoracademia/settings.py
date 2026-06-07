@@ -13,19 +13,21 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from pathlib import Path
 import os
 import sys
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # 🚀 TRUCO SENIOR: Añadir el directorio 'apps' al sys.path para importar limpio
 sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
+load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-u0b_7m(ed_=+w#z8u)z=hpvtrjf^8*d(#x9fsdfn+*=(y$p63&'
+SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -35,8 +37,8 @@ ENTORNO_PRODUCCION = os.environ.get('DJANGO_ENV') == 'production'
 
 if ENTORNO_PRODUCCION:
     # 🌍 MODO PRODUCCIÓN (PYTHONANYWHERE)
-    DEBUG = False
-    ALLOWED_HOSTS = ['appdanza.com', 'www.appdanza.com', 'webapp-3085879.pythonanywhere.com']
+    DEBUG = os.getenv('DEBUG', 'False') == 'True'
+    ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
     
     # Cloudflare usa HTTPS, necesitamos decirle a Django que confíe en el origen
     CSRF_TRUSTED_ORIGINS = ['https://appdanza.com', 'https://www.appdanza.com']
@@ -275,6 +277,6 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'appdanza2026@gmail.com' # Reemplaza con el correo de tu SaaS
-EMAIL_HOST_PASSWORD = 'fupz lkqc ubsx dtqz' # 🚨 Mejor si usas os.getenv('EMAIL_HOST_PASSWORD')
-DEFAULT_FROM_EMAIL = 'App Danza <appdanza2026@gmail.com>' # Nombre visible
+EMAIL_HOST_USER = os.getenv('SMTP_USER') # Reemplaza con el correo de tu SaaS
+EMAIL_HOST_PASSWORD = os.getenv('SMTP_PASSWORD') # 🚨 Mejor si usas os.getenv('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = os.getenv('SMTP_DEFAULT') # Nombre visible
