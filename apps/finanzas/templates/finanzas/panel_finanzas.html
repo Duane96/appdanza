@@ -370,9 +370,14 @@
                 </div>
             </div>
             <div class="modal-footer border-0 bg-light justify-content-between no-print">
-                <button type="button" class="btn btn-sm btn-secondary font-monospace" data-bs-dismiss="modal">Cerrar Visor</button>
+                <button type="button" class="btn btn-sm btn-secondary font-monospace" data-bs-dismiss="modal">Cerrar</button>
+    
+                <a id="btn-descargar-pdf" href="#" class="btn btn-sm btn-primary fw-bold">
+                    <i class="bi bi-file-earmark-pdf me-1"></i> Descargar PDF
+                </a>
+    
                 <button type="button" class="btn btn-sm btn-dark font-monospace fw-bold" onclick="window.print();">
-                    <i class="bi bi-printer-fill me-1"></i> Imprimir / Guardar Voucher
+                    <i class="bi bi-printer-fill me-1"></i> Imprimir Voucher
                 </button>
             </div>
         </div>
@@ -477,6 +482,10 @@
                         <input type="hidden" name="fecha_fin" id="export_fecha_fin_mensual">
                         <button type="submit" class="btn btn-dark w-100 fw-bold py-2"><i class="bi bi-filetype-csv me-2 text-warning"></i> Descargar Consolidado CSV</button>
                     </form>
+                    
+                    <a href="#" id="btn-descargar-zip" class="btn btn-success w-100 fw-bold py-2 mt-2">
+                        <i class="bi bi-file-earmark-zip me-2"></i> Descargar Soportes Contables (ZIP)
+                    </a>
                 </div>
             </div>
         </div>
@@ -485,7 +494,7 @@
 
 <script>
     // =========================================================================
-    // 1. FUNCIONES CONTABLES Y GLOBALES (Deben estar disponibles para los OnClick)
+    // 1. FUNCIONES CONTABLES Y GLOBALES
     // =========================================================================
     const formatoCOP = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
 
@@ -511,7 +520,11 @@
                 const badge = document.getElementById('recibo-estado-badge');
                 badge.innerText = data.estado;
                 badge.className = data.estado === 'ACTIVO' ? "badge bg-success-subtle text-success text-uppercase" : "badge bg-danger-subtle text-danger text-uppercase";
-
+                
+                // MAGIA: Construcción dinámica de la URL de descarga del PDF individual
+                const btnDescarga = document.getElementById('btn-descargar-pdf');
+                btnDescarga.href = `/${slugTenant}/finanzas/descargar-pdf/${tipo}/${id}/`; 
+    
                 new bootstrap.Modal(document.getElementById('modalVisorRecibo')).show();
             })
             .catch(e => {
@@ -523,19 +536,27 @@
     function cargarPrevisualizacion(tipo) {
         const slugTenant = "{{ request.tenant.slug }}";
         let url = `/${slugTenant}/finanzas/reportes/resumen-ajax/?tipo=${tipo}`;
+        let f_ini = "";
+        let f_fin = "";
 
         if(tipo === 'diario') {
-            const fecha = document.getElementById('fecha_diario').value;
-            if(!fecha) return alert("Selecciona una fecha");
-            url += `&fecha_inicio=${fecha}`;
-            document.getElementById('export_fecha_diario').value = fecha;
+            f_ini = document.getElementById('fecha_diario').value;
+            if(!f_ini) return alert("Selecciona una fecha");
+            url += `&fecha_inicio=${f_ini}`;
+            document.getElementById('export_fecha_diario').value = f_ini;
         } else {
-            const f_ini = document.getElementById('fecha_inicio_mensual').value;
-            const f_fin = document.getElementById('fecha_fin_mensual').value;
+            f_ini = document.getElementById('fecha_inicio_mensual').value;
+            f_fin = document.getElementById('fecha_fin_mensual').value;
             if(!f_ini || !f_fin) return alert("Selecciona ambas fechas");
             url += `&fecha_inicio=${f_ini}&fecha_fin=${f_fin}`;
             document.getElementById('export_fecha_inicio_mensual').value = f_ini;
             document.getElementById('export_fecha_fin_mensual').value = f_fin;
+
+            // MAGIA: Construcción dinámica de la URL para descargar el ZIP del contador
+            const btnZip = document.getElementById('btn-descargar-zip');
+            if (btnZip) {
+                btnZip.href = `/${slugTenant}/finanzas/reportes/descargar-zip/?fecha_inicio=${f_ini}&fecha_fin=${f_fin}`;
+            }
         }
 
         fetch(url)
@@ -560,7 +581,7 @@
                 tbody.innerHTML = ''; 
 
                 if(data.transacciones.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-muted small"><i class="bi bi-inbox fs-4 d-block mb-1"></i>No existen movimientos.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-muted small"><i class="bi bi-inbox fs-4 d-block mb-1"></i>No existen movimientos en estas fechas.</td></tr>`;
                     return;
                 }
 
@@ -605,12 +626,11 @@
             cargarScriptDinamicamente("https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js", function() {
                 cargarScriptDinamicamente("https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js", function() {
                     
-                    // Configuración base compartida para ambas tablas
                     const dtConfig = {
                         "dom": '<"top">rt<"d-flex justify-content-between align-items-center mt-3"ip><"clear">',
                         "pageLength": 15,
                         "lengthChange": false,
-                        "ordering": true, // Permite ordenar por columnas (ej. Monto o Fecha)
+                        "ordering": true,
                         "language": {
                             "zeroRecords": "<div class='text-center py-4'><i class='bi bi-search fs-1 text-muted d-block mb-2'></i>No se encontraron transacciones.</div>",
                             "info": "<span class='text-muted small fw-semibold'>Mostrando _START_ a _END_ de _TOTAL_ registros</span>",
@@ -625,23 +645,20 @@
                         }
                     };
 
-                    // Inicializamos ambas tablas
                     var tablaIngresos = $('#tabla-ingresos').DataTable(dtConfig);
                     var tablaGastos = $('#tabla-gastos').DataTable(dtConfig);
 
-                    // 🔗 MAGIA SENIOR: Un solo input filtra las DOS tablas al mismo tiempo
                     $('#buscadorFinanzas').on('keyup', function() {
                         tablaIngresos.search(this.value).draw();
                         tablaGastos.search(this.value).draw();
                     });
 
-                    // Corrección de bug ARIA-HIDDEN en modales
                     $('.modal').on('hidden.bs.modal', function () {
                         $(this).find('.btn-close').blur(); 
                     });
                 });
             });
         }
-    }, 50); // Revisa cada 50ms
+    }, 50);
 </script>
 {% endblock %}

@@ -1,3 +1,5 @@
+import csv
+
 from django.views.generic import TemplateView
 from django.contrib.auth.mixins import UserPassesTestMixin
 from apps.academias.models import Academia, PerfilUsuario
@@ -8,7 +10,7 @@ from .models import PlanSaaS, SuscripcionAcademia
 
 from django.shortcuts import get_object_or_404, render
 from django.views import View
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from .models import *
 
 from django.shortcuts import redirect
@@ -34,6 +36,17 @@ from apps.finanzas.models import ReciboIngreso, Gasto
 from django.db.models import Sum
 from django.contrib import messages
 import json
+
+from django.http import FileResponse
+from django.shortcuts import get_object_or_404
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+import io
+
+from .forms import *
+from django.urls import reverse_lazy
+from django.views.generic.edit import CreateView
+from django.contrib.messages.views import SuccessMessageMixin
 
 
 def api_finanzas_academia(request):
@@ -137,14 +150,13 @@ class PanelMaestroDashboardView(UserPassesTestMixin, TemplateView):
 # apps/saas_core/views.py
 
 class CrearAcademiaSaaSView(UserPassesTestMixin, View):
+    """Crea la entidad de la academia. Nace SUSPENDIDA y sin asignar un plan específico."""
     def test_func(self):
         return self.request.user.is_superuser and self.request.user.is_staff
 
     def post(self, request, *args, **kwargs):
         nombre = request.POST.get('nombre')
         slug = request.POST.get('slug')
-        plan_id = request.POST.get('plan_id')
-        dias_prueba = int(request.POST.get('dias_prueba', 15))
         template_personalizado = request.POST.get('template_landing_personalizado', '').strip() or None
         es_productora = request.POST.get('es_solo_eventos') == 'on'
         admin_email = request.POST.get('admin_email')
@@ -160,25 +172,34 @@ class CrearAcademiaSaaSView(UserPassesTestMixin, View):
                 activo=True
             )
 
-            # 2. Obtenemos el plan comercial maestro seleccionado
-            plan_inicial = PlanSaaS.objects.get(id=plan_id)
+            # 🚀 LÓGICA DE PLAN POR DEFECTO: 
+            # Como el modelo exige un plan, le asignamos el primero que exista en la BD.
+            # (El cliente no lo podrá usar de todas formas porque nace SUSPENDIDO).
+            plan_inicial = PlanSaaS.objects.first()
+            
+            # 🛡️ Fallback por si la BD de planes está vacía:
+            if not plan_inicial:
+                plan_inicial = PlanSaaS.objects.create(
+                    nombre="Plan Base (Autogenerado)",
+                    precio_mensual=0,
+                    max_estudiantes=0
+                )
+
             fecha_hoy = timezone.now().date()
             
-            # 🎯 REPARACIÓN SENIOR: Eliminamos la declaración de los módulos.
-            # Como los módulos son `@property` que heredan los permisos del 'plan', 
-            # no es necesario ni permitido guardarlos explícitamente aquí.
-            # Los campos reales 'bloqueo_manual_*' nacen en False por defecto en tu modelo.
+            # Creamos la suscripción en estado SUSPENDIDO
             SuscripcionAcademia.objects.create(
                 academia=nueva_academia,
                 plan=plan_inicial,
-                estado='PRUEBA',
-                ya_uso_prueba_gratis=True,
-                dias_regalados_prueba=dias_prueba,
+                estado='SUSPENDIDO', 
+                ya_uso_prueba_gratis=True, 
+                dias_regalados_prueba=0,
                 fecha_inicio=fecha_hoy,
-                fecha_vencimiento=fecha_hoy + timezone.timedelta(days=dias_prueba)
+                fecha_vencimiento=fecha_hoy, 
+                es_cuenta_partner_gratis=False
             )
 
-            # 3. Credenciales de acceso de su respectivo director técnico
+            # 2. Credenciales de acceso
             nuevo_admin = User.objects.create_user(
                 username=admin_email,
                 email=admin_email,
@@ -193,17 +214,72 @@ class CrearAcademiaSaaSView(UserPassesTestMixin, View):
                 rol='ADMIN_ACADEMIA'
             )
 
-            # 🚀 DISPARADOR DE CORREO: Bienvenida SaaS
+            # 3. Disparador de correo
             enviar_correo_transaccional(
                 asunto=f"¡Bienvenido a AppDanza, {nueva_academia.nombre}!",
                 template_name="comunicaciones/bienvenida_academia.html",
-                context={
-                    'academia': nueva_academia  # Instancia real de la BD
-                },
+                context={'academia': nueva_academia},
                 destinatarios=[admin_email]
             )
 
+        messages.success(request, f"Academia {nombre} creada. Esperando validación de pago o asignación de Plan.")
         return redirect('saas_core:panel_maestro_dashboard')
+
+class MasterAsignarYRenovarPlanView(UserPassesTestMixin, View):
+    """
+    Vista Súper Admin: Asigna un plan nuevo o renueva uno existente.
+    Si la academia es Partner, no genera cobro. Si no, genera el ReciboSaaS.
+    """
+    def test_func(self):
+        return self.request.user.is_superuser and self.request.user.is_staff
+
+    def post(self, request, *args, **kwargs):
+        academia_id = request.POST.get('academia_id')
+        plan_id = request.POST.get('plan_id')
+        meses_a_renovar = int(request.POST.get('meses_a_renovar', 1))
+        
+        academia = get_object_or_404(Academia.unfiltered_objects, id=academia_id)
+        plan = get_object_or_404(PlanSaaS, id=plan_id)
+        hoy = timezone.localtime(timezone.now()).date()
+
+        with transaction.atomic():
+            # 1. Buscar si ya existe una suscripción, si no, crearla
+            suscripcion, created = SuscripcionAcademia.objects.get_or_create(
+                academia=academia,
+                defaults={
+                    'plan': plan,
+                    'estado': 'ACTIVO',
+                    'fecha_inicio': hoy,
+                    'fecha_vencimiento': hoy + timezone.timedelta(days=30 * meses_a_renovar)
+                }
+            )
+
+            # 2. Lógica de Actualización y Fechas (Si la suscripción ya existía)
+            if not created:
+                suscripcion.plan = plan
+                suscripcion.estado = 'ACTIVO'
+                
+                # Si está vencida, partimos de hoy. Si no, sumamos desde la fecha de vencimiento actual.
+                base_fecha = suscripcion.fecha_vencimiento if suscripcion.fecha_vencimiento >= hoy else hoy
+                suscripcion.fecha_vencimiento = base_fecha + timezone.timedelta(days=30 * meses_a_renovar)
+                suscripcion.save()
+
+            # 3. 🚀 GENERACIÓN DEL RECIBO (Si NO es cuenta Partner)
+            # Solo generamos deuda (recibo) si la cuenta no es VIP gratis
+            if not suscripcion.es_cuenta_partner_gratis:
+                monto_calculado = plan.precio_mensual * meses_a_renovar
+                
+                # Creamos el registro en tus Finanzas Master
+                ReciboSaaS.objects.create(
+                    academia=academia,
+                    plan=plan,
+                    monto=monto_calculado,
+                    concepto=f"Asignación/Renovación: Plan {plan.nombre} ({meses_a_renovar} mes/es).",
+                    medio_pago="PENDIENTE / POR VALIDAR" # Puedes cambiar esto si es pago directo
+                )
+                
+            messages.success(request, f"¡Suscripción de {academia.nombre} actualizada correctamente!")
+            return redirect('saas_core:panel_maestro_dashboard')
 
 
 # apps/saas_core/views.py
@@ -234,6 +310,10 @@ class CrearPlanSaaSView(UserPassesTestMixin, View):
 
 
 class ActualizarLicenciaSaaSView(UserPassesTestMixin, View):
+    """
+    Controla el modal maestro de configuración de la academia.
+    Genera cobro automático si pasa de SUSPENDIDO a ACTIVO.
+    """
     def test_func(self):
         return self.request.user.is_superuser and self.request.user.is_staff
 
@@ -241,8 +321,11 @@ class ActualizarLicenciaSaaSView(UserPassesTestMixin, View):
         academia_id = request.POST.get('academia_id')
         suscripcion = get_object_or_404(SuscripcionAcademia, academia_id=academia_id)
         
-        suscripcion.estado = request.POST.get('estado')
+        # 1. Guardamos el estado en el que estaba ANTES de guardar
+        estado_anterior = suscripcion.estado
+        estado_nuevo = request.POST.get('estado')
         
+        # 2. Actualizamos el Plan si lo cambiaron en el select
         nuevo_plan_id = request.POST.get('plan_id')
         if nuevo_plan_id:
             try:
@@ -250,17 +333,36 @@ class ActualizarLicenciaSaaSView(UserPassesTestMixin, View):
             except PlanSaaS.DoesNotExist:
                 return JsonResponse({'status': 'error', 'message': 'El plan no existe.'}, status=400)
 
-        # 🚀 LÓGICA INVERSA: Si el frontend dice "Módulo Activo = True", el Bloqueo es "False"
+        # 3. Validamos si es Partner VIP ANTES de hacer cálculos
+        suscripcion.es_cuenta_partner_gratis = request.POST.get('es_cuenta_partner_gratis') in ['on', 'True', 'true', '1']
+
+        # 🚀 4. MAGIA FINANCIERA: Si estaba suspendida y la activaste
+        if estado_anterior == 'SUSPENDIDO' and estado_nuevo == 'ACTIVO':
+            hoy_colombia = timezone.localtime(timezone.now()).date()
+            
+            # Le damos sus 30 días de servicio
+            suscripcion.fecha_inicio = hoy_colombia
+            suscripcion.fecha_vencimiento = hoy_colombia + timezone.timedelta(days=30)
+
+            # Si NO es gratis, facturamos en tu panel de finanzas maestro
+            if not suscripcion.es_cuenta_partner_gratis:
+                ReciboSaaS.objects.create(
+                    academia=suscripcion.academia,
+                    plan=suscripcion.plan,
+                    monto=suscripcion.plan.precio_mensual,
+                    concepto=f"Asignación/Activación de Licencia (30 días) - Plan: {suscripcion.plan.nombre}",
+                    medio_pago="ASIGNACIÓN MANUAL (MODAL LICENCIA)"
+                )
+
+        # 5. Guardamos el nuevo estado y los superpoderes manuales
+        suscripcion.estado = estado_nuevo
         suscripcion.bloqueo_manual_estudiantes = not (request.POST.get('modulo_estudiantes_activo') in ['on', 'True', 'true', '1'])
         suscripcion.bloqueo_manual_asistencias = not (request.POST.get('modulo_asistencias_activo') in ['on', 'True', 'true', '1'])
         suscripcion.bloqueo_manual_finanzas = not (request.POST.get('modulo_finanzas_activo') in ['on', 'True', 'true', '1'])
         suscripcion.bloqueo_manual_multimedia = not (request.POST.get('modulo_multimedia_activo') in ['on', 'True', 'true', '1'])
         suscripcion.bloqueo_manual_eventos = not (request.POST.get('modulo_eventos_activo') in ['on', 'True', 'true', '1'])
-        
-        # 🚀 LA CLAVE ESTÁ AQUÍ: Interceptar la tienda
         suscripcion.bloqueo_manual_tienda = not (request.POST.get('modulo_tienda_activo') in ['on', 'True', 'true', '1'])
         
-        suscripcion.es_cuenta_partner_gratis = request.POST.get('es_cuenta_partner_gratis') in ['on', 'True', 'true', '1']
         suscripcion.save()
 
         academia = suscripcion.academia
@@ -400,40 +502,39 @@ class EditarPlanSaaSView(UserPassesTestMixin, View):
 # apps/saas_core/views.py
 
 class MasterConfirmarPagoAcademiaView(UserPassesTestMixin, View):
-    """Endpoint del Panel Maestro para confirmar un pago manual y renovar licencia."""
+    """Endpoint del Panel Maestro para confirmar un pago manual y renovar licencia. Genera ReciboSaaS."""
     
     def test_func(self):
-        # Seguridad absoluta: Solo tú o tu staff administrativo global
         return self.request.user.is_superuser and self.request.user.is_staff
 
     def post(self, request, *args, **kwargs):
         academia_id = request.POST.get('academia_id')
         nuevo_plan_id = request.POST.get('plan_id')
-        meses_a_renovar = int(request.POST.get('meses_a_renovar', 1)) # Por defecto 1 mes
+        meses_a_renovar = int(request.POST.get('meses_a_renovar', 1))
         
         suscripcion = get_object_or_404(SuscripcionAcademia, academia_id=academia_id)
         hoy_colombia = timezone.localtime(timezone.now()).date()
         
         with transaction.atomic():
-            # 1. Gestión y cambio de Plan si el SuperAdmin lo decidió
             if nuevo_plan_id and int(nuevo_plan_id) != suscripcion.plan.id:
-                nuevo_plan = get_object_or_404(PlanSaaS, id=nuevo_plan_id)
-                suscripcion.plan = nuevo_plan
+                suscripcion.plan = get_object_or_404(PlanSaaS, id=nuevo_plan_id)
             
-            # 2. Cálculo inteligente de la nueva fecha de vencimiento:
-            # Si la academia ya estaba bloqueada/vencida, su nuevo periodo inicia HOY.
-            # Si pagó antes del vencimiento, se le acumulan los días sumando desde su fecha de vencimiento actual.
             base_fecha = suscripcion.fecha_vencimiento if suscripcion.fecha_vencimiento >= hoy_colombia else hoy_colombia
-            
-            # Estimación estándar de meses comerciales (30 días por mes para evitar saltos extraños)
-            dias_a_sumar = meses_a_renovar * 30
-            suscripcion.fecha_vencimiento = base_fecha + timezone.timedelta(days=dias_a_sumar)
-            
-            # 3. Restauración de estados de cuenta
+            suscripcion.fecha_vencimiento = base_fecha + timezone.timedelta(days=meses_a_renovar * 30)
             suscripcion.estado = 'ACTIVO'
             suscripcion.save()
+
+            # 🚀 LÓGICA DE RECIBOS: Genera ReciboSaaS SOLO si NO es cuenta partner
+            if not suscripcion.es_cuenta_partner_gratis:
+                monto_calculado = suscripcion.plan.precio_mensual * meses_a_renovar
+                ReciboSaaS.objects.create(
+                    academia=suscripcion.academia,
+                    plan=suscripcion.plan,
+                    monto=monto_calculado,
+                    concepto=f"Renovación de Licencia ({meses_a_renovar} mes/es) - Plan: {suscripcion.plan.nombre}",
+                    medio_pago="MANUAL_MASTER"
+                )
             
-            # 🚀 DISPARADOR DE CORREO: Notificación de pago exitoso al director de la academia
             try:
                 enviar_correo_transaccional(
                     asunto=f"¡Pago Confirmado! Tu licencia ha sido renovada - AppDanza",
@@ -443,10 +544,9 @@ class MasterConfirmarPagoAcademiaView(UserPassesTestMixin, View):
                         'suscripcion': suscripcion,
                         'nueva_fecha_vencimiento': suscripcion.fecha_vencimiento
                     },
-                    destatarios=[suscripcion.academia.usuarios.filter(perfil__rol='ADMIN_ACADEMIA').first().user.email]
+                    destinatarios=[suscripcion.academia.usuarios.filter(perfil__rol='ADMIN_ACADEMIA').first().user.email]
                 )
             except Exception as e:
-                # Loggear el error de correo pero no tumbar la transacción de la BD
                 print(f"Error enviando correo de confirmación: {e}")
 
         return JsonResponse({
@@ -475,21 +575,38 @@ class GuardarConfigPagoGlobalView(UserPassesTestMixin, View):
     
 
 class ToggleBloqueoSaaSView(UserPassesTestMixin, View):
-    """Activa o suspende manualmente una academia desde el switch del Dashboard Maestro."""
-    
+    """
+    Activa o suspende manualmente una academia desde el switch rápido de la tabla.
+    También genera recibos y suma días si se usa para activar.
+    """
     def test_func(self):
-        # Seguridad: Solo el dueño del SaaS puede jalar este gatillo
         return self.request.user.is_superuser and self.request.user.is_staff
 
     def post(self, request, *args, **kwargs):
         try:
-            # Capturamos la data enviada por JS vía fetch
             data = json.loads(request.body)
             academia_id = data.get('academia_id')
-            estado_deseado = data.get('estado') # Será 'ACTIVO' o 'SUSPENDIDO'
+            estado_deseado = data.get('estado') # 'ACTIVO' o 'SUSPENDIDO'
 
-            # Traemos la suscripción y le cambiamos el estado
             suscripcion = get_object_or_404(SuscripcionAcademia, academia_id=academia_id)
+            estado_anterior = suscripcion.estado
+
+            # 🚀 MAGIA FINANCIERA TAMBIÉN EN EL SWITCH
+            if estado_anterior == 'SUSPENDIDO' and estado_deseado == 'ACTIVO':
+                hoy_colombia = timezone.localtime(timezone.now()).date()
+                
+                suscripcion.fecha_inicio = hoy_colombia
+                suscripcion.fecha_vencimiento = hoy_colombia + timezone.timedelta(days=30)
+
+                if not suscripcion.es_cuenta_partner_gratis:
+                    ReciboSaaS.objects.create(
+                        academia=suscripcion.academia,
+                        plan=suscripcion.plan,
+                        monto=suscripcion.plan.precio_mensual,
+                        concepto=f"Reactivación Rápida de Licencia (30 días) - Plan: {suscripcion.plan.nombre}",
+                        medio_pago="SWITCH MANUAL (TABLA MAESTRA)"
+                    )
+
             suscripcion.estado = estado_deseado
             suscripcion.save()
 
@@ -541,40 +658,243 @@ class SubirComprobanteSaaSView(View):
 
 
 class RevisarYAprobarPagoView(UserPassesTestMixin, View):
-    """Vista para el Maestro: Muestra el comprobante y renueva la academia con 1 click."""
+    """Vista para el Maestro: Muestra el comprobante, renueva la academia y genera ReciboSaaS."""
     
     def test_func(self):
         return self.request.user.is_superuser
 
     def get(self, request, pk):
-        # Renderiza una plantilla simple para ver el comprobante
         reporte = get_object_or_404(ReportePagoSaaS, pk=pk)
         return render(request, 'saas_core/revision_pago.html', {'reporte': reporte})
 
     def post(self, request, pk):
-        # 🚀 ACCIÓN DE APROBAR Y RENOVAR
         reporte = get_object_or_404(ReportePagoSaaS, pk=pk)
         suscripcion = reporte.academia.suscripcion_saas
-        
-        # 1. Marcamos el pago como aprobado
-        reporte.estado = 'APROBADO'
-        reporte.save()
-        
-        # 2. Lógica inteligente de renovación
         hoy = timezone.now().date()
         
-        # Si la suscripción aún no ha vencido, partimos desde el vencimiento actual.
-        # Si ya venció (fecha < hoy), partimos desde hoy.
-        if suscripcion.fecha_vencimiento > hoy:
-            base_fecha = suscripcion.fecha_vencimiento
-        else:
-            base_fecha = hoy
+        with transaction.atomic():
+            reporte.estado = 'APROBADO'
+            reporte.save()
             
-        suscripcion.estado = 'ACTIVO'
-        suscripcion.fecha_inicio = hoy
-        # Sumamos 30 días a la fecha base calculada
-        suscripcion.fecha_vencimiento = base_fecha + timezone.timedelta(days=30)
-        suscripcion.save()
+            base_fecha = suscripcion.fecha_vencimiento if suscripcion.fecha_vencimiento > hoy else hoy
+                
+            suscripcion.estado = 'ACTIVO'
+            suscripcion.fecha_inicio = hoy
+            suscripcion.fecha_vencimiento = base_fecha + timezone.timedelta(days=30)
+            suscripcion.save()
+
+            # 🚀 LÓGICA DE RECIBOS: Genera ReciboSaaS SOLO si NO es cuenta partner
+            if not suscripcion.es_cuenta_partner_gratis:
+                ReciboSaaS.objects.create(
+                    academia=reporte.academia,
+                    plan=reporte.plan,
+                    monto=reporte.plan.precio_mensual,
+                    concepto=f"Pago Licencia Mensual - Comprobante de validación #{reporte.id}",
+                    medio_pago="TRANSFERENCIA/COMPROBANTE"
+                )
         
         messages.success(request, f"¡Suscripción de {reporte.academia.nombre} renovada hasta el {suscripcion.fecha_vencimiento.strftime('%d/%m/%Y')}!")
         return redirect('saas_core:panel_maestro_dashboard')
+    
+
+class FinanzasMaestroDashboardView(UserPassesTestMixin, TemplateView):
+    template_name = 'saas_core/finanzas_dashboard.html'
+
+    def test_func(self):
+        # Aseguramos que solo el SuperAdmin (Tú) tenga acceso
+        return self.request.user.is_superuser
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Filtramos por el mes y año actual para los indicadores rápidos
+        hoy = timezone.now()
+        mes_actual = hoy.month
+        anio_actual = hoy.year
+
+        # --- INGRESOS ---
+        recibos_mes = ReciboSaaS.objects.filter(fecha__month=mes_actual, fecha__year=anio_actual)
+        ingresos_mes = recibos_mes.aggregate(total=Sum('monto'))['total'] or 0
+
+        # --- GASTOS ---
+        gastos_mes = GastoSaaS.objects.filter(fecha__month=mes_actual, fecha__year=anio_actual)
+        gastos_total_mes = gastos_mes.aggregate(total=Sum('monto'))['total'] or 0
+
+        # --- BALANCE ---
+        balance_neto = ingresos_mes - gastos_total_mes
+
+        # Inyectamos al contexto (Listados limitados a 50 para no saturar memoria en PythonAnywhere)
+        context['ingresos_mes'] = ingresos_mes
+        context['gastos_mes'] = gastos_total_mes
+        context['balance_neto'] = balance_neto
+        context['ultimos_recibos'] = ReciboSaaS.objects.all()[:50]
+        context['ultimos_gastos'] = GastoSaaS.objects.all()[:50]
+        
+        # 🚀 LA PIEZA FALTANTE: Instanciamos el form y lo pasamos al template
+        context['form_gasto'] = GastoSaaSForm() 
+        
+        return context
+    
+
+class DescargarReciboSaaSPDFView(UserPassesTestMixin, View):
+    """Genera la Cuenta de Cobro en PDF usando ReportLab (Súper ligero para PythonAnywhere)"""
+    
+    def test_func(self):
+        return self.request.user.is_superuser
+
+    def get(self, request, recibo_id):
+        recibo = get_object_or_404(ReciboSaaS, id=recibo_id)
+        
+        # Creamos un buffer en memoria RAM temporal (Súper rápido)
+        buffer = io.BytesIO()
+        p = canvas.Canvas(buffer, pagesize=letter)
+        width, height = letter
+
+        # --- CABECERA (Inspirada en tu Cuenta_Cobro_RC-0001.pdf) ---
+        p.setFont("Helvetica-Bold", 16)
+        p.drawString(50, height - 50, "AppDanza SaaS CORE")
+        
+        p.setFont("Helvetica", 10)
+        p.drawString(50, height - 70, "Razón Social: Duane Abreu")
+        p.drawString(50, height - 85, "NIT/C.C.: 1414772")
+        
+        # --- NÚMERO DE RECIBO A LA DERECHA ---
+        p.setFont("Helvetica-Bold", 14)
+        p.drawString(width - 250, height - 50, "CUENTA DE COBRO")
+        p.setFont("Helvetica", 12)
+        p.drawString(width - 200, height - 70, f"N° {recibo.numero_recibo}")
+
+        # --- DATOS DEL CLIENTE ---
+        p.line(50, height - 100, width - 50, height - 100) # Línea separadora
+        
+        p.setFont("Helvetica-Bold", 10)
+        p.drawString(50, height - 120, "Adquiriente / Cliente:")
+        p.setFont("Helvetica", 10)
+        p.drawString(200, height - 120, f"{recibo.academia.nombre} (NIT/CC: No Registrado)")
+
+        p.setFont("Helvetica-Bold", 10)
+        p.drawString(50, height - 140, "Fecha de Emisión:")
+        p.setFont("Helvetica", 10)
+        p.drawString(200, height - 140, f"{recibo.fecha.strftime('%d/%m/%Y')}")
+
+        # --- TABLA DE CONCEPTOS ---
+        p.line(50, height - 160, width - 50, height - 160)
+        p.setFont("Helvetica-Bold", 10)
+        p.drawString(50, height - 175, "Concepto / Descripción del Ingreso")
+        p.drawString(450, height - 175, "Valor COP")
+        p.line(50, height - 185, width - 50, height - 185)
+
+        p.setFont("Helvetica", 10)
+        p.drawString(50, height - 205, f"{recibo.concepto}")
+        p.drawString(450, height - 205, f"$ {recibo.monto:,.2f}")
+
+        # --- TOTAL ---
+        p.line(50, height - 225, width - 50, height - 225)
+        p.setFont("Helvetica-Bold", 12)
+        p.drawString(300, height - 245, "TOTAL A PAGAR:")
+        p.drawString(450, height - 245, f"$ {recibo.monto:,.2f}")
+
+        # --- PIE DE PÁGINA (Legal) ---
+        p.setFont("Helvetica-Oblique", 8)
+        p.drawString(50, height - 350, "Documento equivalente a cuenta de cobro para no obligados a facturar (Art. 1.6.1.4.12 Decreto 1625 de 2016).")
+        p.drawString(50, height - 365, "Documento de control interno no válido como factura con impuestos descontables.")
+        p.drawString(50, height - 380, "Generado por SaaS AppDanza Hub CORE v1.0.")
+
+        # Cierra el PDF
+        p.showPage()
+        p.save()
+        buffer.seek(0)
+        
+        return FileResponse(buffer, as_attachment=True, filename=f"Cuenta_Cobro_{recibo.numero_recibo}.pdf")
+    
+
+# 1. VISTA PARA GUARDAR EL GASTO SAAS
+class RegistrarGastoSaaSView(UserPassesTestMixin, SuccessMessageMixin, CreateView):
+    """Guarda un gasto operativo del dueño de la plataforma."""
+    model = GastoSaaS
+    form_class = GastoSaaSForm
+    template_name = 'saas_core/finanzas_dashboard.html' # Aunque usa modal, requiere esto por si hay error
+    success_url = reverse_lazy('saas_core:master_finanzas')
+    success_message = "¡Gasto operativo registrado exitosamente!"
+
+    def test_func(self):
+        return self.request.user.is_superuser
+
+    def form_invalid(self, form):
+        messages.error(self.request, "Error al registrar el gasto. Verifica los datos.")
+        return redirect('saas_core:master_finanzas')
+    
+
+# 2. VISTA AJAX PARA EL MODAL DEL RECIBO/GASTO
+class ObtenerDetalleTransaccionSaaSView(UserPassesTestMixin, View):
+    """Retorna los datos de un Ingreso (ReciboSaaS) o Egreso (GastoSaaS) en JSON."""
+    def test_func(self):
+        return self.request.user.is_superuser
+
+    def get(self, request, tipo, pk):
+        if tipo == 'ingreso':
+            item = get_object_or_404(ReciboSaaS, pk=pk)
+            data = {
+                'consecutivo': item.numero_recibo,
+                'fecha': item.fecha.strftime('%d/%m/%Y'),
+                'tipo_badge': 'Ingreso Licencia',
+                'tercero_nombre': item.academia.nombre,
+                'concepto': item.concepto,
+                'medio_pago': item.medio_pago,
+                'monto': float(item.monto),
+                'estado': 'ACTIVO',
+                'es_gasto': False
+            }
+        elif tipo == 'gasto':
+            item = get_object_or_404(GastoSaaS, pk=pk)
+            data = {
+                'consecutivo': f"GS-{item.id:04d}", # Gasto SaaS auto-formateado
+                'fecha': item.fecha.strftime('%d/%m/%Y'),
+                'tipo_badge': 'Gasto Operativo',
+                'tercero_nombre': 'SaaS Hub Core',
+                'concepto': item.concepto,
+                'medio_pago': 'N/A',
+                'monto': float(item.monto),
+                'estado': 'ACTIVO',
+                'es_gasto': True,
+                'url_comprobante': item.comprobante.url if item.comprobante else None
+            }
+        else:
+            return JsonResponse({'error': 'Tipo no válido'}, status=400)
+            
+        return JsonResponse(data)
+
+
+# 3. VISTA PARA EXPORTAR EL CSV CONTABLE GLOBAL
+class ExportarContabilidadSaaSView(UserPassesTestMixin, View):
+    """Exporta Ingresos y Gastos del Master en CSV."""
+    def test_func(self):
+        return self.request.user.is_superuser
+
+    def get(self, request):
+        mes = request.GET.get('mes', timezone.now().month)
+        anio = request.GET.get('anio', timezone.now().year)
+
+        response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
+        response['Content-Disposition'] = f'attachment; filename="Contabilidad_SaaS_{mes}_{anio}.csv"'
+        
+        writer = csv.writer(response, delimiter=';')
+        writer.writerow(['Fecha', 'Referencia', 'Tipo', 'Tercero/Academia', 'Concepto', 'Ingreso', 'Egreso'])
+
+        # Ingresos
+        ingresos = ReciboSaaS.objects.filter(fecha__month=mes, fecha__year=anio)
+        for ing in ingresos:
+            writer.writerow([
+                ing.fecha.strftime('%d/%m/%Y'), ing.numero_recibo, 'INGRESO', 
+                ing.academia.nombre, ing.concepto, ing.monto, 0
+            ])
+            
+        # Gastos
+        gastos = GastoSaaS.objects.filter(fecha__month=mes, fecha__year=anio)
+        for gas in gastos:
+            writer.writerow([
+                gas.fecha.strftime('%d/%m/%Y'), f"GS-{gas.id:04d}", 'EGRESO', 
+                'Operativo SaaS', gas.concepto, 0, gas.monto
+            ])
+            
+        return response

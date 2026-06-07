@@ -1,4 +1,6 @@
 # apps/finanzas/views.py
+from urllib import request
+
 from django.shortcuts import get_object_or_404, render, redirect
 from django.views.generic import ListView, FormView, View
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -19,6 +21,15 @@ import calendar
 
 from itertools import chain
 from operator import attrgetter
+
+from xhtml2pdf import pisa
+from django.template.loader import get_template
+import zipfile
+from io import BytesIO
+from django.http import HttpResponse
+import os
+
+from comunicaciones.services import enviar_correo_transaccional
 
 
 class PanelFinanzasView(LoginRequiredMixin, ListView):
@@ -101,6 +112,24 @@ class RegistrarIngresoExtraView(LoginRequiredMixin, FormView):
         ingreso = form.save(commit=False)
         ingreso.academia = self.request.tenant
         ingreso.save()
+        # Generamos el PDF usando la misma función
+        pdf_bytes = generar_pdf_memoria('finanzas/pdf_cuenta_cobro.html', {'recibo': ingreso, 'academia': request.tenant})
+
+        # Preparamos el adjunto
+        adjunto = {
+            'nombre': f'Cuenta_Cobro_{ingreso.numero_recibo}.pdf',
+            'contenido': pdf_bytes,
+            'mimetype': 'application/pdf'
+        }
+
+        # Despachamos el correo
+        enviar_correo_transaccional(
+            asunto=f"Tu comprobante de pago {ingreso.numero_recibo}",
+            template_name="correos/pago_exitoso.html",
+            context={'recibo': ingreso},
+            destinatarios=[ingreso.estudiante.email], # Asumiendo que capturas el email
+            adjunto=adjunto
+        )
         messages.success(self.request, f"Recibo de Caja {ingreso.numero_recibo} expedido con éxito.")
         return redirect('finanzas:panel_finanzas', slug_academia=self.request.tenant.slug)
 
@@ -305,3 +334,104 @@ class ResumenReporteAjaxView(LoginRequiredMixin, View):
             'cantidad_tx': len(lista_tx),
             'transacciones': lista_tx  # Enviamos el listado al frontend
         })
+    
+
+def generar_pdf_memoria(template_src, context_dict):
+    """Función utilitaria para renderizar HTML a PDF en memoria RAM."""
+    template = get_template(template_src)
+    html  = template.render(context_dict)
+    result = BytesIO()
+    # Genera el PDF
+    pdf = pisa.pisaDocument(BytesIO(html.encode("UTF-8")), result)
+    if not pdf.err:
+        return result.getvalue()
+    return None
+
+
+# Reemplaza SOLO la clase DescargarReciboPDFView en tu views.py
+class DescargarReciboPDFView(LoginRequiredMixin, View):
+    """Descarga un PDF individual (Cuenta de Cobro o Comprobante Egreso)."""
+    
+    def get(self, request, slug_academia, tipo, pk):
+        if tipo == 'ingreso':
+            recibo = get_object_or_404(ReciboIngreso, pk=pk, academia=request.tenant)
+            contexto = {'recibo': recibo, 'academia': request.tenant}
+            pdf_bytes = generar_pdf_memoria('finanzas/pdf_cuenta_cobro.html', contexto)
+            nombre_archivo = f"Cuenta_Cobro_{recibo.numero_recibo}.pdf"
+            
+        elif tipo == 'gasto':
+            gasto = get_object_or_404(Gasto, pk=pk, academia=request.tenant)
+            contexto = {'gasto': gasto, 'academia': request.tenant}
+            pdf_bytes = generar_pdf_memoria('finanzas/pdf_soporte_egreso.html', contexto)
+            nombre_archivo = f"Comprobante_Egreso_{gasto.numero_egreso}.pdf"
+            
+        else:
+            return HttpResponse("Tipo de documento no válido", status=400)
+        
+        if pdf_bytes:
+            response = HttpResponse(pdf_bytes, content_type='application/pdf')
+            # 'attachment' fuerza la descarga automática
+            response['Content-Disposition'] = f'attachment; filename="{nombre_archivo}"'
+            return response
+            
+        return HttpResponse("Error interno generando el PDF", status=500)
+
+class DescargarSoportesZipView(LoginRequiredMixin, View):
+    """
+    Empaqueta Recibos (generados al vuelo en PDF) y Comprobantes de Egreso (PDF + Anexos)
+    en un archivo .ZIP para enviárselo al contador a fin de mes.
+    """
+    def get(self, request, slug_academia):
+        f_inicio = request.GET.get('fecha_inicio')
+        f_fin = request.GET.get('fecha_fin')
+        
+        if not f_inicio or not f_fin:
+            return HttpResponse("Fechas requeridas", status=400)
+
+        ingresos = ReciboIngreso.objects.filter(academia=request.tenant, estado='ACTIVO', fecha__range=[f_inicio, f_fin])
+        gastos = Gasto.objects.filter(academia=request.tenant, estado='ACTIVO', fecha__range=[f_inicio, f_fin])
+
+        # Archivo ZIP en memoria RAM (No consume disco de PythonAnywhere)
+        zip_buffer = BytesIO()
+        
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            
+            # 1. Generar e inyectar PDFs de Ingresos al ZIP
+            for ing in ingresos:
+                contexto = {'recibo': ing, 'academia': request.tenant}
+                pdf_bytes = generar_pdf_memoria('finanzas/pdf_cuenta_cobro.html', contexto)
+                if pdf_bytes:
+                    nombre_archivo = f"Ingresos/Cuenta_Cobro_{ing.numero_recibo}_{ing.cliente_nit}.pdf"
+                    zip_file.writestr(nombre_archivo, pdf_bytes)
+            
+            # 2. Generar e inyectar PDFs de Gastos y sus anexos al ZIP
+            for gas in gastos:
+                # A. Generar el Comprobante de Egreso oficial en PDF "al vuelo"
+                contexto_gasto = {'gasto': gas, 'academia': request.tenant}
+                pdf_gasto_bytes = generar_pdf_memoria('finanzas/pdf_soporte_egreso.html', contexto_gasto)
+                
+                if pdf_gasto_bytes:
+                    nombre_pdf_gasto = f"Egresos/Comprobante_Egreso_{gas.numero_egreso}_{gas.proveedor_nit}.pdf"
+                    zip_file.writestr(nombre_pdf_gasto, pdf_gasto_bytes)
+
+                # B. Adjuntar el soporte físico (foto/factura en WebP o PDF) si existe
+                if gas.soporte_digital:
+                    try:
+                        # Leemos el archivo almacenado
+                        gas.soporte_digital.open('rb')
+                        archivo_bytes = gas.soporte_digital.read()
+                        extension = os.path.splitext(gas.soporte_digital.name)[1]
+                        
+                        # Lo metemos en una subcarpeta de anexos para mantener ordenado el ZIP del contador
+                        nombre_anexo = f"Egresos/Anexos/Factura_Soporte_{gas.numero_egreso}_{gas.proveedor_nit}{extension}"
+                        zip_file.writestr(nombre_anexo, archivo_bytes)
+                    except Exception as e:
+                        print(f"Error adjuntando anexo de gasto {gas.numero_egreso}: {e}")
+                    finally:
+                        gas.soporte_digital.close()
+
+        # Preparar respuesta HTTP con el ZIP
+        zip_buffer.seek(0)
+        response = HttpResponse(zip_buffer, content_type='application/zip')
+        response['Content-Disposition'] = f'attachment; filename="Soportes_Contables_{f_inicio}_al_{f_fin}.zip"'
+        return response

@@ -15,4 +15,8 @@ urlpatterns = [
     path('<slug:slug_academia>/finanzas/transaccion/ajax/<str:tipo>/<int:pk>/', views.ObtenerDetalleTransaccionView.as_view(), name='detalle_transaccion_ajax'),
     path('<slug:slug_academia>/finanzas/reportes/exportar/', views.ExportarReporteContableView.as_view(), name='exportar_reporte_contable'),
     path('<slug:slug_academia>/finanzas/reportes/resumen-ajax/', views.ResumenReporteAjaxView.as_view(), name='resumen_reporte_ajax'),
+
+    # 🚀 RUTAS DE DESCARGA (Las que faltaban para arreglar el 404)
+    path('<slug:slug_academia>/finanzas/descargar-pdf/<str:tipo>/<int:pk>/', views.DescargarReciboPDFView.as_view(), name='descargar_pdf'),
+    path('<slug:slug_academia>/finanzas/reportes/descargar-zip/', views.DescargarSoportesZipView.as_view(), name='descargar_zip'),
 ]

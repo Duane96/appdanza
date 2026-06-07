@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Panel Maestro | AppDanza Hub{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <style>
+        :root { --sidebar-width: 250px; }
+        body { background-color: #f4f6f9; font-family: system-ui, -apple-system, sans-serif; overflow-x: hidden; }
+        
+        /* Layout Sidebar Moderno */
+        #wrapper { display: flex; width: 100%; align-items: stretch; }
+        #sidebar { 
+            min-width: var(--sidebar-width); max-width: var(--sidebar-width); 
+            background-color: #030303; color: #fff; min-height: 100vh; transition: all 0.3s; 
+        }
+        #sidebar .nav-link { color: rgba(255,255,255,0.7); transition: 0.2s; border-radius: 8px; margin: 0 10px; }
+        #sidebar .nav-link:hover, #sidebar .nav-link.active { color: #fff; background: rgba(59, 130, 246, 0.1); }
+        
+        #content { width: 100%; transition: all 0.3s; }
+        .topbar { background: #fff; border-bottom: 1px solid #e0e0e0; }
+        
+        @media (max-width: 768px) {
+            #sidebar { margin-left: calc(var(--sidebar-width) * -1); position: absolute; z-index: 1040; }
+            #sidebar.active { margin-left: 0; box-shadow: 4px 0 10px rgba(0,0,0,0.5); }
+        }
+        
+        {% block extra_css %}{% endblock %}
+    </style>
+</head>
+<body>
+
+<div id="wrapper">
+    <nav id="sidebar" class="py-3 shadow-lg">
+        <div class="px-4 mb-4 d-flex justify-content-between align-items-center">
+            <a class="text-white text-decoration-none fw-bold d-flex align-items-center gap-2 fs-5" href="#">
+                <i class="bi bi-shield-lock-fill text-primary"></i> <span>SaaS <span class="text-primary">CORE</span></span>
+            </a>
+            <button class="btn btn-sm btn-outline-light d-md-none" id="closeSidebar"><i class="bi bi-x-lg"></i></button>
+        </div>
+        
+        <ul class="nav flex-column gap-2">
+            <!-- Enlace fijo 1: Dashboard Principal -->
+            <li class="nav-item">
+                <a class="nav-link {% if request.resolver_match.url_name == 'panel_maestro_dashboard' %}active{% endif %} py-2 px-3" href="{% url 'saas_core:panel_maestro_dashboard' %}">
+                    <i class="bi bi-speedometer2 me-2"></i> Dashboard Global
+                </a>
+            </li>
+            <!-- Enlace fijo 2: Tus Finanzas SaaS -->
+            <li class="nav-item">
+                <a class="nav-link py-2 px-3" href="{% url 'saas_core:master_finanzas' %}">
+                    <i class="bi bi-wallet-fill me-2"></i> Finanzas SaaS
+                </a>
+            </li>
+            
+            <hr class="border-secondary my-2 mx-3">
+            
+            <!-- Modales inyectados por cada vista específica -->
+            {% block sidebar_modals %}{% endblock %}
+        </ul>
+    </nav>
+
+    <div id="content">
+        <div class="topbar py-3 px-4 d-flex justify-content-between align-items-center">
+            <button type="button" id="sidebarCollapse" class="btn btn-light d-md-none border shadow-sm">
+                <i class="bi bi-list"></i>
+            </button>
+            <h5 class="m-0 fw-bold d-none d-md-block text-dark">Consola de Control</h5>
+            <div class="d-flex align-items-center gap-3">
+                <span class="text-muted small fw-semibold"><i class="bi bi-person-circle"></i> Súper Admin</span>
+                <a href="/" class="btn btn-sm btn-dark rounded-pill px-3">Sitio Público</a>
+            </div>
+        </div>
+
+        <!-- Contenido principal inyectado -->
+        {% block content %}{% endblock %}
+    </div> 
+</div> 
+
+<!-- Modales inyectados -->
+{% block modals %}{% endblock %}
+
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const sidebar = document.getElementById('sidebar');
+        const sidebarCollapse = document.getElementById('sidebarCollapse');
+        const closeSidebar = document.getElementById('closeSidebar');
+
+        if(sidebarCollapse) sidebarCollapse.addEventListener('click', () => { sidebar.classList.add('active'); });
+        if(closeSidebar) closeSidebar.addEventListener('click', () => { sidebar.classList.remove('active'); });
+    });
+</script>
+
+<!-- Scripts inyectados -->
+{% block extra_js %}{% endblock %}
+
+</body>
+</html>

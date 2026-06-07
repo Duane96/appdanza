@@ -175,6 +175,21 @@ class Academia(models.Model):
         help_text="Ej: academias/landings/duane_aleja.html. Si se deja vacío, usará el index estándar."
     )
 
+    razon_social = models.CharField(max_length=200, blank=True, null=True, verbose_name="Razón Social (Legal)")
+    representante_legal = models.CharField(max_length=150, blank=True, null=True, verbose_name="Representante Legal")
+    tipo_regimen = models.CharField(
+        max_length=100, 
+        default="No responsable de IVA", 
+        verbose_name="Régimen Fiscal (Ej: Régimen Simple, Responsable de IVA)",
+        blank=True, 
+        null=True,
+    )
+    resolucion_facturacion = models.TextField(
+        blank=True, 
+        null=True, 
+        help_text="Texto legal corto que aparecerá en el pie del PDF de la cuenta de cobro."
+    )
+
     # (Mantén tus métodos save() y lógicas WebP idénticas a como me las pasaste)
     def save(self, *args, **kwargs):
         # Auto-asignación de divisas según el mapeo antes de procesar WebP

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Comprobante de Egreso {{ gasto.numero_egreso }}</title>
+    <style>
+        @page { size: letter; margin: 1.5cm; }
+        body { font-family: Helvetica, Arial, sans-serif; font-size: 12px; color: #333333; }
+        table { width: 100%; border-collapse: collapse; }
+        .header-table { border-bottom: 2px solid #27ae60; padding-bottom: 10px; margin-bottom: 20px; }
+        .title-doc { font-size: 20px; font-weight: bold; color: #27ae60; text-align: right; }
+        .info-table th { background-color: #f4f6f7; padding: 6px; border: 1px solid #bdc3c7; text-align: left; width: 30%; }
+        .info-table td { padding: 6px; border: 1px solid #bdc3c7; }
+        .total-box { text-align: right; font-size: 16px; font-weight: bold; padding: 10px; background-color: #ecf0f1; border: 1px solid #bdc3c7; margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+    <table class="header-table">
+        <tr>
+            <td style="width: 60%; vertical-align: top;">
+                <h1 style="margin: 0; font-size: 18px; color: #333;">{{ academia.razon_social|default:academia.nombre }}</h1>
+                <p style="margin: 2px 0;"><strong>NIT:</strong> {{ academia.nit|default:"No registrado" }}</p>
+                <p style="margin: 2px 0;">Comprobante de desembolso interno.</p>
+            </td>
+            <td style="width: 40%; vertical-align: top; text-align: right;">
+                <div class="title-doc">COMPROBANTE DE EGRESO</div>
+                <div style="font-size: 14px; font-weight: bold; margin-top: 5px;">Nº {{ gasto.numero_egreso }}</div>
+                <p style="margin-top: 5px;">Fecha: {{ gasto.fecha|date:"d/m/Y" }}</p>
+            </td>
+        </tr>
+    </table>
+
+    <table class="info-table" style="margin-bottom: 20px;">
+        <tr>
+            <th>Pagado a (Proveedor/Profesor):</th>
+            <td><strong>{{ gasto.proveedor_nombre }}</strong></td>
+        </tr>
+        <tr>
+            <th>Cédula / NIT:</th>
+            <td>{{ gasto.proveedor_nit }}</td>
+        </tr>
+        <tr>
+            <th>Factura de Respaldo Nº:</th>
+            <td>{{ gasto.numero_factura_proveedor|default:"Cuenta de cobro o Sin Factura" }}</td>
+        </tr>
+        <tr>
+            <th>Categoría Contable:</th>
+            <td>{{ gasto.get_categoria_display }} {% if gasto.es_deducible %}(Deducible){% endif %}</td>
+        </tr>
+        <tr>
+            <th>Concepto Exacto:</th>
+            <td>{{ gasto.concepto }}</td>
+        </tr>
+    </table>
+
+    <div class="total-box">
+        VALOR PAGADO: <span style="color: #27ae60;">$ {{ gasto.monto|floatformat:2 }}</span>
+    </div>
+
+    <table style="width: 100%; margin-top: 60px;">
+        <tr>
+            <td style="width: 33%; text-align: center; vertical-align: bottom;">
+                <div style="border-top: 1px solid #333; width: 80%; margin: 0 auto; padding-top: 5px;">Elaborado por</div>
+            </td>
+            <td style="width: 33%; text-align: center; vertical-align: bottom;">
+                <div style="border-top: 1px solid #333; width: 80%; margin: 0 auto; padding-top: 5px;">Revisado / Autorizado</div>
+            </td>
+            <td style="width: 33%; text-align: center; vertical-align: bottom;">
+                <div style="border-top: 1px solid #333; width: 80%; margin: 0 auto; padding-top: 5px;">Recibí Conforme (Firma y C.C)</div>
+            </td>
+        </tr>
+    </table>
+
+</body>
+</html>

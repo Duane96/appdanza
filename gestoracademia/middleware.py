@@ -1,7 +1,5 @@
-# gestoracademia/middleware.py
 from django.http import Http404
 from django.urls import resolve
-# 🛠️ Eliminamos la línea que causaba el error y dejamos solo las importaciones limpias:
 from apps.academias.models import Academia
 from gestoracademia.tenants import set_current_tenant, clear_current_tenant
 
@@ -14,11 +12,14 @@ class TenantMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        # Resolvemos la ruta actual para verificar si incluye la variable 'slug_academia'
         match = resolve(request.path_info)
         slug_academia = match.kwargs.get('slug_academia')
 
-        if slug_academia:
+        # 🛡️ BLINDAJE SENIOR: Definimos slugs que pertenecen al sistema, no a inquilinos
+        SLUGS_RESERVADOS = ['master', 'admin', 'api', 'static', 'media']
+
+        # Verificamos que haya slug y que NO sea una palabra reservada del sistema
+        if slug_academia and slug_academia not in SLUGS_RESERVADOS:
             try:
                 # Buscamos la academia activa
                 academia = Academia.unfiltered_objects.get(slug=slug_academia, activo=True)
@@ -30,6 +31,7 @@ class TenantMiddleware:
             except Academia.DoesNotExist:
                 raise Http404("La academia solicitada no existe o se encuentra inactiva.")
         else:
+            # Si no hay slug, o es un slug reservado ('master'), limpiamos el tenant
             request.tenant = None
             clear_current_tenant()
 

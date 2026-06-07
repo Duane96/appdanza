@@ -25,4 +25,14 @@ urlpatterns = [
 
     path('api/subir-comprobante/', views.SubirComprobanteSaaSView.as_view(), name='api_subir_comprobante'),
     path('pago/revision/<int:pk>/', views.RevisarYAprobarPagoView.as_view(), name='master_revisar_pago'),
+
+    path('master/finanzas/', views.FinanzasMaestroDashboardView.as_view(), name='master_finanzas'),
+    path('master/finanzas/recibo/<int:recibo_id>/pdf/', views.DescargarReciboSaaSPDFView.as_view(), name='master_descargar_recibo_pdf'),
+
+    # 🚀 NUEVAS RUTAS DE FINANZAS MASTER:
+    path('master/finanzas/gasto/nuevo/', views.RegistrarGastoSaaSView.as_view(), name='master_registrar_gasto'),
+    path('master/finanzas/transaccion/ajax/<str:tipo>/<int:pk>/', views.ObtenerDetalleTransaccionSaaSView.as_view(), name='master_detalle_transaccion_ajax'),
+    path('master/finanzas/exportar-csv/', views.ExportarContabilidadSaaSView.as_view(), name='master_exportar_csv'),
+
+    path('master/asignar-plan/', views.MasterAsignarYRenovarPlanView.as_view(), name='master_asignar_plan'),
 ]

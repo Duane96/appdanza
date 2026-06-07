@@ -1,6 +1,12 @@
 # apps/saas_core/forms.py
 from django import forms
-from .models import ConfigPagoGlobalSaaS
+from .models import *
+from django.contrib.auth.mixins import UserPassesTestMixin
+from django.views import View
+from django.shortcuts import redirect
+from django.contrib import messages
+
+from .models import *
 
 class ConfigPagoSaaSForm(forms.ModelForm):
     """Formulario estilizado para la configuración del recaudo global."""
@@ -17,12 +23,7 @@ class ConfigPagoSaaSForm(forms.ModelForm):
         }
 
 # apps/saas_core/views.py
-from django.contrib.auth.mixins import UserPassesTestMixin
-from django.views import View
-from django.shortcuts import redirect
-from django.contrib import messages
-from .forms import ConfigPagoSaaSForm
-from .models import ConfigPagoGlobalSaaS
+
 
 class GuardarConfigPagoGlobalView(UserPassesTestMixin, View):
     """Vista del Panel Maestro para guardar/actualizar el método único de pago del SaaS."""
@@ -41,3 +42,15 @@ class GuardarConfigPagoGlobalView(UserPassesTestMixin, View):
             messages.error(request, "Error al procesar el formulario de pagos.")
             
         return redirect('panel_maestro_dashboard')
+    
+
+class GastoSaaSForm(forms.ModelForm):
+    class Meta:
+        model = GastoSaaS
+        fields = ['fecha', 'monto', 'concepto', 'comprobante']
+        widgets = {
+            'fecha': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'monto': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ej: 150000'}),
+            'concepto': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Pago Servidor PythonAnywhere'}),
+            'comprobante': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+        }

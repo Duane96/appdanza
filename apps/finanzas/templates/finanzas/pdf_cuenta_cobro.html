@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Cuenta de Cobro {{ recibo.numero_recibo }}</title>
+    <style>
+        /* 1. Configuración de página exclusiva para xhtml2pdf */
+        @page {
+            size: letter;
+            margin: 1.5cm;
+            /* Definición del bloque del pie de página */
+            @frame footer_frame {
+                -pdf-frame-content: footer_content;
+                bottom: 1cm;
+                margin-left: 1.5cm;
+                margin-right: 1.5cm;
+                height: 2cm;
+            }
+        }
+        
+        /* 2. Estilos globales básicos */
+        body { font-family: Helvetica, Arial, sans-serif; font-size: 12px; color: #333333; }
+        
+        /* 3. Estilos de layout usando tablas */
+        table { width: 100%; border-collapse: collapse; }
+        .header-table { border-bottom: 2px solid #2c3e50; padding-bottom: 10px; margin-bottom: 20px; }
+        .title-doc { font-size: 20px; font-weight: bold; color: #2c3e50; text-align: right; }
+        .info-table th { background-color: #f4f6f7; padding: 6px; border: 1px solid #bdc3c7; text-align: left; width: 30%; }
+        .info-table td { padding: 6px; border: 1px solid #bdc3c7; }
+        .items-table th { background-color: #2c3e50; color: #ffffff; padding: 8px; text-align: left; }
+        .items-table td { padding: 8px; border-bottom: 1px solid #bdc3c7; }
+        
+        .total-box { text-align: right; font-size: 16px; font-weight: bold; padding: 10px; background-color: #ecf0f1; border: 1px solid #bdc3c7; margin-top: 15px; }
+        .footer-text { text-align: center; font-size: 9px; color: #7f8c8d; border-top: 1px solid #bdc3c7; padding-top: 5px; }
+    </style>
+</head>
+<body>
+
+    <!-- CABECERA: Datos de la Academia y Consecutivo -->
+    <table class="header-table">
+    <tr>
+        <td style="width: 60%; vertical-align: top;">
+            <!-- Si no hay razón social, mostramos solo el nombre comercial -->
+            <h1 style="margin: 0; font-size: 18px; color: #2c3e50;">{{ academia.nombre }}</h1>
+            
+            {% if academia.razon_social %}
+            <p style="margin: 2px 0; font-size: 11px;"><strong>Razón Social:</strong> {{ academia.razon_social }}</p>
+            {% endif %}
+            
+            {% if academia.nit %}
+            <p style="margin: 2px 0; font-size: 11px;"><strong>NIT/C.C.:</strong> {{ academia.nit }}</p>
+            {% endif %}
+            
+            <p style="margin: 2px 0; font-size: 11px;">{{ academia.direccion_sede }}</p>
+        </td>
+        <td style="width: 40%; vertical-align: top; text-align: right;">
+            <div class="title-doc">CUENTA DE COBRO</div>
+            <div style="font-size: 14px; color: #e74c3c; font-weight: bold; margin-top: 5px;">Nº {{ recibo.numero_recibo }}</div>
+        </td>
+    </tr>
+</table>
+
+    <!-- DATOS DEL CLIENTE / ESTUDIANTE -->
+    <table class="info-table" style="margin-bottom: 20px;">
+        <tr>
+            <th>Adquiriente / Cliente:</th>
+            <td>{{ recibo.cliente_nombre }}</td>
+        </tr>
+        <tr>
+            <th>Cédula / NIT:</th>
+            <td>{{ recibo.cliente_nit }}</td>
+        </tr>
+        <tr>
+            <th>Medio de Pago:</th>
+            <td>{{ recibo.get_medio_pago_display }}</td>
+        </tr>
+    </table>
+
+    <!-- DETALLE DEL CONCEPTO (Items) -->
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th style="width: 75%;">Concepto / Descripción del Ingreso</th>
+                <th style="width: 25%; text-align: right;">Valor {{ academia.divisa }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>{{ recibo.concepto }}</td>
+                <td style="text-align: right;">$ {{ recibo.monto|floatformat:2 }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- TOTAL -->
+    <div class="total-box">
+        TOTAL A PAGAR: <span style="color: #c0392b;">$ {{ recibo.monto|floatformat:2 }}</span>
+    </div>
+
+    <!-- REEMPLAZA EL BLOQUE DE FIRMAS POR ESTE -->
+<table style="width: 100%; margin-top: 50px;">
+    <tr>
+        <!-- LADO IZQUIERDO: ACADEMIA -->
+        <td style="width: 50%; text-align: left; vertical-align: top;">
+            <div style="border-top: 1px solid #333; width: 90%; padding-top: 5px; font-size: 10px;">
+                <strong>EMITIDO POR (ACADEMIA):</strong><br>
+                {{ academia.razon_social|default:academia.nombre }}<br>
+                NIT: {{ academia.nit|default:"N/A" }}<br>
+                Representante: {{ academia.representante_legal|default:"Administración" }}
+            </div>
+        </td>
+        
+        <!-- LADO DERECHO: ESTUDIANTE / TERCERO -->
+        <td style="width: 50%; text-align: left; vertical-align: top;">
+            <div style="border-top: 1px solid #333; width: 90%; padding-top: 5px; font-size: 10px;">
+                <strong>ACEPTADO POR:</strong><br>
+                {{ recibo.cliente_nombre }}<br>
+                C.C. / NIT: {{ recibo.cliente_nit }}<br>
+                <span style="font-size: 8px; color: #7f8c8d; margin-top: 5px; display: block;">
+                    Acepto los servicios/productos descritos y los términos de uso del sistema.
+                </span>
+            </div>
+        </td>
+    </tr>
+</table>
+    <!-- PIE DE PÁGINA: Resolución DIAN (Se inyecta dinámicamente en cada página) -->
+    <div id="footer_content" class="footer-text">
+        Documento equivalente a cuenta de cobro para no obligados a facturar (Art. 1.6.1.4.12 Decreto 1625 de 2016).<br>
+        {% if academia.resolucion_facturacion %}
+            {{ academia.resolucion_facturacion }}<br>
+        {% else %}
+            Documento de control interno no válido como factura con impuestos descontables.<br>
+        {% endif %}
+        Generado por SaaS Multi-Academia v1.0 • {{ request.tenant.nombre|default:"" }}
+    </div>
+
+</body>
+</html>

@@ -4,6 +4,11 @@ from apps.academias.models import Academia
 from apps.planes_estudiantes.models import InscripcionPlan
 from django.contrib.auth.models import User
 
+from PIL import Image
+from io import BytesIO
+from django.core.files.base import ContentFile
+import os
+
 class ReciboIngreso(models.Model):
     TIPOS_INGRESO = [
         ('PLAN_ESTUDIANTE', 'Pago de Plan / Tiquetera / Mensualidad'),
@@ -106,11 +111,47 @@ class Gasto(models.Model):
     
     creado_en = models.DateTimeField(auto_now_add=True)
 
+    es_deducible = models.BooleanField(
+        default=True, 
+        help_text="¿Este gasto cuenta con soporte válido para deducir impuestos (DIAN)?"
+    )
+
     def save(self, *args, **kwargs):
-        """Generador de consecutivo automático de Comprobante de Egreso por Tenant"""
+        """Generador de consecutivo automático y optimización de soportes"""
+        
+        # 1. Consecutivo automático
         if not self.numero_egreso:
             total_gastos = Gasto.objects.filter(academia=self.academia).count() + 1
             self.numero_egreso = f"CE-0001" if total_gastos == 1 else f"CE-{total_gastos:04d}"
+            
+        # 2. ⚡ Optimización del Soporte Digital a WebP (Baja Resolución)
+        if self.soporte_digital and not self.soporte_digital.name.lower().endswith('.webp'):
+            try:
+                # Abrimos la imagen con Pillow
+                img = Image.open(self.soporte_digital)
+                
+                # Convertimos a RGB (Por si suben un PNG con transparencia o RGBA)
+                if img.mode != 'RGB':
+                    img = img.convert('RGB')
+                
+                # Reducimos la resolución máxima a 1200px manteniendo proporción
+                img.thumbnail((1200, 1200))
+                
+                # Guardamos en memoria como WebP comprimido
+                output = BytesIO()
+                img.save(output, format='WEBP', quality=65) # Quality 65% es perfecto para recibos legibles pero ligeros
+                output.seek(0)
+                
+                # Renombramos el archivo original
+                base_name = os.path.splitext(os.path.basename(self.soporte_digital.name))[0]
+                nuevo_nombre = f"{base_name}_optimizado.webp"
+                
+                # Reasignamos el archivo sin lanzar otro save global
+                self.soporte_digital.save(nuevo_nombre, ContentFile(output.read()), save=False)
+            except Exception as e:
+                # Si suben un PDF, Pillow lanzará error, lo capturamos y lo dejamos como PDF
+                print(f"No se pudo convertir a WebP (Probablemente sea un PDF o archivo corrupto): {e}")
+
         super().save(*args, **kwargs)
 
     def __str__(self):

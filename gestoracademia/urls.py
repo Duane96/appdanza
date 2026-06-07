@@ -23,9 +23,11 @@ from django.conf.urls.static import static
 urlpatterns = [
     
     
-
+    
 
     path('admin/', admin.site.urls),
+
+    path('', include('apps.saas_core.urls')),
     # 🚀 Inclusión de las rutas de las academias con el prefijo dinámico
     path('', include('apps.academias.urls', namespace='academias')),
     # 🚀 ENGANCHAMOS LAS RUTAS DE ESTUDIANTES
@@ -37,7 +39,7 @@ urlpatterns = [
     path('', include('apps.eventos.urls')), # 👈 ENGANCHAMOS LAS URLS DE EVENTOS DE UNA
     path('', include('apps.multimedia.urls')),
     path('', include('apps.tienda.urls')),
-    path('', include('apps.saas_core.urls')),
+    
 ]
 
 if settings.DEBUG:

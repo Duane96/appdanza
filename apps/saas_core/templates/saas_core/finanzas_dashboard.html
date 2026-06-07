@@ -1,0 +1,284 @@
+{% extends 'saas_core/base_maestro.html' %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+<style>
+    .recibo-voucher { border: 2px dashed #dee2e6; background-color: #fffdf9; }
+    .fs-8 { font-size: 0.75rem !important; }
+    /* Protege el scroll del contenedor principal sin romper el sidebar */
+    .table-responsive { max-height: 600px; overflow-y: auto; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4 p-md-5">
+    
+    {% if messages %}
+        {% for msg in messages %}
+            <div class="alert alert-{{ msg.tags }} alert-dismissible fade show small shadow-sm border-0" role="alert">
+                {{ msg }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold text-success m-0"><i class="bi bi-wallet2"></i> Finanzas Globales SaaS</h2>
+        <div class="d-flex gap-2">
+            <a href="{% url 'saas_core:master_exportar_csv' %}" class="btn btn-outline-dark fw-bold btn-sm py-2">
+                <i class="bi bi-filetype-csv me-1 text-primary"></i> Exportar CSV Mensual
+            </a>
+            <button class="btn btn-danger fw-bold btn-sm py-2" data-bs-toggle="modal" data-bs-target="#nuevoGastoModal">
+                <i class="bi bi-dash-circle me-1"></i> Registrar Gasto SaaS
+            </button>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-xl-4 col-md-6 mb-3">
+            <div class="card bg-success text-white shadow-sm h-100 border-0 rounded-4">
+                <div class="card-body p-4">
+                    <h6 class="text-uppercase fw-bold mb-1">Ingresos (Mes Actual)</h6>
+                    <h2 class="mb-0">${{ ingresos_mes|floatformat:0 }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-4 col-md-6 mb-3">
+            <div class="card bg-danger text-white shadow-sm h-100 border-0 rounded-4">
+                <div class="card-body p-4">
+                    <h6 class="text-uppercase fw-bold mb-1">Gastos (Mes Actual)</h6>
+                    <h2 class="mb-0">${{ gastos_mes|floatformat:0 }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-4 col-md-12 mb-3">
+            <div class="card {% if balance_neto >= 0 %}bg-primary{% else %}bg-warning text-dark{% endif %} text-white shadow-sm h-100 border-0 rounded-4">
+                <div class="card-body p-4">
+                    <h6 class="text-uppercase fw-bold mb-1">Utilidad Neta</h6>
+                    <h2 class="mb-0">${{ balance_neto|floatformat:0 }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <ul class="nav nav-tabs mb-4 border-0" id="finanzasTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active fw-bold border-0 text-success bg-transparent" id="ingresos-tab" data-bs-toggle="tab" data-bs-target="#ingresos" type="button" role="tab">Ingresos (Recibos)</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link fw-bold border-0 text-danger bg-transparent" id="gastos-tab" data-bs-toggle="tab" data-bs-target="#gastos" type="button" role="tab">Gastos Operativos</button>
+        </li>
+    </ul>
+
+    <div class="tab-content bg-white p-4 rounded-4 shadow-sm" id="finanzasTabsContent">
+        
+        <div class="tab-pane fade show active" id="ingresos" role="tabpanel">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle tabla-dt">
+                    <thead class="table-light text-secondary small text-uppercase font-monospace">
+                        <tr>
+                            <th>Recibo #</th>
+                            <th>Fecha</th>
+                            <th>Academia (Inquilino)</th>
+                            <th>Monto</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="small">
+                        {% for recibo in ultimos_recibos %}
+                        <tr>
+                            <td>
+                                <button type="button" onclick="abrirVisorSaaS('ingreso', {{ recibo.id }})" class="btn btn-link p-0 fw-bold font-monospace text-decoration-none text-success">
+                                    {{ recibo.numero_recibo }}
+                                </button>
+                            </td>
+                            <td class="text-muted">{{ recibo.fecha|date:"d/m/Y" }}</td>
+                            <td class="fw-bold text-dark">{{ recibo.academia.nombre }}</td>
+                            <td class="text-success fw-bold">${{ recibo.monto|floatformat:0 }}</td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-light rounded-pill px-3 shadow-sm text-primary fw-bold" onclick="abrirVisorSaaS('ingreso', {{ recibo.id }})">
+                                    <i class="bi bi-eye"></i> Ver
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="gastos" role="tabpanel">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle tabla-dt">
+                    <thead class="table-light text-secondary small text-uppercase font-monospace">
+                        <tr>
+                            <th>Ref</th>
+                            <th>Fecha</th>
+                            <th>Concepto</th>
+                            <th>Soporte</th>
+                            <th>Monto</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="small">
+                        {% for gasto in ultimos_gastos %}
+                        <tr>
+                            <td>
+                                <button type="button" onclick="abrirVisorSaaS('gasto', {{ gasto.id }})" class="btn btn-link p-0 fw-bold font-monospace text-decoration-none text-danger">
+                                    GS-{{ gasto.id|stringformat:"04d" }}
+                                </button>
+                            </td>
+                            <td class="text-muted">{{ gasto.fecha|date:"d/m/Y" }}</td>
+                            <td class="fw-bold">{{ gasto.concepto }}</td>
+                            <td>
+                                {% if gasto.comprobante %}
+                                    <a href="{{ gasto.comprobante.url }}" target="_blank" class="badge bg-info bg-opacity-10 text-info text-decoration-none px-2 py-1"><i class="bi bi-paperclip"></i> Adjunto</a>
+                                {% else %}
+                                    <span class="text-muted italic small">Ninguno</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-danger fw-bold">-${{ gasto.monto|floatformat:0 }}</td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-light rounded-pill px-3 shadow-sm text-primary fw-bold" onclick="abrirVisorSaaS('gasto', {{ gasto.id }})">
+                                    <i class="bi bi-eye"></i> Ver
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<div class="modal fade" id="nuevoGastoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="post" action="{% url 'saas_core:master_registrar_gasto' %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header bg-danger text-white border-0 pt-4 px-4">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-dash-circle me-2"></i> Registrar Gasto Operativo</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body px-4 py-4">
+                    {{ form_gasto.as_p }}
+                </div>
+                <div class="modal-footer border-0 pb-4 px-4 bg-light rounded-bottom-4">
+                    <button type="button" class="btn btn-light rounded-3 px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger rounded-3 px-4 fw-bold">Guardar Gasto</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="modalVisorSaaS" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white border-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-receipt me-2"></i>Soporte Operativo</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="recibo-voucher p-4 rounded text-dark position-relative">
+                    <div class="text-center mb-3">
+                        <h4 class="fw-bold text-uppercase m-0">APPDANZA SAAS CORE</h4>
+                        <small class="text-muted font-monospace" id="visor-badge-tipo">--</small>
+                        <hr class="my-2 border-secondary opacity-25">
+                    </div>
+
+                    <div class="row g-2 mb-3 small">
+                        <div class="col-6">
+                            <span class="text-muted d-block text-uppercase font-monospace fs-8">Consecutivo:</span>
+                            <span class="badge bg-dark fs-6 font-monospace" id="visor-consecutivo">--</span>
+                        </div>
+                        <div class="col-6 text-end">
+                            <span class="text-muted d-block text-uppercase font-monospace fs-8">Fecha:</span>
+                            <strong id="visor-fecha">--</strong>
+                        </div>
+                    </div>
+
+                    <div class="bg-light p-3 rounded border mb-3 small">
+                        <span class="text-muted font-monospace text-uppercase fs-8 d-block">A nombre de:</span>
+                        <strong id="visor-tercero" class="text-uppercase text-dark fs-6">--</strong>
+                    </div>
+
+                    <div class="mb-3 small">
+                        <span class="text-muted font-monospace text-uppercase fs-8 d-block">Concepto:</span>
+                        <div class="p-2 bg-white rounded border-start border-3 border-dark font-monospace" id="visor-concepto">--</div>
+                    </div>
+
+                    <div class="row align-items-center small">
+                        <div class="col-12 text-end">
+                            <span class="text-muted font-monospace text-uppercase fs-8 d-block">Monto Contable:</span>
+                            <h3 class="fw-bold text-dark m-0 font-monospace" id="visor-monto">$0</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 bg-light justify-content-between">
+                <button type="button" class="btn btn-sm btn-secondary font-monospace" data-bs-dismiss="modal">Cerrar</button>
+                
+                <a id="btn-accion-visor" href="#" target="_blank" class="btn btn-sm btn-primary fw-bold">
+                    <i class="bi bi-box-arrow-up-right me-1"></i> Acción
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+<script>
+    const formatoCOP = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
+
+    $(document).ready(function() {
+        $('.tabla-dt').DataTable({
+            "language": { "url": "//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json" },
+            "pageLength": 10,
+            "ordering": false
+        });
+    });
+
+    function abrirVisorSaaS(tipo, id) {
+        const url = `/master/finanzas/transaccion/ajax/${tipo}/${id}/`; 
+
+        fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('visor-badge-tipo').innerText = data.tipo_badge;
+                document.getElementById('visor-consecutivo').innerText = data.consecutivo;
+                document.getElementById('visor-fecha').innerText = data.fecha;
+                document.getElementById('visor-tercero').innerText = data.tercero_nombre;
+                document.getElementById('visor-concepto').innerText = data.concepto;
+                document.getElementById('visor-monto').innerText = formatoCOP.format(data.monto);
+
+                const btnAccion = document.getElementById('btn-accion-visor');
+                
+                if(data.es_gasto) {
+                    if(data.url_comprobante) {
+                        btnAccion.href = data.url_comprobante;
+                        btnAccion.innerHTML = '<i class="bi bi-paperclip me-1"></i> Ver Soporte Adjunto';
+                        btnAccion.className = "btn btn-sm btn-info fw-bold text-white";
+                        btnAccion.style.display = "inline-block";
+                    } else {
+                        btnAccion.style.display = "none"; // Oculta si no hay comprobante
+                    }
+                } else {
+                    btnAccion.href = `/master/finanzas/recibo/${id}/pdf/`;
+                    btnAccion.innerHTML = '<i class="bi bi-file-earmark-pdf me-1"></i> Descargar PDF DIAN';
+                    btnAccion.className = "btn btn-sm btn-primary fw-bold";
+                    btnAccion.style.display = "inline-block";
+                }
+
+                new bootstrap.Modal(document.getElementById('modalVisorSaaS')).show();
+            })
+            .catch(e => alert("Error cargando detalles del registro."));
+    }
+</script>
+{% endblock %}

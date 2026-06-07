@@ -37,7 +37,7 @@ class SuscripcionAcademia(models.Model):
     
     academia = models.OneToOneField(Academia, on_delete=models.CASCADE, related_name='suscripcion_saas')
     plan = models.ForeignKey(PlanSaaS, on_delete=models.PROTECT, related_name='academias_inscritas')
-    estado = models.CharField(max_length=20, choices=ESTADOS, default='PRUEBA')
+    estado = models.CharField(max_length=20, choices=ESTADOS, default='SUSPENDIDO')
     
     # Forzado manual para activar/desactivar módulos sin importar el plan (Tu súper poder)
     bloqueo_manual_multimedia = models.BooleanField(default=False, verbose_name="Bloquear Multimedia Manualmente")
@@ -324,3 +324,48 @@ class ReportePagoSaaS(models.Model):
 
     def __str__(self):
         return f"Pago de {self.academia.nombre} - {self.get_estado_display()}"
+    
+
+class ReciboSaaS(models.Model):
+    """Contabilidad Global del Dueño de la Plataforma (Registro de tus ingresos)"""
+    numero_recibo = models.CharField(max_length=20, unique=True, editable=False)
+    academia = models.ForeignKey(Academia, on_delete=models.PROTECT, related_name='recibos_pagados_saas')
+    plan = models.ForeignKey(PlanSaaS, on_delete=models.PROTECT)
+    fecha = models.DateTimeField(auto_now_add=True)
+    monto = models.DecimalField(max_digits=10, decimal_places=2)
+    medio_pago = models.CharField(max_length=50, default='TRANSFERENCIA/COMPROBANTE')
+    concepto = models.CharField(max_length=255)
+    
+
+    class Meta:
+        ordering = ['-fecha']
+        verbose_name = "Recibo de Ingreso SaaS"
+        verbose_name_plural = "Recibos de Ingreso SaaS"
+
+    def __str__(self):
+        return f"{self.numero_recibo} - {self.academia.nombre} - ${self.monto}"
+
+    def save(self, *args, **kwargs):
+        """Autogenera un consecutivo único para tus facturas SaaS"""
+        if not self.numero_recibo:
+            ultimo = ReciboSaaS.objects.order_by('id').last()
+            consecutivo = (ultimo.id + 1) if ultimo else 1
+            # Tus recibos tendrán el prefijo SAAS-0001, SAAS-0002...
+            self.numero_recibo = f"SAAS-{consecutivo:04d}"
+        super().save(*args, **kwargs)
+
+
+class GastoSaaS(models.Model):
+    """Registro de gastos operativos del dueño de la plataforma (Servidores, dominios, etc.)"""
+    fecha = models.DateField(default=timezone.now, verbose_name="Fecha del Gasto")
+    monto = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Monto")
+    concepto = models.CharField(max_length=255, verbose_name="Descripción / Concepto")
+    comprobante = models.FileField(upload_to='saas/gastos_comprobantes/', blank=True, null=True)
+
+    class Meta:
+        ordering = ['-fecha']
+        verbose_name = "Gasto SaaS"
+        verbose_name_plural = "Gastos SaaS"
+
+    def __str__(self):
+        return f"{self.fecha} - {self.concepto} - ${self.monto}"

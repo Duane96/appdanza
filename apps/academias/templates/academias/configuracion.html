@@ -228,50 +228,78 @@
                 </div>
 
                 <div class="card border-0 shadow-sm bg-white p-4 rounded-4 mb-4">
-                    <h5 class="fw-bold text-dark mb-3"><i class="bi bi-geo-alt text-danger me-2"></i>Ubicación, Contacto y Redes</h5>
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold text-secondary">NIT / Identificación Fiscal</label>
-                            {{ form.nit }}
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold text-secondary">Teléfono de Atención</label>
-                            {{ form.telefono }}
-                        </div>
-                        
-                        <!-- 🚀 LIMPIEZA: Se muestran siempre -->
-                        <div class="col-12">
-                            <label class="form-label small fw-semibold text-secondary">Dirección Exacta de la Sede</label>
-                            {{ form.direccion_sede }}
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label small fw-semibold text-secondary">Horario Comercial Público</label>
-                            {{ form.horario_atencion }}
-                        </div>
+                <h5 class="fw-bold text-dark mb-3"><i class="bi bi-geo-alt text-danger me-2"></i>Ubicación, Contacto y Redes</h5>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold text-secondary">Teléfono de Atención</label>
+                        {{ form.telefono }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold text-secondary">Horario Comercial</label>
+                        {{ form.horario_atencion }}
+                    </div>
+        
+                    <div class="col-12">
+                        <label class="form-label small fw-semibold text-secondary">Dirección Exacta de la Sede</label>
+                        {{ form.direccion_sede }}
+                    </div>
 
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold text-secondary"><i class="bi bi-instagram text-danger me-1"></i>URL Instagram</label>
-                            {{ form.instagram_url }}
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold text-secondary"><i class="bi bi-facebook text-primary me-1"></i>URL Facebook</label>
-                            {{ form.facebook_url }}
-                        </div>
-                        
-                        <div class="col-md-4">
-                            <label class="form-label small fw-semibold text-secondary"><i class="bi bi-tiktok text-dark me-1"></i>URL TikTok</label>
-                            {{ form.tiktok_url }}
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-semibold text-secondary"><i class="bi bi-youtube text-danger me-1"></i>URL YouTube</label>
-                            {{ form.youtube_url }}
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-semibold text-secondary"><i class="bi bi-whatsapp text-success me-1"></i>URL WhatsApp</label>
-                            {{ form.whatsapp_url }}
-                        </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold text-secondary"><i class="bi bi-instagram text-danger me-1"></i>URL Instagram</label>
+                        {{ form.instagram_url }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold text-secondary"><i class="bi bi-facebook text-primary me-1"></i>URL Facebook</label>
+                        {{ form.facebook_url }}
+                    </div>
+        
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold text-secondary"><i class="bi bi-tiktok text-dark me-1"></i>URL TikTok</label>
+                        {{ form.tiktok_url }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold text-secondary"><i class="bi bi-youtube text-danger me-1"></i>URL YouTube</label>
+                        {{ form.youtube_url }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold text-secondary"><i class="bi bi-whatsapp text-success me-1"></i>URL WhatsApp</label>
+                        {{ form.whatsapp_url }}
                     </div>
                 </div>
+                </div>
+                <div class="card border-0 shadow-sm bg-white p-4 rounded-4 mb-4 border-start border-secondary border-4">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="fw-bold text-dark m-0"><i class="bi bi-bank text-secondary me-2"></i>Datos Legales (DIAN)</h5>
+        <span class="badge bg-light text-muted border fw-normal fs-8">Opcional</span>
+    </div>
+    <p class="text-muted small mb-3">
+        Si eres instructor independiente o no tienes empresa constituida, deja esto en blanco. Los recibos y PDFs se adaptarán automáticamente usando tu nombre comercial.
+    </p>
+    
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label class="form-label small fw-semibold text-secondary">Razón Social Legal</label>
+            {{ form.razon_social }}
+        </div>
+        <div class="col-md-6">
+            <label class="form-label small fw-semibold text-secondary">NIT / Identificación</label>
+            {{ form.nit }}
+        </div>
+        <div class="col-md-6">
+            <label class="form-label small fw-semibold text-secondary">Representante Legal</label>
+            {{ form.representante_legal }}
+        </div>
+        <div class="col-md-6">
+            <label class="form-label small fw-semibold text-secondary">Régimen Fiscal</label>
+            {{ form.tipo_regimen }}
+        </div>
+        <div class="col-12">
+            <label class="form-label small fw-semibold text-secondary">Nota Legal / Resolución (Pie del PDF)</label>
+            {{ form.resolucion_facturacion }}
+            <small class="text-muted d-block mt-1" style="font-size: 0.7rem;">Ej: "Documento soporte en adquisiciones efectuadas a no obligados a facturar..."</small>
+        </div>
+    </div>
+</div>
 
             </div> 
         </div> 

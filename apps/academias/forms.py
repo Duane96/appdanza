@@ -16,7 +16,8 @@ class ConfigMascaraForm(forms.ModelForm):
             'bloque_3_titulo', 'bloque_3_icono', 'bloque_4_titulo', 'bloque_4_icono',
             'direccion_sede', 'horario_atencion', 
             'instagram_url', 'facebook_url', 'tiktok_url', 'youtube_url', 'whatsapp_url',
-            'login_imagen'
+            'login_imagen',
+            'razon_social', 'nit', 'representante_legal', 'tipo_regimen', 'resolucion_facturacion'
         ]
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control'}),
@@ -51,6 +52,15 @@ class ConfigMascaraForm(forms.ModelForm):
             'bloque_3_icono': forms.Select(attrs={'class': 'form-select', 'id': 'select-icono-3'}),
             'bloque_4_titulo': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Opcional'}),
             'bloque_4_icono': forms.Select(attrs={'class': 'form-select', 'id': 'select-icono-4'}),
+            'razon_social': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Distrito Social S.A.S.'}),
+            'nit': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: 900.123.456-7'}),
+            'representante_legal': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre de quien firma'}),
+            'tipo_regimen': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: No responsable de IVA'}),
+            'resolucion_facturacion': forms.Textarea(attrs={
+                'class': 'form-control', 
+                'rows': 2, 
+                'placeholder': 'Ej: Actividad económica 9329. Documento equivalente...'
+            }),
         }
 
     def __init__(self, *args, **kwargs):
