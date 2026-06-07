@@ -1,5 +1,7 @@
 from django.db import models
 from apps.academias.models import Academia # Importamos tu modelo actual de Academia
+from django.utils import timezone
+
 
 class PlanSaaS(models.Model):
     TIPO_COBRO_CHOICES = [
@@ -112,6 +114,45 @@ class SuscripcionAcademia(models.Model):
         if self.es_cuenta_partner_gratis: return True
         return self.plan.permite_tienda
     
+    @property
+    def dias_restantes_licencia(self):
+        """Calcula de forma exacta cuántos días le quedan de uso a la academia en Hora Colombia."""
+        # Forzamos la zona horaria local colombiana configurada en Django (America/Bogota)
+        hoy_colombia = timezone.localtime(timezone.now()).date()
+        delta = self.fecha_vencimiento - hoy_colombia
+        return delta.days
+
+    @property
+    def mostrar_alerta_vencimiento(self):
+        """Condición: Muestra alerta permanente durante los 5 días previos al vencimiento."""
+        if self.es_cuenta_partner_gratis or self.estado == 'SUSPENDIDO':
+            return False
+        
+        dias = self.dias_restantes_licencia
+        # Retorna True si está entre el día 0 (último día de pago) y el día 5 de anticipación
+        return 0 <= dias <= 5
+
+    @property
+    def esta_bloqueada(self):
+        """
+        Determina si la academia debe ser bloqueada inmediatamente.
+        Condición de bloqueo:
+        1. NO es Partner.
+        2. El estado es explícitamente SUSPENDIDO o ya pasó la medianoche del día de vencimiento.
+        """
+        if self.es_cuenta_partner_gratis:
+            return False
+            
+        if self.estado == 'SUSPENDIDO':
+            return True
+            
+        # Bloqueo automático a las 12:00 AM del día siguiente al pago
+        # Si la fecha_vencimiento es hoy, todavía tiene acceso. Si ya es mañana, se bloquea.
+        if self.dias_restantes_licencia < 0:
+            return True
+            
+        return False
+    
 
 
 
@@ -202,3 +243,84 @@ class VideoLanding(models.Model):
     youtube_url = models.URLField()
 
     activo = models.BooleanField(default=True)
+
+
+class ConfigPagoGlobalSaaS(models.Model):
+    """Guarda el método de recaudo oficial del SaaS (Banco, Nequi, Llave, etc.)."""
+    
+    METODO_CHOICES = [
+        ('BANCO', 'Cuenta Bancaria Tradicional'),
+        ('NEQUI', 'Plataforma Nequi (Número de celular)'),
+        ('DAVIPLATA', 'Plataforma Daviplata (Número de celular)'),
+        ('LLAVE', 'Llave Transfiya / Celular / Correo'),
+        ('QR_DIRECTO', 'Código QR de Transferencia Directa'),
+    ]
+    
+    tipo_metodo = models.CharField(
+        max_length=20, 
+        choices=METODO_CHOICES, 
+        default='NEQUI',
+        verbose_name="Tipo de Canal de Pago"
+    )
+    
+    nombre_proveedor = models.CharField(
+        max_length=100, 
+        verbose_name="Entidad / Proveedor",
+        help_text="Ej: Bancolombia, Nequi, Davivienda, etc."
+    )
+    
+    identificador_pago = models.CharField(
+        max_length=150, 
+        verbose_name="Número de Cuenta / Celular / Llave",
+        help_text="El dato exacto que el cliente debe copiar para transferir."
+    )
+    
+    # 🔓 Flexibilidad Total: Campos opcionales para no romper flujos si usas Nequi o llaves
+    titular = models.CharField(
+        max_length=150, 
+        blank=True, 
+        null=True, 
+        verbose_name="Titular de la cuenta (Opcional)"
+    )
+    
+    documento_titular = models.CharField(
+        max_length=50, 
+        blank=True, 
+        null=True, 
+        verbose_name="Cédula/NIT del Titular (Opcional)"
+    )
+    
+    instrucciones_adicionales = models.TextField(
+        blank=True, 
+        help_text="Mensaje instructivo (Ej: 'Una vez transferido, envía el pantallazo al WhatsApp 310...')"
+    )
+
+    class Meta:
+        verbose_name = "Configuración de Pago Global SaaS"
+        verbose_name_plural = "Configuraciones de Pago Global SaaS"
+
+    def __str__(self):
+        return f"Recaudo vía {self.get_tipo_metodo_display()} ({self.nombre_proveedor})"
+    
+class ReportePagoSaaS(models.Model):
+    """Modelo para almacenar los comprobantes de pago subidos por las academias."""
+    
+    ESTADOS = [
+        ('PENDIENTE', 'Pendiente de Revisión'),
+        ('APROBADO', 'Aprobado y Renovado'),
+        ('RECHAZADO', 'Rechazado'),
+    ]
+
+    academia = models.ForeignKey(Academia, on_delete=models.CASCADE, related_name='reportes_pago')
+    plan = models.ForeignKey(PlanSaaS, on_delete=models.SET_NULL, null=True)
+    comprobante = models.FileField(upload_to='saas_comprobantes/%Y/%m/')
+    fecha_envio = models.DateTimeField(auto_now_add=True)
+    estado = models.CharField(max_length=20, choices=ESTADOS, default='PENDIENTE')
+
+    class Meta:
+        ordering = ['-fecha_envio']
+        verbose_name = 'Reporte de Pago SaaS'
+        verbose_name_plural = 'Reportes de Pago SaaS'
+
+    def __str__(self):
+        return f"Pago de {self.academia.nombre} - {self.get_estado_display()}"

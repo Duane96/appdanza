@@ -1,0 +1,30 @@
+{% extends "comunicaciones/base_email.html" %}
+
+{% block contenido %}
+    <h2 style="color: #212529; margin-top: 0;">¡Tu pase está confirmado! 🎟️</h2>
+    <p>Hola <strong>{{ comprador_nombre }}</strong>,</p>
+    <p>Estás oficialmente registrado/a para <strong>{{ evento.nombre }}</strong> organizado por {{ academia.nombre }}.</p>
+    
+    <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin-bottom: 25px; border-radius: 4px;">
+        <p style="margin: 0; color: #664d03; font-size: 14px;">
+            <strong>📅 Fecha:</strong> {{ evento.fecha }}<br>
+            <strong>📍 Lugar:</strong> {{ academia.direccion_sede }}
+        </p>
+    </div>
+
+    <p>A continuación, encontrarás tu(s) código(s) QR de acceso. <strong>Por favor, preséntalos en la taquilla desde tu celular.</strong></p>
+
+    <div style="text-align: center; margin: 30px 0;">
+        {% for boleta in boletas %}
+            <div style="display: inline-block; background: #ffffff; border: 2px dashed #dee2e6; padding: 20px; border-radius: 10px; margin: 10px; width: 200px;">
+                <p style="margin-top: 0; font-size: 12px; color: #adb5bd; text-transform: uppercase; letter-spacing: 1px;">Entrada #{{ forloop.counter }}</p>
+                
+                <img src="{{ boleta.qr_url }}" alt="QR Code" style="width: 150px; height: 150px; display: block; margin: 0 auto;">
+                
+                <p style="margin-bottom: 0; margin-top: 10px; font-size: 11px; color: #6c757d; font-family: monospace;">{{ boleta.codigo }}</p>
+            </div>
+        {% endfor %}
+    </div>
+    
+    <p style="font-size: 14px; text-align: center;">¡Prepárate para disfrutar al máximo!</p>
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends "comunicaciones/base_email.html" %}
+
+{% block contenido %}
+    <h2 style="color: #212529; margin-top: 0;">¡Bienvenido a la familia, {{ academia.nombre }}! 🕺💃</h2>
+    
+    <p>Tu cuenta corporativa ha sido creada exitosamente y tu academia ya está en línea en nuestro ecosistema.</p>
+    
+    <p>Para empezar a gestionar tus planes, estudiantes y finanzas, haz clic en el siguiente enlace y accede a tu panel maestro:</p>
+    
+    <div style="text-align: center; margin: 30px 0;">
+        <a href="https://tudominio.com/{{ academia.slug }}/login/" class="btn">Ir a mi Panel de Control</a>
+    </div>
+    
+    <p style="margin-top: 30px; font-size: 14px; color: #6c757d;">Si tú no solicitaste este registro, por favor ignora este correo o contáctanos.</p>
+{% endblock %}

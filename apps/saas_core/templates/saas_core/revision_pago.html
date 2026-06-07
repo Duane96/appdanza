@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Revisión de Pago | SaaS Core</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css" rel="stylesheet">
+</head>
+<body class="bg-secondary bg-opacity-10">
+
+<div class="container py-5" style="max-width: 600px;">
+    
+    <a href="{% url 'saas_core:panel_maestro_dashboard' %}" class="btn btn-outline-dark btn-sm mb-3 rounded-pill">
+        <i class="bi bi-arrow-left"></i> Volver al Panel Maestro
+    </a>
+
+    <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+        <div class="card-header bg-dark text-white p-4 border-0">
+            <h5 class="mb-0 fw-bold"><i class="bi bi-search me-2"></i>Auditoría de Pago SaaS</h5>
+        </div>
+        <div class="card-body p-4 bg-light">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h4 class="fw-black text-dark mb-0">{{ reporte.academia.nombre }}</h4>
+                    <span class="badge bg-primary rounded-pill mt-1">{{ reporte.plan.nombre }}</span>
+                </div>
+                <div class="text-end text-muted small">
+                    <i class="bi bi-clock"></i> {{ reporte.fecha_envio|date:"d M Y, H:i" }}
+                </div>
+            </div>
+
+            <div class="text-center bg-white border rounded-4 p-2 mb-4 shadow-sm">
+                <img src="{{ reporte.comprobante.url }}" alt="Comprobante" class="img-fluid rounded-3" style="max-height: 400px; object-fit: contain;">
+                <div class="mt-2 text-end">
+                    <a href="{{ reporte.comprobante.url }}" target="_blank" class="btn btn-sm btn-outline-secondary rounded-pill">
+                        <i class="bi bi-arrows-fullscreen"></i> Ver Completo
+                    </a>
+                </div>
+            </div>
+
+            <form action="{% url 'saas_core:master_revisar_pago' reporte.id %}" method="POST">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success w-100 py-3 rounded-pill fw-bold fs-5 shadow">
+                    <i class="bi bi-check-circle-fill me-2"></i> APROBAR Y RENOVAR 30 DÍAS
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

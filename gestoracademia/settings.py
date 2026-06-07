@@ -70,6 +70,7 @@ INSTALLED_APPS = [
     "csp",
     'saas_core',
     'tienda',
+    'comunicaciones',
 ]
 
 MIDDLEWARE = [
@@ -265,3 +266,15 @@ CSRF_COOKIE_HTTPONLY = True
 
 # Controla el comportamiento de las cookies en el mismo sitio
 SESSION_COOKIE_SAMESITE = 'Lax'
+
+
+# ==========================================
+# CONFIGURACIÓN DE CORREOS (GMAIL SMTP)
+# ==========================================
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'appdanza2026@gmail.com' # Reemplaza con el correo de tu SaaS
+EMAIL_HOST_PASSWORD = 'fupz lkqc ubsx dtqz' # 🚨 Mejor si usas os.getenv('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = 'App Danza <appdanza2026@gmail.com>' # Nombre visible

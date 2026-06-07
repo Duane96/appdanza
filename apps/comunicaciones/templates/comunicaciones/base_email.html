@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        /* Estilos generales de respaldo (Los clientes de correo suelen requerir estilos básicos) */
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f8f9fa; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .header { background-color: {{ academia.color_primario|default:'#212529' }}; padding: 30px; text-align: center; }
+        .header h1 { color: #ffffff; margin: 0; font-size: 24px; letter-spacing: 1px; }
+        .content { padding: 40px 30px; color: #495057; line-height: 1.6; font-size: 16px; }
+        .footer { background-color: #f1f3f5; padding: 20px; text-align: center; font-size: 12px; color: #adb5bd; }
+        .btn { display: inline-block; padding: 12px 25px; background-color: {{ academia.color_secundario|default:'#e83e8c' }}; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>{{ academia.nombre|default:"AppDanza" }}</h1>
+        </div>
+        
+        <div class="content">
+            {% block contenido %}
+            {% endblock %}
+        </div>
+        
+        <div class="footer">
+            <p>Este es un correo automático generado por nuestra plataforma. Por favor no respondas a este mensaje.</p>
+            <p>&copy; {% now "Y" %} {{ academia.nombre|default:"Tempo Hub" }}. Todos los derechos reservados.</p>
+        </div>
+    </div>
+</body>
+</html>

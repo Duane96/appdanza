@@ -25,6 +25,8 @@ from .models import EntradaQR
 
 from django.views.generic import UpdateView
 
+from apps.comunicaciones.services import enviar_correo_transaccional
+
 class EventoListView(LoginRequiredMixin, ListView):
     """Lista todos los eventos de la academia (Tenant actual)."""
     model = Evento
@@ -409,6 +411,29 @@ class RegistroEventoPublicoView(FormView):
             })
         
         self.request.session['boletas_recien_compradas'] = boletas_sesion
+
+        # 🚀 DISPARADOR DE CORREO: Tickets de Evento y QR
+        if recibo.comprador_email:
+            # Preparamos las boletas para el template del correo
+            boletas_correo = []
+            for b in boletas_sesion:
+                boletas_correo.append({
+                    'codigo': b['codigo_unico'],
+                    # Usamos una API pública para garantizar que Gmail/Outlook muestren la imagen del QR
+                    'qr_url': f"https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={b['codigo_unico']}"
+                })
+
+            enviar_correo_transaccional(
+                asunto=f"🎟️ Tus entradas para {self.evento_obj.nombre}",
+                template_name="comunicaciones/ticket_evento.html",
+                context={
+                    'academia': self.academia_obj,
+                    'comprador_nombre': recibo.comprador_nombre,
+                    'evento': self.evento_obj,
+                    'boletas': boletas_correo
+                },
+                destinatarios=[recibo.comprador_email]
+            )
         
         return redirect('eventos:registro_exito', slug_academia=self.academia_obj.slug, recibo_id=recibo.id)
     

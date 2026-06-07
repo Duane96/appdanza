@@ -17,6 +17,8 @@ from django.shortcuts import redirect
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 
+from apps.comunicaciones.services import enviar_correo_transaccional
+
 class CrearEstudianteView(LoginRequiredMixin, CreateView):
     model = Estudiante
     form_class = EstudianteForm
@@ -142,6 +144,29 @@ class AsignarPlanView(LoginRequiredMixin, CreateView):
                 cliente_nit=alumno.identificacion,      # 🎯 ¡Magia! Extraído automáticamente
                 cliente_nombre=f"{alumno.nombres} {alumno.apellidos}" # 🎯 Extraído automáticamente
             )
+
+            recibo_creado = ReciboIngreso
+
+            # 🚀 DISPARADOR DE CORREO: Recibo de Plan
+            if alumno.email:
+                # Construimos la URL absoluta (incluyendo https://midominio.com)
+                portal_url = self.request.build_absolute_uri(
+                    reverse('planes_estudiantes:portal_estudiante', kwargs={'slug_academia': self.request.tenant.slug})
+                )
+                
+                enviar_correo_transaccional(
+                    asunto=f"Tu recibo de pago en {self.request.tenant.nombre}",
+                    template_name="comunicaciones/recibo_plan.html",
+                    context={
+                        'academia': self.request.tenant,
+                        'estudiante': alumno,
+                        'recibo': recibo_creado,
+                        'plan': plan,
+                        'fecha_fin': inscripcion.fecha_fin.strftime('%d/%m/%Y'),
+                        'portal_url': portal_url
+                    },
+                    destinatarios=[alumno.email]
+                )
 
             # 4. Activamos al alumno
             alumno.estado = 'ACTIVO'

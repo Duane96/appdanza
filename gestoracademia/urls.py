@@ -18,30 +18,13 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from apps.saas_core.views import (
-    PanelMaestroDashboardView, 
-    ActualizarLicenciaSaaSView,
-    CrearAcademiaSaaSView,
-    CrearPlanSaaSView,
-    APIObtenerEstudiantesAcademiaView,
-    IndexSaaSGlobalView,
-    MasterActualizarLandingView
-)
+
 
 urlpatterns = [
     
-    path('', IndexSaaSGlobalView.as_view(), name='saas_index_global'),
-    path('master/control-panel/', PanelMaestroDashboardView.as_view(), name='panel_maestro_dashboard'),
-    # 🎯 LA PIEZA FALTANTE: Endpoint POST para la actualización de licencias vía Fetch/AJAX
-    path('master/control-panel/actualizar-licencia/', ActualizarLicenciaSaaSView.as_view(), name='actualizar_licencia'),
-
-    # ➕ Endpoints de Creación Rápida
-    path('master/control-panel/crear-academia/', CrearAcademiaSaaSView.as_view(), name='master_crear_academia'),
-    path('master/control-panel/crear-plan/', CrearPlanSaaSView.as_view(), name='master_crear_plan'),
-    path('master/actualizar-landing/', MasterActualizarLandingView.as_view(), name='master_actualizar_landing'),
     
-    # 🔍 API secreta de soporte para visualización de estudiantes en modal
-    path('master/control-panel/api-estudiantes/', APIObtenerEstudiantesAcademiaView.as_view(), name='api_estudiantes_academia'),
+
+
     path('admin/', admin.site.urls),
     # 🚀 Inclusión de las rutas de las academias con el prefijo dinámico
     path('', include('apps.academias.urls', namespace='academias')),
@@ -54,6 +37,7 @@ urlpatterns = [
     path('', include('apps.eventos.urls')), # 👈 ENGANCHAMOS LAS URLS DE EVENTOS DE UNA
     path('', include('apps.multimedia.urls')),
     path('', include('apps.tienda.urls')),
+    path('', include('apps.saas_core.urls')),
 ]
 
 if settings.DEBUG:

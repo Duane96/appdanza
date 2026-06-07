@@ -1,7 +1,7 @@
 # apps/academias/views.py
 from django.views.generic import TemplateView, UpdateView
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.shortcuts import redirect
+from django.shortcuts import redirect, render
 from django.urls import reverse
 
 from apps.eventos.models import Evento
@@ -21,6 +21,11 @@ from .forms import ConfigMascaraForm
 from django.contrib.auth.views import LogoutView
 
 from apps.multimedia.models import VideoClase
+
+from django.contrib.auth.views import PasswordChangeView
+from django.contrib import messages
+from django.urls import reverse_lazy
+from apps.saas_core.models import ConfigPagoGlobalSaaS
 
 # apps/academias/views.py
 
@@ -73,13 +78,21 @@ class LandingAcademiaView(TemplateView):
 
 
 class LoginAcademiaView(LoginView):
-    """Formulario de inicio de sesión adaptado al tenant."""
+    """Formulario de inicio de sesión adaptado al tenant con control anti-morosos."""
     template_name = "academias/login.html"
 
     def get_success_url(self):
-        """🚀 REDIRECCIÓN INTELIGENTE CORREGIDA: Apunta al portal real del estudiante."""
+        """🚀 REDIRECCIÓN INTELIGENTE: Evalúa si el inquilino está suspendido antes de dar paso."""
         user = self.request.user
-        slug = self.request.tenant.slug
+        tenant = self.request.tenant
+        slug = tenant.slug
+        suscripcion = tenant.suscripcion_saas
+
+        # 🛑 FILTRO DE CONTROL SAAS: Si la academia está bloqueada/suspendida
+        if suscripcion.estado == 'SUSPENDIDO':
+            # Si es un estudiante, no debería usar la plataforma; si es admin, va directo a la pantalla de cobro
+            # Redirigimos a una ruta segura que maneje el aviso (por ejemplo, la landing page o la URL capturada por el middleware)
+            return reverse('academias:dashboard', kwargs={'slug_academia': slug})
 
         try:
             perfil = user.perfil
@@ -87,7 +100,7 @@ class LoginAcademiaView(LoginView):
             if perfil.rol in ['ADMIN_ACADEMIA', 'PROFESOR']:
                 return reverse('academias:dashboard', kwargs={'slug_academia': slug})
             
-            # 2. 🎯 CORRECCIÓN: Si es Estudiante, va DIRECTO a su portal de tiqueteras y QR
+            # 2. 🎯 Si es Estudiante, va DIRECTO a su portal de tiqueteras y QR
             elif perfil.rol == 'ESTUDIANTE':
                 return reverse('planes_estudiantes:portal_estudiante', kwargs={'slug_academia': slug})
         
@@ -104,7 +117,27 @@ class DashboardAdminView(LoginRequiredMixin, TemplateView):
     """Renderiza el panel de control administrativo de la academia específica."""
     template_name = "academias/dashboard.html"
 
+    def get(self, request, *args, **kwargs):
+        """Intercepta la petición GET para evitar procesar contexto si la cuenta está en mora."""
+        academia = self.request.tenant
+        suscripcion = academia.suscripcion_saas
+        
+        # ⚡ CORTOCIRCUITO MAESTRO: Si la academia está suspendida, congelamos el backend aquí
+        if suscripcion.estado == 'SUSPENDIDO':
+            datos_pago = ConfigPagoGlobalSaaS.objects.first()
+            
+            # Renderizamos directamente la plantilla de bloqueo, ignorando por completo todo el código de abajo
+            return render(request, 'academias/bloqueado_pago.html', {
+                'academia': academia,
+                'suscripcion': suscripcion,
+                'datos_pago': datos_pago,
+                'monto_a_pagar': suscripcion.plan.precio_mensual
+            }, status=403)
+            
+        return super().get(request, *args, **kwargs)
+
     def get_context_data(self, **kwargs):
+        # Este método ya SOLO se ejecutará si la academia está ACTIVA y AL DÍA.
         context = super().get_context_data(**kwargs)
         academia = self.request.tenant
         context['academia'] = academia
@@ -123,7 +156,7 @@ class DashboardAdminView(LoginRequiredMixin, TemplateView):
         # 👥 KPI DE ESTUDIANTES Y EVENTOS
         context['eventos_activos'] = Evento.objects.filter(
             academia=academia, estado__in=['REGISTRO_ONLINE', 'REGISTRO_PUERTA']
-        ).order_by('fecha')[:5] # Limitamos a 5 para no saturar la vista
+        ).order_by('fecha')[:5]
 
         context['estudiantes_totales'] = Estudiante.objects.filter(academia=academia).count()
         context['estudiantes_activos'] = Estudiante.objects.filter(academia=academia, estado='ACTIVO').count()
@@ -161,64 +194,53 @@ class DashboardAdminView(LoginRequiredMixin, TemplateView):
         context['porcentaje_efectivo'] = (caja_efectivo / total_cajas * 100) if total_cajas > 0 else 0
         context['porcentaje_transferencia'] = (caja_transferencia / total_cajas * 100) if total_cajas > 0 else 0
 
-        # 🚨 ALERTA 1: ALUMNOS EN RIESGO (OPTIMIZADO PARA EVITAR N+1)
+        # Alumnos en riesgo... (Mantenemos tu lógica intacta sin tocar nada)
         hace_7_dias = ahora - timezone.timedelta(days=7)
-        
-        # 🛠️ CORRECCIÓN: Usamos 'asistencias' e 'inscripciones' según tus related_names
         estudiantes_activos = Estudiante.objects.filter(
             academia=academia, estado='ACTIVO'
         ).annotate(
-            ultima_asistencia=Max('asistencias__fecha_hora')  # Cambiado a 'asistencias'
+            ultima_asistencia=Max('asistencias__fecha_hora')
         ).prefetch_related(
-            Prefetch('inscripciones', queryset=InscripcionPlan.objects.order_by('-id')) # Cambiado a 'inscripciones'
+            Prefetch('inscripciones', queryset=InscripcionPlan.objects.order_by('-id'))
         )
 
         lista_alumnos_riesgo = []
         for est in estudiantes_activos:
-            # Filtramos si la última asistencia fue hace más de 7 días, o si nunca vino y se registró hace más de 7 días
             if (est.ultima_asistencia and est.ultima_asistencia < hace_7_dias) or \
                (not est.ultima_asistencia and est.fecha_registro.date() < hace_7_dias.date()):
                 
                 est.ultima_asistencia_str = est.ultima_asistencia.strftime('%d/%m/%Y') if est.ultima_asistencia else "Nunca ha asistido"
-                
-                # Extraemos el plan del prefetch para no hacer consultas extra
-                # Cambiado a est.inscripciones.all()
                 planes_alumno = list(est.inscripciones.all())
                 est.plan_nombre = planes_alumno[0].plan.nombre if planes_alumno else "Sin Plan Activo"
-                
                 lista_alumnos_riesgo.append(est)
 
         context['alumnos_en_riesgo_lista'] = lista_alumnos_riesgo
         context['alumnos_en_riesgo'] = len(lista_alumnos_riesgo)
 
-        # 🚨 ALERTA 2: PLANES POR VENCER
+        # Planes por vencer...
         dentro_de_5_dias = hoy_fecha + timezone.timedelta(days=5)
         context['planes_por_vencer_lista'] = InscripcionPlan.objects.filter(
             academia=academia, fecha_fin__gte=hoy_fecha, fecha_fin__lte=dentro_de_5_dias
         ).select_related('estudiante', 'plan')
         context['planes_por_vencer'] = context['planes_por_vencer_lista'].count()
 
-        # ⚖️ ANÁLISIS COMPARATIVO
+        # Comparativa analítica...
         ingresos_mes_anterior = ReciboIngreso.objects.filter(
             academia=academia, estado='ACTIVO', fecha__year=año_anterior, fecha__month=mes_anterior
         ).aggregate(total=Sum('monto'))['total'] or 0
-        
         context['comparativa_ingresos'] = round(((ingresos_mes - ingresos_mes_anterior) / ingresos_mes_anterior) * 100, 1) if ingresos_mes_anterior > 0 else 100.0
 
-        # 📈 GRÁFICOS (Pasados como JSON para JavaScript)
+        # Gráficos Chart.js...
         datos_ingresos = ReciboIngreso.objects.filter(
             academia=academia, estado='ACTIVO', fecha__year=año_actual
         ).values('fecha__month').annotate(total=Sum('monto'))
-        
         datos_gastos = Gasto.objects.filter(
             academia=academia, estado='ACTIVO', fecha__year=año_actual
         ).values('fecha__month').annotate(total=Sum('monto'))
 
-        # 🛠️ CORRECCIÓN: Envolvemos el resultado en float() para que json.dumps lo acepte
         chart_ingresos = [float(next((d['total'] for d in datos_ingresos if d['fecha__month'] == m), 0)) for m in range(1, 13)]
         chart_gastos = [float(next((d['total'] for d in datos_gastos if d['fecha__month'] == m), 0)) for m in range(1, 13)]
 
-        # Convertimos a JSON para que JS pueda leerlo sin errores de sintaxis
         context['chart_ingresos'] = json.dumps(chart_ingresos)
         context['chart_gastos'] = json.dumps(chart_gastos)
 
@@ -276,3 +298,15 @@ class LogoutAcademiaView(LogoutView):
         slug = self.request.tenant.slug
         # Al salir, lo mandamos al index comercial de la academia actual
         return reverse('academias:index', kwargs={'slug_academia': slug})
+    
+
+class CambioPasswordView(LoginRequiredMixin, PasswordChangeView):
+    """Vista segura para que el usuario cambie su contraseña."""
+    template_name = "academias/cambio_password.html"
+
+    def get_success_url(self):
+        # Generamos un mensaje de éxito que se mostrará en el dashboard
+        messages.success(self.request, "¡Tu contraseña ha sido actualizada con éxito y de forma segura!")
+        
+        # Redirigimos al dashboard del tenant actual
+        return reverse('academias:dashboard', kwargs={'slug_academia': self.request.tenant.slug})

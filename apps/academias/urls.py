@@ -16,4 +16,6 @@ urlpatterns = [
     # El Dashboard administrativo que ya creamos
     path('<slug:slug_academia>/dashboard/', views.DashboardAdminView.as_view(), name='dashboard'),
     path('<slug:slug_academia>/configuracion/', views.BrandingConfigView.as_view(), name='configuracion'),
+
+    path('<slug:slug_academia>/cambiar-password/', views.CambioPasswordView.as_view(), name='cambiar_password'),
 ]
