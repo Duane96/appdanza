@@ -52,6 +52,19 @@
 
             </div>
             {% endfor %}
+            <div class="mt-5 pt-4 border-top border-2 border-light text-center">
+                <p class="text-secondary small mb-3">También hemos enviado una copia de estos QRs a tu correo electrónico.</p>
+                
+                <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center">
+                    {# Asumiendo que tienes una url llamada 'academia_landing' o similar en tus urls globales #}
+                    {# Si no la tienes aún, podemos usar un enlace genérico '/' o la ruta que uses para el index del tenant #}
+                    <a href="/" class="btn btn-outline-dark fw-bold rounded-pill px-4 py-2">
+                        <i class="bi bi-house-door me-2"></i> Volver al Inicio
+                    </a>
+                    
+                   
+                </div>
+            </div>
 
         </div>
     </div>

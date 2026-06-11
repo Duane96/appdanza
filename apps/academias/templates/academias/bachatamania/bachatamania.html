@@ -1,0 +1,382 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bachatamanía Fusion Night | {{ academia.nombre }}</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;600;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            /* FUSION NIGHT PALETTE - ¡ULTRA VIBRANTE! */
+            --fusion-bg-base: #100020; /* Púrpura profundo y rico */
+            --fusion-magenta: #FF007F; /* Fucsia eléctrico */
+            --fusion-cyan: #00FFFF; /* Cian eléctrico */
+            --brand-yellow: #FFC800; /* Amarillo de image 0, ahora es acento VIP */
+            
+            /* Textos */
+            --fusion-text-light: #FFFFFF;
+            --fusion-text-muted: #CBD5E1;
+            
+            /* Efectos Glow */
+            --glow-magenta: rgba(255, 0, 127, 0.5);
+            --glow-cyan: rgba(0, 255, 255, 0.4);
+            --glow-yellow: rgba(255, 200, 0, 0.6);
+        }
+
+        body {
+            font-family: 'Urbanist', sans-serif; /* Más urbana y moderna */
+            background-color: var(--fusion-bg-base);
+            /* ATMÓSFERA DE FUSIÓN ABSTRACTA */
+            background-image: 
+                /* Luces de escenario abstractas (humo magenta/púrpura) */
+                radial-gradient(circle at 15% 15%, var(--glow-magenta) 0%, transparent 40%),
+                radial-gradient(circle at 85% 85%, rgba(16, 0, 32, 0.8) 0%, #000 100%),
+                /* Efecto de ruido o grano para textura */
+                url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1IiBoZWlnaHQ9IjUiPgo8cmVjdCB3aWR0aD0iNSIgaGVpZHRoPSI1IiBmaWxsPSIjMDAwIiBmaWxsLW9wYWNpdHk9IjAuMDUiPjwvcmVjdD4KPC9zdmc+');
+            background-attachment: fixed;
+            color: var(--fusion-text-light);
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+        }
+
+        /* TIPOGRAFÍA DE IMPACTO CON DEGRADADO ( provided in image_0.png) */
+        h1, h2, h3, h4, h5, .font-heading {
+            font-family: 'Arial Black', Arial, sans-serif;
+            text-transform: uppercase;
+            letter-spacing: -2px; /* Super compacto, agresivo */
+            font-weight: 900;
+        }
+        
+        .title-fusion {
+            background: linear-gradient(135deg, var(--fusion-cyan) 0%, var(--fusion-magenta) 50%, var(--brand-yellow) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            /* Brillo de texto vibrante */
+            filter: drop-shadow(0 0 8px rgba(255, 0, 127, 0.6));
+        }
+
+        /* --- BOTONES PREMIUM DE FUSIÓN (¡WOW!) --- */
+        /* Botón Magenta-Cian (Eléctrico) */
+        .btn-fusion-electric {
+            background: linear-gradient(90deg, var(--fusion-cyan) 0%, var(--fusion-magenta) 100%);
+            color: #000 !important;
+            font-family: 'Arial Black', Arial, sans-serif;
+            text-transform: uppercase;
+            border: none;
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+            box-shadow: 0 0 20px var(--glow-magenta);
+            position: relative;
+        }
+        
+        .btn-fusion-electric:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 0 35px rgba(255, 0, 127, 1), 0 0 15px rgba(0, 255, 255, 1);
+        }
+
+        /* Botón Amarillo VIP ( provided in image_0.png) */
+        .btn-fusion-vip {
+            background: #000;
+            border: 2px solid var(--brand-yellow);
+            color: var(--brand-yellow) !important;
+            font-family: 'Arial Black', Arial, sans-serif;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 15px var(--glow-yellow);
+        }
+        
+        .btn-fusion-vip:hover {
+            background-color: var(--brand-yellow);
+            color: #000 !important;
+            box-shadow: 0 0 30px rgba(255, 200, 0, 1);
+        }
+
+        /* --- PANELES CON GLOW DE FUSIÓN (CARDS) --- */
+        .panel-fusion {
+            background: rgba(16, 0, 32, 0.4);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-radius: 20px;
+            /* BORDE NEÓN MULTICOLOR */
+            border: 2px solid;
+            border-image: linear-gradient(135deg, var(--fusion-cyan) 0%, var(--fusion-magenta) 100%) 1;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+            transition: all 0.4s ease;
+        }
+
+        .ticket-card-fusion {
+            background: linear-gradient(135deg, rgba(16, 0, 32, 0.8) 0%, rgba(0,0,0,0.9) 100%);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Salto dinámico */
+            position: relative;
+            /* Borde neón fucsia sutil */
+            border: 2px solid rgba(255, 0, 127, 0.2);
+        }
+        
+        /* Línea neón superior dinámica */
+        .ticket-card-fusion::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 4px;
+            background: linear-gradient(90deg, var(--fusion-cyan), var(--fusion-magenta));
+            z-index: 2;
+            opacity: 0.8;
+        }
+        
+        .ticket-card-fusion:hover {
+            transform: translateY(-12px) scale(1.02);
+            border-color: rgba(255, 0, 127, 0.8);
+            box-shadow: 0 30px 60px rgba(0,0,0,0.8), 0 0 20px var(--glow-magenta);
+        }
+
+        /* --- NAVBAR DE FUSIÓN --- */
+        .navbar-event {
+            background: rgba(16, 0, 32, 0.6) !important;
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        .nav-link {
+            color: var(--fusion-text-light) !important;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+        
+        .nav-link:hover {
+            color: var(--fusion-cyan) !important;
+            text-shadow: 0 0 8px var(--glow-cyan);
+        }
+
+        /* Galería Ultra Vibrante */
+        .gallery-img-fusion {
+            border-radius: 20px;
+            transition: all 0.4s ease;
+            cursor: pointer;
+            border: 4px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .gallery-img-fusion:hover {
+            transform: scale(1.08) rotate(2deg); /* Animación de baile */
+            border-image: linear-gradient(135deg, var(--fusion-magenta) 0%, var(--fusion-cyan) 100%) 1;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.7), 0 0 20px var(--glow-magenta);
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-event fixed-top py-3">
+        <div class="container">
+            <a class="navbar-brand font-heading fs-2 d-flex align-items-center title-fusion" href="#">
+                {% if academia.logo %}
+                    <img src="{{ academia.logo.url }}" alt="Bachatamanía" style="height: 50px;">
+                {% else %}
+                    BACHATA<span class="text-white">MANÍA</span>
+                {% endif %}
+            </a>
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+                <ul class="navbar-nav align-items-center gap-3">
+                    <li class="nav-item"><a class="nav-link px-3" href="#cartelera">Cartelera</a></li>
+                    {% if galeria_fotos %} <li class="nav-item"><a class="nav-link px-3" href="#galeria">Memorias</a></li>
+                    {% endif %}
+                    <li class="nav-item ms-lg-2 mt-3 mt-lg-0">
+                        <a href="#cartelera" class="btn btn-fusion-vip rounded-pill px-4 py-2">Comprar Tickets</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <header id="heroBachatamania" class="carousel slide carousel-fade" data-bs-ride="carousel" style="height: 98vh; position: relative; overflow: hidden;">
+        <div class="carousel-inner h-100">
+            <div class="carousel-item active h-100" style="position: relative;">
+                {% if academia.hero_imagen_1 %}
+                    <img src="{{ academia.hero_imagen_1.url }}" alt="Bachatamanía Oficial" class="d-block w-100 h-100 object-fit-cover">
+                {% else %}
+                    <div class="position-absolute w-100 h-100" style="background: var(--fusion-bg-base);"></div>
+                {% endif %}
+                
+                <div class="position-absolute bottom-0 start-0 right-0" style="height: 250px; background: linear-gradient(to top, var(--fusion-bg-base), transparent); z-index: 1;"></div>
+
+                <div class="carousel-caption d-flex flex-column justify-content-center h-100 text-center text-md-start px-3 px-md-5" style="bottom: 0; z-index: 2; left: 0; right: 0;">
+                    <div class="container mt-auto mb-auto">
+                        <div class="panel-fusion p-5 mx-0 mx-lg-3" style="max-width: 850px;">
+                            <span class="badge px-4 py-2 rounded-pill mb-4" style="background: var(--fusion-magenta); color: #000; font-family: 'Urbanist', sans-serif; font-weight: 800;">
+                                <i class="bi bi-star-fill me-1"></i> EXPERIENCIA ULTRA VIP
+                            </span>
+                            <h1 class="display-3 font-heading mb-3 title-fusion">{{ academia.hero_titulo|default:"Siente la Pasión de Bailar" }}</h1>
+                            <p class="fs-4 mb-5" style="color: var(--fusion-text-muted);">{{ academia.hero_eslogan|default:"Prepárate para la fusión más grande de ritmo, energía y noche urbana." }}</p>
+                            <a href="#cartelera" class="btn btn-fusion-electric btn-lg px-5 py-3 rounded-pill">Ver Próximos Eventos</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% for evento in eventos %}
+                <div class="carousel-item h-100" style="position: relative;">
+                    {% if evento.imagen %}
+                        <img src="{{ evento.imagen.url }}" alt="{{ evento.nombre }}" class="d-block w-100 h-100 object-fit-cover">
+                    {% else %}
+                        <div class="position-absolute w-100 h-100" style="background: #111;"></div>
+                    {% endif %}
+                    
+                    <div class="position-absolute bottom-0 start-0 right-0" style="height: 250px; background: linear-gradient(to top, var(--fusion-bg-base), transparent); z-index: 1;"></div>
+
+                    <div class="carousel-caption d-flex flex-column justify-content-center h-100 text-center text-md-start px-3 px-md-5" style="bottom: 0; z-index: 2; left: 0; right: 0;">
+                        <div class="container mt-auto mb-auto">
+                            <div class="panel-fusion p-5 mx-0 mx-lg-3" style="max-width: 850px;">
+                                <span class="badge px-4 py-2 rounded-pill mb-4" style="background: var(--fusion-cyan); color: #000; font-family: 'Urbanist', sans-serif; font-weight: 800;">
+                                    <i class="bi bi-fire me-1"></i> FIESTA EN CAMINO
+                                </span>
+                                <h1 class="display-3 font-heading mb-3 title-fusion">{{ evento.nombre }}</h1>
+                                <div class="d-flex flex-wrap gap-4 align-items-center mb-5 fs-4 justify-content-center justify-content-md-start">
+                                    <span class="text-white"><i class="bi bi-calendar-event me-2 text-cyan"></i>{{ evento.fecha|date:"d M, Y" }}</span>
+                                    <span class="text-white"><i class="bi bi-geo-alt-fill me-2 text-magenta"></i>{{ evento.ubicacion }}</span>
+                                </div>
+                                <div class="d-flex gap-3 flex-wrap justify-content-center justify-content-md-start">
+                                    {% if evento.estado == 'REGISTRO_ONLINE' %}
+                                        <a href="{% url 'eventos:registro_publico' academia.slug evento.slug %}" class="btn btn-fusion-electric btn-lg px-5 py-3 rounded-pill">
+                                            <i class="bi bi-ticket-detailed-fill me-2"></i>Asegurar Entrada
+                                        </a>
+                                    {% else %}
+                                        <button class="btn btn-outline-light btn-lg px-5 py-3 rounded-pill font-heading" disabled>Solo Taquilla</button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <button class="carousel-control-prev" type="button" data-bs-target="#heroBachatamania" data-bs-slide="prev" style="width: 7%; z-index: 5;">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#heroBachatamania" data-bs-slide="next" style="width: 7%; z-index: 5;">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+        </button>
+    </header>
+
+    <section id="cartelera" class="py-5 position-relative">
+        <div class="container py-5">
+            <div class="mb-5 text-center">
+                <h2 class="display-5 font-heading title-fusion">CARTELERA <span class="text-white">ACTIVA</span></h2>
+                <p class="fs-4 mt-2" style="color: var(--fusion-text-muted);">Reserva tu lugar antes del Sold Out. ¡No te quedes por fuera!</p>
+            </div>
+
+            <div class="row g-4">
+                {% for evento in eventos %}
+                    <div class="col-md-6 col-xl-4">
+                        <div class="ticket-card-fusion h-100 d-flex flex-column">
+                            <div class="position-relative" style="aspect-ratio: 16/9; background: #000;">
+                                {% if evento.imagen %}
+                                    <img src="{{ evento.imagen.url }}" alt="{{ evento.nombre }}" class="w-100 h-100 object-fit-cover">
+                                {% endif %}
+                                <div class="position-absolute top-0 end-0 m-3">
+                                    <span class="badge rounded-pill px-3 py-2 shadow-lg font-heading" style="background: rgba(0,0,0,0.8); border: 2px solid var(--fusion-cyan); color: var(--fusion-cyan); filter: drop-shadow(0 0 5px var(--glow-cyan));">
+                                        <i class="bi bi-clock-history me-1"></i> {{ evento.fecha|date:"h:i A" }}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div class="p-4 d-flex flex-column flex-grow-1">
+                                <span class="text-magenta font-heading small mb-2 d-block">{{ evento.fecha|date:"d M, Y" }}</span>
+                                <h4 class="font-heading mb-3">{{ evento.nombre }}</h4>
+                                <p class="small mb-4" style="color: var(--fusion-text-muted);"><i class="bi bi-geo-alt-fill text-cyan me-2"></i>{{ evento.ubicacion }}</p>
+                                
+                                <div class="mt-auto">
+                                    <div class="d-flex justify-content-between align-items-end mb-4 px-3 py-3 rounded-3" style="background: rgba(16, 0, 32, 0.5); border: 1px solid rgba(255,255,255,0.03);">
+                                        <div>
+                                            <span class="d-block small text-white">Preventa VIP</span>
+                                            <strong class="fs-3 font-heading" style="color: var(--brand-yellow); text-shadow: 0 0 10px var(--glow-yellow);">${{ evento.precio_preventa|floatformat:"0" }}</strong>
+                                        </div>
+                                        <div class="text-end">
+                                            <span class="d-block small" style="color: var(--fusion-text-muted);">Taquilla</span>
+                                            <span class="text-decoration-line-through font-heading" style="color: var(--fusion-text-muted);">${{ evento.precio_puerta|floatformat:"0" }}</span>
+                                        </div>
+                                    </div>
+
+                                    {% if evento.estado == 'REGISTRO_ONLINE' %}
+                                        <a href="{% url 'eventos:registro_publico' academia.slug evento.slug %}" class="btn btn-fusion-electric w-100 py-3 rounded-pill">COMPRAR TICKETS AHORA</a>
+                                    {% else %}
+                                        <button class="btn btn-outline-light w-100 py-3 rounded-pill font-heading" disabled>SOLO TAQUILLA FÍSICA</button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="col-12 text-center py-5">
+                        <div class="panel-fusion p-5 d-inline-block">
+                            <i class="bi bi-calendar-x-fill display-1 mb-3 title-fusion d-block"></i>
+                            <h3 class="font-heading">ESTAMOS PREPARANDO LA FIESTA</h3>
+                            <p style="color: var(--fusion-text-muted);">Mantente atento a nuestras redes sociales.</p>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    {% if galeria_fotos %}
+    <section id="galeria" class="py-5" style="background: rgba(0,0,0,0.3); border-top: 1px solid rgba(255,255,255,0.05);">
+        <div class="container py-5">
+            <div class="mb-5 text-center">
+                <h2 class="display-5 font-heading title-fusion">MEMORIAS <span class="text-white">ÉPICAS</span></h2>
+                <p class="fs-4 mt-2" style="color: var(--fusion-text-muted);">Revive los mejores momentos de la fiesta más grande.</p>
+            </div>
+            
+            <div class="row g-4 justify-content-center">
+                {% for foto in galeria_fotos|slice:":6" %}
+                <div class="col-6 col-md-4 col-xl-3">
+                    <img src="{{ foto.imagen.url }}" alt="Memoria Bachatamanía" class="img-fluid gallery-img-fusion w-100 object-fit-cover shadow-lg" style="height: 280px;">
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    <footer class="pt-5 pb-3" style="background: #08080a; border-top: 2px solid; border-image: linear-gradient(90deg, var(--fusion-magenta), var(--fusion-cyan)) 1;">
+        <div class="container">
+            <div class="row g-4 mb-4 justify-content-between align-items-center">
+                <div class="col-lg-4 text-center text-lg-start">
+                    <h3 class="font-heading mb-2 title-fusion fs-2">
+                        {% if academia.logo %}
+                            <img src="{{ academia.logo.url }}" alt="Logo" style="height: 45px;" class="me-2">
+                        {% else %}
+                            BACHATA<span class="text-white">MANÍA</span>
+                        {% endif %}
+                    </h3>
+                    <p class="small" style="color: var(--fusion-text-muted);">Producción de eventos de bachata de alto nivel. La energía no miente.</p>
+                </div>
+                
+                <div class="col-lg-4 text-center text-lg-end">
+                    <div class="d-flex justify-content-center justify-content-lg-end gap-3 mb-3 fs-3">
+                        {% if academia.instagram_url %}<a href="{{ academia.instagram_url }}" target="_blank" class="text-white hover-magenta"><i class="bi bi-instagram"></i></a>{% endif %}
+                        {% if academia.facebook_url %}<a href="{{ academia.facebook_url }}" target="_blank" class="text-white hover-cyan"><i class="bi bi-facebook"></i></a>{% endif %}
+                        {% if academia.whatsapp_url %}<a href="{{ academia.whatsapp_url }}" target="_blank" class="text-white hover-magenta"><i class="bi bi-whatsapp"></i></a>{% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="text-center pt-4 mt-4" style="border-top: 1px solid rgba(255,255,255,0.03);">
+                <p class="small mb-0" style="color: var(--fusion-text-muted);">
+                    &copy; 2026 Bachatamanía. Powered by <a href="#" class="text-yellow font-heading text-decoration-none">AppDanza</a>
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

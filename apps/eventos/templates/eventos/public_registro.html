@@ -128,10 +128,14 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", function () {
-        // Precios base inyectados desde Django
-        let precioIndividual = parseFloat("{{ evento.precio_por_dia }}") || 0;
-        let precioFull = parseFloat("{{ evento.precio_preventa }}") || 0;
-        let precioCupon = 0; // Se actualiza si aplican cupón
+        // 🚀 CORRECCIÓN SENIOR: Blindaje de parsing contra configuraciones de idioma (comas vs puntos)
+        // Usamos las variables flotantes que ya inyectaste desde la vista
+        let precioIndividual = parseFloat("{{ precio_por_dia }}".replace(',', '.')) || 0;
+        let precioFull = parseFloat("{{ precio_full }}".replace(',', '.')) || 0;
+        let precioCupon = 0; 
+
+        // Variable clave: Le decimos a JS si estamos en un evento multidía o no
+        const esMultiDia = {{ evento.es_multidias|yesno:"true,false" }};
 
         const selectDias = document.getElementById("id_dias_adquirir");
         const inputCantidad = document.getElementById("id_cantidad_entradas");
@@ -139,9 +143,16 @@
         const btnCupon = document.getElementById("btn_aplicar_cupon");
         const feedbackCupon = document.getElementById("cupon_feedback");
 
-        // 🎯 CORRECCIÓN JS: Ahora validamos si el value es "FULL" en lugar del número de días
         function getPrecioBase() {
-            if (selectDias && selectDias.value === "FULL") return precioFull;
+            // 🎯 LÓGICA CORREGIDA: Si NO es multidía, el precio siempre es preventa (precioFull)
+            if (!esMultiDia) {
+                return precioFull;
+            }
+            
+            // Si ES multidía, evaluamos qué seleccionó el usuario
+            if (selectDias && selectDias.value === "FULL") {
+                return precioFull;
+            }
             return precioIndividual;
         }
 
@@ -159,7 +170,6 @@
             const codigo = inputCupon.value.trim();
             if (!codigo) return;
 
-            // Fetch API moderno para validar el cupón sin recargar la página
             fetch(`/{% if request.tenant %}{{ request.tenant.slug }}{% else %}{{ academia.slug }}{% endif %}/eventos/{{ evento.slug }}/validar-cupon/?codigo=${codigo}`)
                 .then(res => res.json())
                 .then(data => {
@@ -176,11 +186,9 @@
                 });
         });
 
-        // Listeners para recalcular en tiempo real
         if(selectDias) selectDias.addEventListener("change", liquidarPrecios);
         inputCantidad.addEventListener("input", liquidarPrecios);
         
-        // Ejecución inicial al cargar la vista
         liquidarPrecios();
     });
 </script>

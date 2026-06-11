@@ -413,7 +413,7 @@ class RegistroEventoPublicoView(FormView):
         self.request.session['boletas_recien_compradas'] = boletas_sesion
 
         # 🚀 DISPARADOR DE CORREO: Tickets de Evento y QR
-        if recibo.comprador_email:
+        if recibo.comprador_correo:
             # Preparamos las boletas para el template del correo
             boletas_correo = []
             for b in boletas_sesion:
@@ -432,7 +432,7 @@ class RegistroEventoPublicoView(FormView):
                     'evento': self.evento_obj,
                     'boletas': boletas_correo
                 },
-                destinatarios=[recibo.comprador_email]
+                destinatarios=[recibo.comprador_correo]
             )
         
         return redirect('eventos:registro_exito', slug_academia=self.academia_obj.slug, recibo_id=recibo.id)
