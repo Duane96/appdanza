@@ -75,13 +75,17 @@ class Evento(TenantModel):
         ordering = ['-fecha']
 
     # 🧠 MÉTODO SENIOR: Cómputo de Deudas Dinámicas con Reglas de País
+    # 🧠 MÉTODO SENIOR: Cómputo de Deudas Dinámicas con Reglas de País
     def calcular_estado_comisiones(self):
         """Calcula de manera exacta las comisiones transaccionales manejando el salvoconducto Partner."""
         suscripcion = self.academia.suscripcion_saas
         
-        # Conteo físico de registros emitidos para el evento actual
-        total_online = self.recibos_evento.filter(origen='ONLINE').count()
-        total_puerta = self.recibos_evento.filter(origen='PUERTA').count()
+        # 🐛 EL BUG ESTABA AQUÍ: Usabas .count() (contar recibos). Si 1 recibo tenía 5 entradas, lo contaba como 1.
+        # ✅ CORRECCIÓN SENIOR: Usamos models.Sum('cantidad_entradas') para contar a las personas reales.
+        
+        # Conteo físico real de registros emitidos para el evento actual
+        total_online = self.recibos_evento.filter(origen='ONLINE').aggregate(total=models.Sum('cantidad_entradas'))['total'] or 0
+        total_puerta = self.recibos_evento.filter(origen='PUERTA').aggregate(total=models.Sum('cantidad_entradas'))['total'] or 0
         
         # 🎁 FILTRO VIP COMPAÑEROS DE PRUEBA: Si es aliado o partner, la plataforma reporta cero deudas
         if suscripcion and suscripcion.es_cuenta_partner_gratis:
@@ -96,7 +100,7 @@ class Evento(TenantModel):
             }
             
         # 💵 MATEMÁTICAS COMERCIALES CLIENTES CONVENCIONALES
-        # 🚨 NOTA SENIOR: Usamos models.Sum para evitar la palabra suelta en amarillo si no importaste Sum arriba
+        # Ahora sí, multiplicamos la cantidad exacta de BOLETAS por la tarifa del SaaS
         deuda_online_calculada = total_online * 5000
         es_minima = False
         

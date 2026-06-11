@@ -130,8 +130,8 @@
     document.addEventListener("DOMContentLoaded", function () {
         // 🚀 CORRECCIÓN SENIOR: Blindaje de parsing contra configuraciones de idioma (comas vs puntos)
         // Usamos las variables flotantes que ya inyectaste desde la vista
-        let precioIndividual = parseFloat("{{ precio_por_dia }}".replace(',', '.')) || 0;
-        let precioFull = parseFloat("{{ precio_full }}".replace(',', '.')) || 0;
+        let precioIndividual = parseFloat("{{ precio_por_dia|stringformat:'f' }}") || 0;
+        let precioFull = parseFloat("{{ precio_full|stringformat:'f' }}") || 0;
         let precioCupon = 0; 
 
         // Variable clave: Le decimos a JS si estamos en un evento multidía o no
