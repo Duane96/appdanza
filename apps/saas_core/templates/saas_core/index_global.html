@@ -3,15 +3,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppDanza | La Cartelera Global de Baile</title>
     
-    <!-- Bootstrap 5.3 & Icons -->
+    <title>AppDanza | Eventos y Clases de Bachata, Salsa y Kizomba en Bogotá</title>
+    <meta name="description" content="Descubre la mejor cartelera de eventos, sociales y academias de baile en Bogotá. Encuentra clases de Salsa, Bachata y Kizomba, o gestiona tu academia con nuestro software.">
+    <meta name="keywords" content="eventos de baile, salsa bogotá, bachata bogotá, kizomba, sociales de baile, academias de baile colombia, software para academias, AppDanza">
+    <meta name="author" content="AppDanza">
+    
+    <link rel="canonical" href="{{ request.build_absolute_uri }}">
+
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ request.build_absolute_uri }}">
+    <meta property="og:title" content="AppDanza | Cartelera Global de Baile en Bogotá">
+    <meta property="og:description" content="Asegura tu pase a los mejores sociales y talleres de baile. ¿Eres director? Digitaliza tu taquilla y academia hoy mismo.">
+    <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}/static/img/appdanza-og.jpg">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="AppDanza | Cartelera Global de Baile">
+    <meta name="twitter:description" content="Descubre la mejor cartelera de eventos, sociales y academias de baile en Bogotá.">
+    <meta name="twitter:image" content="{{ request.scheme }}://{{ request.get_host }}/static/img/appdanza-og.jpg">
+
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css" rel="stylesheet">
     
-    <!-- Fuentes Premium -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
     
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "AppDanza",
+      "url": "https://www.appdanza.com/",
+      "description": "Plataforma SaaS para academias de baile y cartelera global de eventos de Salsa y Bachata."
+    }
+    </script>
+
+    {% if eventos_globales %}
+    <script type="application/ld+json">
+    [
+      {% for evento in eventos_globales|slice:":5" %}
+      {
+        "@context": "https://schema.org",
+        "@type": "Event",
+        "name": "{{ evento.nombre }}",
+        "startDate": "{{ evento.fecha|date:'c' }}",
+        "location": {
+          "@type": "Place",
+          "name": "{{ evento.academia.nombre }}",
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "Bogotá",
+            "addressCountry": "CO",
+            "streetAddress": "{{ evento.ubicacion }}"
+          }
+        },
+        "image": [
+          {% if evento.imagen %}"{{ request.scheme }}://{{ request.get_host }}{{ evento.imagen.url }}"{% endif %}
+        ],
+        "description": "Evento de baile organizado por {{ evento.academia.nombre }}.",
+        "offers": {
+          "@type": "Offer",
+          "price": "{{ evento.precio_preventa }}",
+          "priceCurrency": "COP",
+          "url": "{{ request.scheme }}://{{ request.get_host }}{% url 'academias:index' evento.academia.slug %}"
+        }
+      }{% if not forloop.last %},{% endif %}
+      {% endfor %}
+    ]
+    </script>
+    {% endif %}
+
     <style>
         :root {
             /* Paleta Vibrante & Cálida (Estilo Baile/Energía) */
@@ -109,11 +173,63 @@
         /* Métricas */
         .metrics-section { background: linear-gradient(135deg, var(--text-main) 0%, #312e81 100%); color: white; border-radius: 40px; position: relative; overflow: hidden; }
         .metrics-section::before { content: ''; position: absolute; width: 300px; height: 300px; background: var(--primary); border-radius: 50%; filter: blur(80px); opacity: 0.3; top: -50px; left: -50px; }
+
+        /* --- NUEVO: CARRUSEL INFINITO DE EVENTOS (CARTELERA) --- */
+        .cartelera-wrapper {
+            width: 100%;
+            overflow: hidden;
+            padding: 2rem 0;
+            position: relative;
+        }
+
+        /* Efecto de desvanecimiento a los lados */
+        .cartelera-wrapper::before,
+        .cartelera-wrapper::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            width: 80px;
+            height: 100%;
+            z-index: 3;
+            pointer-events: none;
+        }
+        .cartelera-wrapper::before {
+            left: 0;
+            background: linear-gradient(to right, var(--bg-body) 0%, transparent 100%);
+        }
+        .cartelera-wrapper::after {
+            right: 0;
+            background: linear-gradient(to left, var(--bg-body) 0%, transparent 100%);
+        }
+
+        .cartelera-track {
+            display: flex;
+            gap: 2rem;
+            width: max-content;
+            animation: scrollInfinito 40s linear infinite; 
+            will-change: transform; /* Aceleración GPU */
+        }
+
+        /* Pausa al pasar el mouse */
+        .cartelera-track:hover {
+            animation-play-state: paused;
+        }
+
+        .cartelera-item {
+            width: 350px; 
+            flex-shrink: 0;
+        }
+
+        @keyframes scrollInfinito {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(calc(-50% - 1rem)); } 
+        }
     </style>
 </head>
 <body>
 
-    <!-- 🌐 NAVBAR -->
+    <h1 class="visually-hidden">Cartelera de Eventos, Sociales y Clases de Salsa, Bachata y Kizomba en Bogotá</h1>
+
     <nav class="navbar navbar-expand-lg navbar-light navbar-appdanza fixed-top py-3" id="mainNavbar">
         <div class="container">
             <a class="navbar-brand fw-bold font-space d-flex align-items-center gap-2 fs-4" href="#">
@@ -129,33 +245,30 @@
                 <div class="navbar-nav ms-auto align-items-center gap-4 mt-3 mt-lg-0 bg-white bg-lg-transparent p-4 p-lg-0 rounded-4 shadow-sm shadow-lg-none">
                     <a href="#cartelera" class="nav-link">Eventos</a>
                     <a href="#academias" class="nav-link">Academias</a>
-                    <!-- El gancho SaaS se va al final -->
                     <a href="#software" class="btn btn-dark rounded-pill px-4 py-2 fw-bold d-none d-lg-block shadow-sm">Soy Director <i class="bi bi-laptop ms-1"></i></a>
                 </div>
             </div>
         </div>
     </nav>
 
-    <!-- 🌟 HERO CAROUSEL: EL CENTRO SON LOS EVENTOS -->
     <div id="heroEventsCarousel" class="carousel slide carousel-fade hero-carousel" data-bs-ride="carousel" data-bs-pause="false">
         <div class="carousel-inner h-100">
             {% if eventos_globales %}
                 {% for evento in eventos_globales|slice:":3" %}
                 <div class="carousel-item h-100 {% if forloop.first %}active{% endif %}">
                     {% if evento.imagen %}
-                        <img src="{{ evento.imagen.url }}" class="d-block w-100 h-100 object-fit-cover" alt="{{ evento.nombre }}">
+                        <img src="{{ evento.imagen.url }}" class="d-block w-100 h-100 object-fit-cover" alt="Evento de baile {{ evento.nombre }} en Bogotá por {{ evento.academia.nombre }}">
                     {% else %}
                         <div class="w-100 h-100 bg-dark"></div>
                     {% endif %}
                     
-                    <!-- Gradiente oscuro para legibilidad -->
                     <div class="position-absolute top-0 start-0 w-100 h-100" style="background: linear-gradient(0deg, rgba(30,27,75,0.9) 0%, rgba(30,27,75,0.4) 100%);"></div>
                     
                     <div class="carousel-caption-custom px-4">
                         <span class="badge bg-primary text-white rounded-pill px-4 py-2 mb-4 fs-6 tracking-widest text-uppercase shadow-lg border border-white border-opacity-25">
                             <i class="bi bi-star-fill me-1 text-warning"></i> Evento Destacado
                         </span>
-                        <h1 class="display-3 font-space fw-bold text-white mb-3 text-shadow">{{ evento.nombre }}</h1>
+                        <h2 class="display-3 font-space fw-bold text-white mb-3 text-shadow">{{ evento.nombre }}</h2>
                         <p class="fs-4 text-white opacity-75 mb-5 fw-light">
                             <i class="bi bi-calendar-event me-2"></i>{{ evento.fecha|date:"l, d \d\e F" }} &nbsp;|&nbsp; 
                             <i class="bi bi-geo-alt me-2"></i>{{ evento.ubicacion }}
@@ -168,12 +281,11 @@
                 </div>
                 {% endfor %}
             {% else %}
-                <!-- Fallback si no hay eventos activos -->
                 <div class="carousel-item h-100 active">
                     <img src="https://images.unsplash.com/photo-1545128485-c400e7702796?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80" class="d-block w-100 h-100 object-fit-cover" alt="Baile">
                     <div class="position-absolute top-0 start-0 w-100 h-100" style="background: rgba(30,27,75,0.7);"></div>
                     <div class="carousel-caption-custom px-4">
-                        <h1 class="display-3 font-space fw-bold text-white mb-3">La comunidad en movimiento.</h1>
+                        <h2 class="display-3 font-space fw-bold text-white mb-3">La comunidad en movimiento.</h2>
                         <p class="fs-4 text-white opacity-75 mb-5 fw-light">Descubre los mejores talleres, sociales y congresos gestionados por nuestra tecnología.</p>
                         <a href="#cartelera" class="btn btn-primary-custom btn-lg rounded-pill px-5 py-3 font-space fw-bold fs-5 shadow-lg">Explorar Cartelera</a>
                     </div>
@@ -181,7 +293,6 @@
             {% endif %}
         </div>
         
-        <!-- Controles sutiles -->
         <button class="carousel-control-prev" type="button" data-bs-target="#heroEventsCarousel" data-bs-slide="prev" style="width: 5%; z-index: 20;">
             <div class="bg-white bg-opacity-25 rounded-circle p-2 backdrop-blur"><span class="carousel-control-prev-icon"></span></div>
         </button>
@@ -190,7 +301,6 @@
         </button>
     </div>
 
-    <!-- 🎫 CINTA DE TICKETS (TICKER) -->
     {% if eventos_globales %}
     <div class="ticker-wrap shadow-lg">
         <div class="ticker-move">
@@ -200,7 +310,6 @@
                 <div class="ticker-item opacity-50">{{ evento.fecha|date:"d M" }}</div>
                 <div class="ticker-item text-accent">${{ evento.precio_preventa|floatformat:0 }}</div>
             {% endfor %}
-            <!-- Duplicado para efecto infinito -->
             {% for evento in eventos_globales %}
                 <div class="ticker-item text-warning"><i class="bi bi-fire"></i></div>
                 <div class="ticker-item">{{ evento.nombre|upper }}</div>
@@ -211,72 +320,115 @@
     </div>
     {% endif %}
 
-    <!-- 🎟️ CARTELERA GLOBAL DE EVENTOS -->
-    <section id="cartelera" class="container py-5 my-5 position-relative" style="z-index: 2;">
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end mb-5">
-            <div class="text-center text-md-start">
-                <h2 class="font-space fw-bold display-5 text-dark mb-2">Cartelera Oficial</h2>
-                <p class="text-muted fs-5 mb-0">No te quedes por fuera. Asegura tu pase a los mejores eventos.</p>
+    <section id="cartelera" class="py-5 my-5 position-relative" style="z-index: 2;">
+        <div class="container mb-4">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end">
+                <div class="text-center text-md-start">
+                    <h2 class="font-space fw-bold display-5 text-dark mb-2">Cartelera Oficial</h2>
+                    <p class="text-muted fs-5 mb-0">No te quedes por fuera. Asegura tu pase a los mejores eventos.</p>
+                </div>
             </div>
         </div>
 
-        <div class="row g-4 justify-content-center">
-            {% for evento in eventos_globales %}
-            <div class="col-md-6 col-lg-4">
-                <div class="feature-card h-100 d-flex flex-column bg-white p-0">
-                    <div class="position-relative overflow-hidden" style="aspect-ratio: 4/5; background: var(--bg-body);">
-                        {% if evento.imagen %}
-                            <img src="{{ evento.imagen.url }}" alt="{{ evento.nombre }}" class="w-100 h-100 object-fit-cover transition-transform duration-500" style="transition: transform 0.5s ease;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">
-                        {% else %}
-                            <div class="w-100 h-100 d-flex align-items-center justify-content-center bg-light"><i class="bi bi-image fs-1 text-muted opacity-25"></i></div>
-                        {% endif %}
-                        
-                        <div class="position-absolute bottom-0 start-0 w-100 p-4 pt-5" style="background: linear-gradient(0deg, rgba(30,27,75,0.95) 0%, transparent 100%); z-index: 1;"></div>
-                        
-                        <div class="position-absolute top-0 end-0 m-3 bg-white rounded-4 shadow-lg text-center px-3 py-2" style="z-index: 2;">
-                            <span class="d-block small fw-bold text-uppercase" style="color: var(--secondary);">{{ evento.fecha|date:"M" }}</span>
-                            <span class="d-block fs-3 font-space fw-bold text-dark lh-1">{{ evento.fecha|date:"d" }}</span>
-                        </div>
+        <div class="cartelera-wrapper">
+            <div class="cartelera-track">
+                
+                {% for evento in eventos_globales %}
+                <div class="cartelera-item">
+                    <div class="feature-card h-100 d-flex flex-column bg-white p-0">
+                        <div class="position-relative overflow-hidden" style="aspect-ratio: 4/5; background: var(--bg-body);">
+                            {% if evento.imagen %}
+                                <img src="{{ evento.imagen.url }}" alt="Ticket para {{ evento.nombre }}" class="w-100 h-100 object-fit-cover transition-transform duration-500" style="transition: transform 0.5s ease;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'" loading="lazy">
+                            {% else %}
+                                <div class="w-100 h-100 d-flex align-items-center justify-content-center bg-light"><i class="bi bi-image fs-1 text-muted opacity-25"></i></div>
+                            {% endif %}
+                            
+                            <div class="position-absolute bottom-0 start-0 w-100 p-4 pt-5" style="background: linear-gradient(0deg, rgba(30,27,75,0.95) 0%, transparent 100%); z-index: 1;"></div>
+                            
+                            <div class="position-absolute top-0 end-0 m-3 bg-white rounded-4 shadow-lg text-center px-3 py-2" style="z-index: 2;">
+                                <span class="d-block small fw-bold text-uppercase" style="color: var(--secondary);">{{ evento.fecha|date:"M" }}</span>
+                                <span class="d-block fs-3 font-space fw-bold text-dark lh-1">{{ evento.fecha|date:"d" }}</span>
+                            </div>
 
-                        <div class="position-absolute top-0 start-0 m-3" style="z-index: 2;">
-                            <span class="badge bg-white text-dark shadow-lg rounded-pill px-3 py-2 d-flex align-items-center gap-2">
-                                {% if evento.academia.logo %}
-                                    <img src="{{ evento.academia.logo.url }}" alt="Logo" class="rounded-circle" style="width: 20px; height: 20px; object-fit: contain;">
+                            <div class="position-absolute top-0 start-0 m-3" style="z-index: 2;">
+                                <span class="badge bg-white text-dark shadow-lg rounded-pill px-3 py-2 d-flex align-items-center gap-2">
+                                    {% if evento.academia.logo %}
+                                        <img src="{{ evento.academia.logo.url }}" alt="Logo {{ evento.academia.nombre }}" class="rounded-circle" style="width: 20px; height: 20px; object-fit: contain;" loading="lazy">
+                                    {% endif %}
+                                    <span class="fw-bold">{{ evento.academia.nombre }}</span>
+                                </span>
+                            </div>
+
+                            <div class="position-absolute bottom-0 start-0 w-100 p-4" style="z-index: 2;">
+                                <h3 class="font-space fw-bold text-white mb-2 lh-sm fs-4">{{ evento.nombre }}</h3>
+                                <p class="small text-white opacity-75 mb-0"><i class="bi bi-geo-alt-fill text-primary"></i> {{ evento.ubicacion }}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="p-4 bg-white d-flex justify-content-between align-items-center mt-auto">
+                            <div>
+                                <span class="small text-muted d-block fw-semibold text-uppercase">Desde</span>
+                                <strong class="fs-4 text-dark font-space">${{ evento.precio_preventa|floatformat:0 }}</strong>
+                            </div>
+                            <a href="{% url 'academias:index' evento.academia.slug %}" target="_blank" class="btn btn-dark rounded-pill px-4 py-2 fw-bold shadow-sm">
+                                Comprar <i class="bi bi-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="w-100 text-center py-5">
+                    <div class="p-5 bg-white rounded-5 border shadow-sm mx-auto" style="max-width: 600px;">
+                        <i class="bi bi-calendar2-x display-1 text-muted opacity-25 mb-3 d-block"></i>
+                        <h4 class="font-space fw-bold text-dark">Agenda en preparación</h4>
+                        <p class="text-muted mb-0">Nuestras academias están organizando los próximos eventos. ¡Vuelve pronto!</p>
+                    </div>
+                </div>
+                {% endfor %}
+
+                {% if eventos_globales %}
+                    {% for evento in eventos_globales %}
+                    <div class="cartelera-item">
+                        <div class="feature-card h-100 d-flex flex-column bg-white p-0">
+                            <div class="position-relative overflow-hidden" style="aspect-ratio: 4/5; background: var(--bg-body);">
+                                {% if evento.imagen %}
+                                    <img src="{{ evento.imagen.url }}" alt="Ticket para {{ evento.nombre }}" class="w-100 h-100 object-fit-cover transition-transform duration-500" style="transition: transform 0.5s ease;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'" loading="lazy">
+                                {% else %}
+                                    <div class="w-100 h-100 d-flex align-items-center justify-content-center bg-light"><i class="bi bi-image fs-1 text-muted opacity-25"></i></div>
                                 {% endif %}
-                                <span class="fw-bold">{{ evento.academia.nombre }}</span>
-                            </span>
-                        </div>
-
-                        <div class="position-absolute bottom-0 start-0 w-100 p-4" style="z-index: 2;">
-                            <h4 class="font-space fw-bold text-white mb-2 lh-sm">{{ evento.nombre }}</h4>
-                            <p class="small text-white opacity-75 mb-0"><i class="bi bi-geo-alt-fill text-primary"></i> {{ evento.ubicacion }}</p>
+                                <div class="position-absolute bottom-0 start-0 w-100 p-4 pt-5" style="background: linear-gradient(0deg, rgba(30,27,75,0.95) 0%, transparent 100%); z-index: 1;"></div>
+                                <div class="position-absolute top-0 end-0 m-3 bg-white rounded-4 shadow-lg text-center px-3 py-2" style="z-index: 2;">
+                                    <span class="d-block small fw-bold text-uppercase" style="color: var(--secondary);">{{ evento.fecha|date:"M" }}</span>
+                                    <span class="d-block fs-3 font-space fw-bold text-dark lh-1">{{ evento.fecha|date:"d" }}</span>
+                                </div>
+                                <div class="position-absolute top-0 start-0 m-3" style="z-index: 2;">
+                                    <span class="badge bg-white text-dark shadow-lg rounded-pill px-3 py-2 d-flex align-items-center gap-2">
+                                        {% if evento.academia.logo %}<img src="{{ evento.academia.logo.url }}" alt="Logo {{ evento.academia.nombre }}" class="rounded-circle" style="width: 20px; height: 20px; object-fit: contain;" loading="lazy">{% endif %}
+                                        <span class="fw-bold">{{ evento.academia.nombre }}</span>
+                                    </span>
+                                </div>
+                                <div class="position-absolute bottom-0 start-0 w-100 p-4" style="z-index: 2;">
+                                    <h3 class="font-space fw-bold text-white mb-2 lh-sm fs-4">{{ evento.nombre }}</h3>
+                                    <p class="small text-white opacity-75 mb-0"><i class="bi bi-geo-alt-fill text-primary"></i> {{ evento.ubicacion }}</p>
+                                </div>
+                            </div>
+                            <div class="p-4 bg-white d-flex justify-content-between align-items-center mt-auto">
+                                <div>
+                                    <span class="small text-muted d-block fw-semibold text-uppercase">Desde</span>
+                                    <strong class="fs-4 text-dark font-space">${{ evento.precio_preventa|floatformat:0 }}</strong>
+                                </div>
+                                <a href="{% url 'academias:index' evento.academia.slug %}" target="_blank" class="btn btn-dark rounded-pill px-4 py-2 fw-bold shadow-sm">
+                                    Comprar <i class="bi bi-arrow-right"></i>
+                                </a>
+                            </div>
                         </div>
                     </div>
-                    
-                    <div class="p-4 bg-white d-flex justify-content-between align-items-center">
-                        <div>
-                            <span class="small text-muted d-block fw-semibold text-uppercase">Desde</span>
-                            <strong class="fs-4 text-dark font-space">${{ evento.precio_preventa|floatformat:0 }}</strong>
-                        </div>
-                        <a href="{% url 'academias:index' evento.academia.slug %}" target="_blank" class="btn btn-dark rounded-pill px-4 py-2 fw-bold shadow-sm">
-                            Comprar <i class="bi bi-arrow-right"></i>
-                        </a>
-                    </div>
-                </div>
+                    {% endfor %}
+                {% endif %}
             </div>
-            {% empty %}
-            <div class="col-12 text-center py-5">
-                <div class="p-5 bg-white rounded-5 border shadow-sm mx-auto" style="max-width: 600px;">
-                    <i class="bi bi-calendar2-x display-1 text-muted opacity-25 mb-3 d-block"></i>
-                    <h4 class="font-space fw-bold text-dark">Agenda en preparación</h4>
-                    <p class="text-muted mb-0">Nuestras academias están organizando los próximos eventos. ¡Vuelve pronto!</p>
-                </div>
-            </div>
-            {% endfor %}
         </div>
     </section>
 
-    <!-- 🏢 ACADEMIAS (LA COMUNIDAD) -->
     {% if academias_trust %}
     <section id="academias" class="py-5 bg-white border-top border-bottom border-warning border-opacity-10">
         <div class="container py-4">
@@ -291,16 +443,15 @@
                 <div class="col-6 col-md-4 col-lg-3">
                     <a href="{% url 'academias:index' academia.slug %}" target="_blank" class="text-decoration-none">
                         <div class="academy-card">
-                            <!-- 🧠 FALLBACK INTELIGENTE: Logo o Inicial -->
                             {% if academia.logo %}
-                                <img src="{{ academia.logo.url }}" alt="{{ academia.nombre }}" class="img-fluid mb-3" style="max-height: 80px; object-fit: contain;">
+                                <img src="{{ academia.logo.url }}" alt="Logo Academia de Baile {{ academia.nombre }}" class="img-fluid mb-3" style="max-height: 80px; object-fit: contain;" loading="lazy">
                             {% else %}
                                 <div class="d-flex align-items-center justify-content-center rounded-circle mb-3 mx-auto shadow-sm border border-primary border-opacity-10" style="width: 80px; height: 80px; background: var(--primary-light); color: var(--primary); font-size: 2.5rem;">
                                     <span class="font-space fw-bold">{{ academia.nombre|slice:":1"|upper }}</span>
                                 </div>
                             {% endif %}
                             
-                            <h6 class="text-dark fw-bold mb-0 font-space">{{ academia.nombre }}</h6>
+                            <h3 class="text-dark fw-bold mb-0 font-space fs-6">{{ academia.nombre }}</h3>
                             <span class="small text-primary mt-2">Visitar Sede <i class="bi bi-box-arrow-up-right"></i></span>
                         </div>
                     </a>
@@ -311,7 +462,6 @@
     </section>
     {% endif %}
 
-    <!-- 📊 MÉTRICAS DE IMPACTO -->
     <section class="container py-5 my-5">
         <div class="metrics-section p-5 p-md-5 shadow-lg">
             <div class="row text-center position-relative z-index-2 g-5">
@@ -331,7 +481,6 @@
         </div>
     </section>
 
-    <!-- 💻 SAAS PITCH: PARA DIRECTORES Y ORGANIZADORES -->
     <section id="software" class="container py-5 mt-5 position-relative border-top border-warning border-opacity-25">
         <div class="row g-5 align-items-center">
             <div class="col-lg-5 pe-lg-5 text-center text-lg-start">
@@ -347,28 +496,28 @@
             <div class="col-lg-7">
                 <div class="feature-card p-5 bg-white border-0" style="box-shadow: 0 30px 60px rgba(30, 27, 75, 0.08);">
                     <div class="d-flex align-items-center justify-content-between mb-4 border-bottom pb-4">
-                        <h4 class="font-space fw-bold text-dark m-0 d-flex align-items-center gap-2"><i class="bi bi-check-circle-fill text-accent fs-3"></i> Todo en un solo link</h4>
+                        <h3 class="font-space fw-bold text-dark m-0 d-flex align-items-center gap-2 fs-4"><i class="bi bi-check-circle-fill text-accent fs-3"></i> Todo en un solo link</h3>
                     </div>
                     
                     <ul class="list-unstyled d-flex flex-column gap-4 text-dark m-0">
                         <li class="d-flex align-items-start gap-4">
                             <div class="bg-primary-light text-primary rounded-4 d-flex align-items-center justify-content-center shadow-sm" style="width: 55px; height: 55px; font-size: 1.5rem; flex-shrink: 0;"><i class="bi bi-qr-code-scan"></i></div>
                             <div>
-                                <h5 class="fw-bold font-space text-dark mb-1">Entradas y Clases por QR</h5>
+                                <h4 class="fw-bold font-space text-dark mb-1 fs-5">Entradas y Clases por QR</h4>
                                 <p class="text-muted mb-0 small">El sistema descuenta clases automáticamente al escanear, bloqueando el acceso a morosos.</p>
                             </div>
                         </li>
                         <li class="d-flex align-items-start gap-4">
                             <div class="bg-secondary-light text-secondary rounded-4 d-flex align-items-center justify-content-center shadow-sm" style="width: 55px; height: 55px; font-size: 1.5rem; flex-shrink: 0;"><i class="bi bi-wallet2"></i></div>
                             <div>
-                                <h5 class="fw-bold font-space text-dark mb-1">Caja Blindada</h5>
+                                <h4 class="fw-bold font-space text-dark mb-1 fs-5">Caja Blindada</h4>
                                 <p class="text-muted mb-0 small">Separa ventas de preventa web vs taquilla. Registra gastos de DJ y obtén reportes netos.</p>
                             </div>
                         </li>
                         <li class="d-flex align-items-start gap-4">
                             <div class="rounded-4 d-flex align-items-center justify-content-center shadow-sm" style="width: 55px; height: 55px; font-size: 1.5rem; flex-shrink: 0; background: #dcfce7; color: #16a34a;"><i class="bi bi-globe"></i></div>
                             <div>
-                                <h5 class="fw-bold font-space text-dark mb-1">Tu Landing Propia</h5>
+                                <h4 class="fw-bold font-space text-dark mb-1 fs-5">Tu Landing Propia</h4>
                                 <p class="text-muted mb-0 small">Te damos tu propia página web (midominio.com/mi-escuela) con tus colores y logo.</p>
                             </div>
                         </li>
@@ -378,7 +527,6 @@
         </div>
     </section>
 
-    <!-- 📩 MODAL LEAD MAGNET -->
     <div class="modal fade" id="leadModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 rounded-5 shadow-lg overflow-hidden bg-white">
@@ -387,7 +535,7 @@
                     <div class="d-inline-flex p-3 rounded-circle mb-3 bg-white shadow-sm mt-2 border border-primary border-opacity-25 text-primary fs-3">
                         <i class="bi bi-rocket-takeoff-fill"></i>
                     </div>
-                    <h4 class="font-space fw-bold text-dark">Únete a la Cartelera Global</h4>
+                    <h3 class="font-space fw-bold text-dark fs-4">Únete a la Cartelera Global</h3>
                     <p class="text-muted small mb-0 px-3">Deja tus datos. Te contactaremos por WhatsApp para entregarte tu propio panel administrativo.</p>
                 </div>
                 
@@ -418,7 +566,6 @@
         </div>
     </div>
 
-    <!-- 🏢 FOOTER -->
     <footer class="py-5 mt-5 bg-white border-top border-warning border-opacity-25">
         <div class="container text-center text-md-start">
             <div class="row align-items-center g-4">
@@ -438,7 +585,6 @@
         </div>
     </footer>
 
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
@@ -466,13 +612,9 @@
             bootstrap.Modal.getInstance(document.getElementById('leadModal')).hide();
             this.reset();
         });
-
-        // Carrusel estilo Netflix para la Cartelera
-        function scrollCartelera(direction) {
-            const row = document.getElementById('carteleraRow');
-            const cardWidth = 360 + 24; // max-width de la tarjeta + margin (gap)
-            row.scrollBy({ left: cardWidth * direction, behavior: 'smooth' });
-        }
+        
+        // NOTA: La función JS del carrusel de eventos fue removida. 
+        // Ahora todo el scroll infinito está gestionado nativamente por CSS en .cartelera-track
     </script>
 </body>
 </html>
