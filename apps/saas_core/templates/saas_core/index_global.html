@@ -308,13 +308,25 @@
                 <div class="ticker-item text-warning"><i class="bi bi-fire"></i></div>
                 <div class="ticker-item">{{ evento.nombre|upper }}</div>
                 <div class="ticker-item opacity-50">{{ evento.fecha|date:"d M" }}</div>
-                <div class="ticker-item text-accent">${{ evento.precio_preventa|floatformat:0 }}</div>
+                {% with pase_base=evento.pases_personalizados.first %}
+                    {% if pase_base %}
+                        <div class="ticker-item text-accent">Desde ${{ pase_base.precio|floatformat:0 }}</div>
+                    {% else %}
+                        <div class="ticker-item text-accent">Entradas Abiertas</div>
+                    {% endif %}
+                {% endwith %}
             {% endfor %}
             {% for evento in eventos_globales %}
                 <div class="ticker-item text-warning"><i class="bi bi-fire"></i></div>
                 <div class="ticker-item">{{ evento.nombre|upper }}</div>
                 <div class="ticker-item opacity-50">{{ evento.fecha|date:"d M" }}</div>
-                <div class="ticker-item text-accent">${{ evento.precio_preventa|floatformat:0 }}</div>
+                {% with pase_base=evento.pases_personalizados.first %}
+                    {% if pase_base %}
+                        <div class="ticker-item text-accent">Desde ${{ pase_base.precio|floatformat:0 }}</div>
+                    {% else %}
+                        <div class="ticker-item text-accent">Entradas Abiertas</div>
+                    {% endif %}
+                {% endwith %}
             {% endfor %}
         </div>
     </div>
