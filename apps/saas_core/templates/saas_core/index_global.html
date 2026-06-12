@@ -308,19 +308,16 @@
                 <div class="ticker-item text-warning"><i class="bi bi-fire"></i></div>
                 <div class="ticker-item">{{ evento.nombre|upper }}</div>
                 <div class="ticker-item opacity-50">{{ evento.fecha|date:"d M" }}</div>
-                
                 {% if evento.precio_minimo_calculado > 0 %}
                     <div class="ticker-item text-accent">Desde ${{ evento.precio_minimo_calculado|floatformat:0 }}</div>
                 {% else %}
                     <div class="ticker-item text-accent">Entradas Abiertas</div>
                 {% endif %}
             {% endfor %}
-            
             {% for evento in eventos_globales %}
                 <div class="ticker-item text-warning"><i class="bi bi-fire"></i></div>
                 <div class="ticker-item">{{ evento.nombre|upper }}</div>
                 <div class="ticker-item opacity-50">{{ evento.fecha|date:"d M" }}</div>
-                
                 {% if evento.precio_minimo_calculado > 0 %}
                     <div class="ticker-item text-accent">Desde ${{ evento.precio_minimo_calculado|floatformat:0 }}</div>
                 {% else %}
@@ -354,7 +351,7 @@
                                 <div class="w-100 h-100 d-flex align-items-center justify-content-center bg-light"><i class="bi bi-image fs-1 text-muted opacity-25"></i></div>
                             {% endif %}
                             
-                            <div class="position-absolute bottom-0 start-0 w-100 p-4 pt-5" style="background: linear-gradient(0deg, rgba(30,27,75,0.95) 0%, transparent 100%); z-index: 1;"></div>
+                            <div class="position-absolute bottom-0 start-0 w-100 p-4 pt-5" style="background: linear-gradient(0deg, rgba(15,23,42,0.98) 0%, rgba(15,23,42,0.85) 40%, transparent 100%); z-index: 1;"></div>
                             
                             <div class="position-absolute top-0 end-0 m-3 bg-white rounded-4 shadow-lg text-center px-3 py-2" style="z-index: 2;">
                                 <span class="d-block small fw-bold text-uppercase" style="color: var(--secondary);">{{ evento.fecha|date:"M" }}</span>
@@ -371,8 +368,8 @@
                             </div>
 
                             <div class="position-absolute bottom-0 start-0 w-100 p-4" style="z-index: 2;">
-                                <h3 class="font-space fw-bold text-white mb-2 lh-sm fs-4">{{ evento.nombre }}</h3>
-                                <p class="small text-white opacity-75 mb-0"><i class="bi bi-geo-alt-fill text-primary"></i> {{ evento.ubicacion }}</p>
+                                <h3 class="font-space fw-bold text-white mb-2 lh-sm fs-4" style="text-shadow: 0 2px 4px rgba(0,0,0,0.8);">{{ evento.nombre }}</h3>
+                                <p class="small text-white mb-0 fw-medium" style="text-shadow: 0 1px 3px rgba(0,0,0,0.8);"><i class="bi bi-geo-alt-fill text-primary"></i> {{ evento.ubicacion }}</p>
                             </div>
                         </div>
                         
@@ -404,22 +401,27 @@
                                 {% else %}
                                     <div class="w-100 h-100 d-flex align-items-center justify-content-center bg-light"><i class="bi bi-image fs-1 text-muted opacity-25"></i></div>
                                 {% endif %}
-                                <div class="position-absolute bottom-0 start-0 w-100 p-4 pt-5" style="background: linear-gradient(0deg, rgba(30,27,75,0.95) 0%, transparent 100%); z-index: 1;"></div>
+                                
+                                <div class="position-absolute bottom-0 start-0 w-100 p-4 pt-5" style="background: linear-gradient(0deg, rgba(15,23,42,0.98) 0%, rgba(15,23,42,0.85) 40%, transparent 100%); z-index: 1;"></div>
+                                
                                 <div class="position-absolute top-0 end-0 m-3 bg-white rounded-4 shadow-lg text-center px-3 py-2" style="z-index: 2;">
                                     <span class="d-block small fw-bold text-uppercase" style="color: var(--secondary);">{{ evento.fecha|date:"M" }}</span>
                                     <span class="d-block fs-3 font-space fw-bold text-dark lh-1">{{ evento.fecha|date:"d" }}</span>
                                 </div>
+
                                 <div class="position-absolute top-0 start-0 m-3" style="z-index: 2;">
                                     <span class="badge bg-white text-dark shadow-lg rounded-pill px-3 py-2 d-flex align-items-center gap-2">
                                         {% if evento.academia.logo %}<img src="{{ evento.academia.logo.url }}" alt="Logo {{ evento.academia.nombre }}" class="rounded-circle" style="width: 20px; height: 20px; object-fit: contain;" loading="lazy">{% endif %}
                                         <span class="fw-bold">{{ evento.academia.nombre }}</span>
                                     </span>
                                 </div>
+
                                 <div class="position-absolute bottom-0 start-0 w-100 p-4" style="z-index: 2;">
-                                    <h3 class="font-space fw-bold text-white mb-2 lh-sm fs-4">{{ evento.nombre }}</h3>
-                                    <p class="small text-white opacity-75 mb-0"><i class="bi bi-geo-alt-fill text-primary"></i> {{ evento.ubicacion }}</p>
+                                    <h3 class="font-space fw-bold text-white mb-2 lh-sm fs-4" style="text-shadow: 0 2px 4px rgba(0,0,0,0.8);">{{ evento.nombre }}</h3>
+                                    <p class="small text-white mb-0 fw-medium" style="text-shadow: 0 1px 3px rgba(0,0,0,0.8);"><i class="bi bi-geo-alt-fill text-primary"></i> {{ evento.ubicacion }}</p>
                                 </div>
                             </div>
+                            
                             <div class="p-4 bg-white d-flex justify-content-center align-items-center mt-auto">
                                 <a href="{% url 'academias:index' evento.academia.slug %}" target="_blank" class="btn btn-dark rounded-pill w-100 py-3 fw-bold shadow-sm d-flex justify-content-between align-items-center px-4">
                                     <span>Conseguir Tickets</span>
@@ -617,9 +619,6 @@
             bootstrap.Modal.getInstance(document.getElementById('leadModal')).hide();
             this.reset();
         });
-        
-        // NOTA: La función JS del carrusel de eventos fue removida. 
-        // Ahora todo el scroll infinito está gestionado nativamente por CSS en .cartelera-track
     </script>
 </body>
 </html>
