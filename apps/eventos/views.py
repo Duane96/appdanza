@@ -144,6 +144,10 @@ class AgregarTipoPaseView(LoginRequiredMixin, CreateView):
         if not evento.es_multidias:
             form.instance.accesos_permitidos = 1
             
+        # 🚀 FIX DE INTEGRIDAD DB: Si usan preventas o el precio viene nulo, lo forzamos a 0.
+        if evento.tiene_fases_fechas or form.instance.precio is None:
+            form.instance.precio = 0
+            
         form.instance.evento = evento
         return super().form_valid(form)
 
@@ -222,6 +226,10 @@ class EditarTipoPaseView(LoginRequiredMixin, UpdateView):
         # 🚀 BLINDAJE SENIOR: Protegemos la edición también
         if not form.instance.evento.es_multidias:
             form.instance.accesos_permitidos = 1
+            
+        # 🚀 FIX DE INTEGRIDAD DB: Evitar error NOT NULL al editar
+        if form.instance.evento.tiene_fases_fechas or form.instance.precio is None:
+            form.instance.precio = 0
             
         messages.success(self.request, f"Pase '{form.instance.nombre}' actualizado correctamente.")
         return super().form_valid(form)
