@@ -501,15 +501,17 @@
                                     <p class="mb-2"><i class="bi bi-clock me-2 text-primary"></i>{{ evento.fecha|date:"h:i A" }}</p>
                                     <p class="mb-0 text-truncate"><i class="bi bi-geo-alt-fill text-danger me-2"></i>{{ evento.ubicacion }}</p>
                                 </div>
-                                <div class="row g-2 text-center mb-4 mt-auto rounded-3 p-2" style="background: rgba(15, 23, 42, 0.03); border: 1px solid rgba(15, 23, 42, 0.04);">
-                                    <div class="col-6 border-end border-secondary border-opacity-10"><span class="text-muted d-block small">Preventa</span><strong class="text-dark">${{ evento.precio_preventa|floatformat:"0" }}</strong></div>
-                                    <div class="col-6"><span class="text-muted d-block small">Taquilla</span><strong class="text-dark">${{ evento.precio_puerta|floatformat:"0" }}</strong></div>
+                                <div class="mt-auto pt-3">
+                                    {% if evento.estado == 'REGISTRO_ONLINE' %}
+                                        <a href="{% url 'eventos:registro_publico' request.tenant.slug evento.slug %}" class="btn btn-dance rounded-pill w-100 py-3 fw-bold shadow-sm d-flex justify-content-center align-items-center gap-2">
+                                            <i class="bi bi-ticket-perforated-fill"></i> Reservar Entradas
+                                        </a>
+                                    {% else %}
+                                        <button class="btn btn-outline-secondary rounded-pill w-100 py-3 fw-bold d-flex justify-content-center align-items-center gap-2" disabled>
+                                            <i class="bi bi-lock-fill"></i> Venta Exclusiva en Puerta
+                                        </button>
+                                    {% endif %}
                                 </div>
-                                {% if evento.estado == 'REGISTRO_ONLINE' %}
-                                    <a href="{% url 'eventos:registro_publico' request.tenant.slug evento.slug %}" class="btn btn-dance rounded-pill w-100 py-2.5 fw-bold shadow-sm">Comprar Entrada</a>
-                                {% else %}
-                                    <button class="btn btn-outline-secondary rounded-pill w-100 py-2.5 fw-bold" disabled>Registro en Puerta</button>
-                                {% endif %}
                             </div>
                         </div>
                     </div>

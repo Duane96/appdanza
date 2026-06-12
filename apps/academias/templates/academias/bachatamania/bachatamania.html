@@ -245,8 +245,8 @@
                                 </div>
                                 <div class="d-flex gap-3 flex-wrap justify-content-center justify-content-md-start">
                                     {% if evento.estado == 'REGISTRO_ONLINE' %}
-                                        <a href="{% url 'eventos:registro_publico' academia.slug evento.slug %}" class="btn btn-fusion-electric btn-lg px-5 py-3 rounded-pill">
-                                            <i class="bi bi-ticket-detailed-fill me-2"></i>Asegurar Entrada
+                                        <a href="{% url 'eventos:registro_publico' academia.slug evento.slug %}" class="btn btn-fusion-electric btn-lg px-5 py-3 rounded-pill shadow-lg" style="box-shadow: 0 0 25px var(--glow-cyan);">
+                                            <i class="bi bi-ticket-detailed-fill me-2"></i>OBTENER TICKETS
                                         </a>
                                     {% else %}
                                         <button class="btn btn-outline-light btn-lg px-5 py-3 rounded-pill font-heading" disabled>Solo Taquilla</button>
@@ -295,22 +295,16 @@
                                 <p class="small mb-4" style="color: var(--fusion-text-muted);"><i class="bi bi-geo-alt-fill text-cyan me-2"></i>{{ evento.ubicacion }}</p>
                                 
                                 <div class="mt-auto">
-                                    <div class="d-flex justify-content-between align-items-end mb-4 px-3 py-3 rounded-3" style="background: rgba(16, 0, 32, 0.5); border: 1px solid rgba(255,255,255,0.03);">
-                                        <div>
-                                            <span class="d-block small text-white">Preventa VIP</span>
-                                            <strong class="fs-3 font-heading" style="color: var(--brand-yellow); text-shadow: 0 0 10px var(--glow-yellow);">${{ evento.precio_preventa|floatformat:"0" }}</strong>
-                                        </div>
-                                        <div class="text-end">
-                                            <span class="d-block small" style="color: var(--fusion-text-muted);">Taquilla</span>
-                                            <span class="text-decoration-line-through font-heading" style="color: var(--fusion-text-muted);">${{ evento.precio_puerta|floatformat:"0" }}</span>
-                                        </div>
+                                    <div class="mt-auto pt-2">
+                                        {% if evento.estado == 'REGISTRO_ONLINE' %}
+                                            <a href="{% url 'eventos:registro_publico' academia.slug evento.slug %}" class="btn btn-fusion-electric w-100 py-3 rounded-pill d-flex justify-content-between align-items-center px-4" style="font-size: 1.1rem;">
+                                                <span>ASEGURAR ACCESO</span>
+                                                    <i class="bi bi-arrow-right-circle-fill fs-4"></i>
+                                            </a>
+                                        {% else %}
+                                            <button class="btn btn-outline-light w-100 py-3 rounded-pill font-heading" disabled>SOLD OUT / SOLO TAQUILLA</button>
+                                        {% endif %}
                                     </div>
-
-                                    {% if evento.estado == 'REGISTRO_ONLINE' %}
-                                        <a href="{% url 'eventos:registro_publico' academia.slug evento.slug %}" class="btn btn-fusion-electric w-100 py-3 rounded-pill">COMPRAR TICKETS AHORA</a>
-                                    {% else %}
-                                        <button class="btn btn-outline-light w-100 py-3 rounded-pill font-heading" disabled>SOLO TAQUILLA FÍSICA</button>
-                                    {% endif %}
                                 </div>
                             </div>
                         </div>
