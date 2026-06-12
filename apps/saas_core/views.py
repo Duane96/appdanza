@@ -48,6 +48,9 @@ from django.urls import reverse_lazy
 from django.views.generic.edit import CreateView
 from django.contrib.messages.views import SuccessMessageMixin
 
+from django.db.models import Min
+from django.db.models.functions import Coalesce
+
 
 def api_finanzas_academia(request):
     academia_id = request.GET.get('academia_id')
@@ -404,11 +407,15 @@ class IndexSaaSGlobalView(TemplateView):
 
         # 🚀 NUEVO: Cartelera Global de Eventos
         try:
-            # Traemos los próximos 6 eventos que estén activos, de academias activas.
+            # Traemos los próximos 6 eventos activos
+            # 🚀 LÓGICA SENIOR: Calculamos el "precio a mostrar" unificando viejo y nuevo
             context['eventos_globales'] = Evento.unfiltered_objects.filter(
-                academia__activo=True,  # Seguridad: que la academia no esté bloqueada
+                academia__activo=True,
                 fecha__gte=timezone.now(),
                 estado__in=['REGISTRO_ONLINE', 'REGISTRO_PUERTA']
+            ).annotate(
+                # Busca el precio mínimo de sus pases. Si no tiene, usa su precio_preventa original.
+                precio_minimo_calculado=Coalesce(Min('pases_personalizados__precio'), 'precio_preventa')
             ).select_related('academia').order_by('fecha')[:6]
         except Exception:
             context['eventos_globales'] = []
