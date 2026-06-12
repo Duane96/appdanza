@@ -168,6 +168,46 @@
             border-image: linear-gradient(135deg, var(--fusion-magenta) 0%, var(--fusion-cyan) 100%) 1;
             box-shadow: 0 15px 40px rgba(0,0,0,0.7), 0 0 20px var(--glow-magenta);
         }
+
+
+
+
+        /* 🚀 MAGIA 3D FUSION NIGHT: FLIP CARDS */
+        .flip-card-container {
+            perspective: 1000px;
+            height: 100%;
+            min-height: 480px; 
+        }
+        .flip-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform-style: preserve-3d;
+        }
+        .flip-card-container:hover .flip-card-inner {
+            transform: rotateY(180deg);
+        }
+        .flip-card-front, .flip-card-back {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            border-radius: 16px;
+        }
+        .flip-card-front {
+            z-index: 2;
+        }
+        .flip-card-back {
+            transform: rotateY(180deg);
+            z-index: 1;
+            background: rgba(16, 0, 32, 0.95);
+            border: 2px solid rgba(255, 0, 127, 0.5);
+            box-shadow: 0 0 30px rgba(255, 0, 127, 0.2);
+            backdrop-filter: blur(15px);
+        }
     </style>
 </head>
 <body>
@@ -277,38 +317,69 @@
             <div class="row g-4">
                 {% for evento in eventos %}
                     <div class="col-md-6 col-xl-4">
-                        <div class="ticket-card-fusion h-100 d-flex flex-column">
-                            <div class="position-relative" style="aspect-ratio: 16/9; background: #000;">
-                                {% if evento.imagen %}
-                                    <img src="{{ evento.imagen.url }}" alt="{{ evento.nombre }}" class="w-100 h-100 object-fit-cover">
-                                {% endif %}
-                                <div class="position-absolute top-0 end-0 m-3">
-                                    <span class="badge rounded-pill px-3 py-2 shadow-lg font-heading" style="background: rgba(0,0,0,0.8); border: 2px solid var(--fusion-cyan); color: var(--fusion-cyan); filter: drop-shadow(0 0 5px var(--glow-cyan));">
-                                        <i class="bi bi-clock-history me-1"></i> {{ evento.fecha|date:"h:i A" }}
-                                    </span>
-                                </div>
-                            </div>
-                            
-                            <div class="p-4 d-flex flex-column flex-grow-1">
-                                <span class="text-magenta font-heading small mb-2 d-block">{{ evento.fecha|date:"d M, Y" }}</span>
-                                <h4 class="font-heading mb-3">{{ evento.nombre }}</h4>
-                                <p class="small mb-4" style="color: var(--fusion-text-muted);"><i class="bi bi-geo-alt-fill text-cyan me-2"></i>{{ evento.ubicacion }}</p>
-                                
-                                <div class="mt-auto">
-                                    <div class="mt-auto pt-2">
-                                        {% if evento.estado == 'REGISTRO_ONLINE' %}
-                                            <a href="{% url 'eventos:registro_publico' academia.slug evento.slug %}" class="btn btn-fusion-electric w-100 py-3 rounded-pill d-flex justify-content-between align-items-center px-4" style="font-size: 1.1rem;">
-                                                <span>ASEGURAR ACCESO</span>
-                                                    <i class="bi bi-arrow-right-circle-fill fs-4"></i>
-                                            </a>
-                                        {% else %}
-                                            <button class="btn btn-outline-light w-100 py-3 rounded-pill font-heading" disabled>SOLD OUT / SOLO TAQUILLA</button>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+    <div class="flip-card-container">
+        <div class="flip-card-inner">
+            
+            <div class="flip-card-front ticket-card-fusion d-flex flex-column p-0">
+                <div class="position-relative w-100 h-100" style="background: #000;">
+                    {% if evento.imagen %}
+                        <img src="{{ evento.imagen.url }}" alt="{{ evento.nombre }}" class="w-100 h-100 object-fit-cover">
+                    {% endif %}
+                    
+                    <div class="position-absolute bottom-0 start-0 w-100 p-4 pt-5" style="background: linear-gradient(0deg, rgba(0,0,0,0.95) 0%, transparent 100%); z-index: 1;"></div>
+                    
+                    <div class="position-absolute top-0 end-0 m-3" style="z-index: 2;">
+                        <span class="badge rounded-pill px-3 py-2 shadow-lg font-heading" style="background: rgba(0,0,0,0.8); border: 2px solid var(--fusion-cyan); color: var(--fusion-cyan); filter: drop-shadow(0 0 5px var(--glow-cyan));">
+                            <i class="bi bi-clock-history me-1"></i> {{ evento.fecha|date:"h:i A" }}
+                        </span>
                     </div>
+
+                    <div class="position-absolute bottom-0 start-0 w-100 p-4" style="z-index: 2;">
+                        <span class="text-magenta font-heading small mb-1 d-block" style="color: var(--fusion-magenta); text-shadow: 0 0 5px var(--fusion-magenta);">{{ evento.fecha|date:"d M, Y" }}</span>
+                        <h3 class="font-heading text-white mb-2 lh-sm fs-4" style="text-shadow: 0 2px 5px rgba(0,0,0,1);">{{ evento.nombre }}</h3>
+                        <p class="small mb-0 fw-medium" style="color: var(--fusion-cyan); text-shadow: 0 1px 3px rgba(0,0,0,1);"><i class="bi bi-geo-alt-fill me-1"></i>{{ evento.ubicacion }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flip-card-back p-4 d-flex flex-column text-center align-items-center justify-content-center">
+                <h3 class="font-heading title-fusion mb-4 text-uppercase">Accesos VIP</h3>
+                
+                {% if evento.fase_actual %}
+                    <span class="badge mb-4 px-4 py-2 rounded-pill font-heading" style="background: rgba(0,255,255,0.1); color: var(--fusion-cyan); border: 1px solid var(--fusion-cyan); font-size: 0.9rem; box-shadow: 0 0 10px var(--glow-cyan);">
+                        <i class="bi bi-fire me-1"></i> FASE: {{ evento.fase_actual|upper }}
+                    </span>
+                {% endif %}
+                
+                <div class="w-100 mb-4 px-2 overflow-auto" style="max-height: 200px;">
+                    {% for pase in evento.pases_procesados %}
+                        <div class="d-flex justify-content-between align-items-center py-3 border-bottom" style="border-color: rgba(255,255,255,0.1) !important;">
+                            <div class="text-start">
+                                <strong class="text-white d-block font-heading fs-6" style="letter-spacing: 0px;">{{ pase.nombre|upper }}</strong>
+                                <small style="color: var(--fusion-text-muted); font-size: 0.75rem;">{{ pase.accesos }} Días Incluidos</small>
+                            </div>
+                            <strong class="fs-4 font-heading" style="color: var(--brand-yellow); text-shadow: 0 0 10px var(--glow-yellow);">${{ pase.precio|floatformat:0 }}</strong>
+                        </div>
+                    {% empty %}
+                        <div class="text-center text-muted py-3">Precios en el portal.</div>
+                    {% endfor %}
+                </div>
+                
+                <div class="mt-auto w-100">
+                    {% if evento.estado == 'REGISTRO_ONLINE' %}
+                        <a href="{% url 'eventos:registro_publico' academia.slug evento.slug %}" class="btn btn-fusion-electric w-100 py-3 rounded-pill d-flex justify-content-between align-items-center px-4" style="font-size: 1.1rem;">
+                            <span>ASEGURAR TICKET</span>
+                            <i class="bi bi-arrow-right-circle-fill fs-4"></i>
+                        </a>
+                    {% else %}
+                        <button class="btn btn-outline-light w-100 py-3 rounded-pill font-heading" disabled>SOLD OUT / SOLO TAQUILLA</button>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
                 {% empty %}
                     <div class="col-12 text-center py-5">
                         <div class="panel-fusion p-5 d-inline-block">

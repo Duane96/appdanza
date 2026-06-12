@@ -54,14 +54,45 @@ class LandingAcademiaView(TemplateView):
         except (NameError, AttributeError):
             context['planes'] = []
             
-        # 2. TRAER EVENTOS VIGENTES
+        # 2. TRAER EVENTOS Y PRE-CALCULAR PASES (🚀 LÓGICA SENIOR)
         try:
-            context['eventos'] = Evento.objects.filter(
+            eventos = Evento.objects.filter(
                 academia=academia_activa,
                 fecha__gte=timezone.now(),  
                 estado__in=['REGISTRO_ONLINE', 'REGISTRO_PUERTA']
-            ).order_by('fecha')[:3]  
-        except (NameError, AttributeError):
+            ).order_by('fecha')[:6]
+            
+            now = timezone.now()
+            
+            for evt in eventos:
+                fase_activa = None
+                # Si tiene fases, buscamos la que está vigente hoy
+                if evt.tiene_fases_fechas:
+                    fase_activa = evt.fases_preventa.filter(fecha_limite__gte=now).order_by('fecha_limite').first()
+                    if not fase_activa:
+                        fase_activa = evt.fases_preventa.order_by('-fecha_limite').first()
+                
+                # Armamos un diccionario con los precios finales a mostrar
+                pases_info = []
+                for pase in evt.pases_personalizados.all():
+                    precio_final = pase.precio
+                    if fase_activa:
+                        pivote = fase_activa.precios_pases.filter(pase=pase).first()
+                        if pivote and pivote.precio is not None:
+                            precio_final = pivote.precio
+                    
+                    pases_info.append({
+                        'nombre': pase.nombre,
+                        'precio': precio_final,
+                        'accesos': pase.accesos_permitidos
+                    })
+                
+                # Inyectamos esta data temporalmente al objeto del evento para usarla en el HTML
+                evt.pases_procesados = pases_info
+                evt.fase_actual = fase_activa.nombre_fase if fase_activa else None
+                
+            context['eventos'] = eventos
+        except Exception:
             context['eventos'] = []
 
         # 3. 🎥 INYECCIÓN DE MULTIMEDIA DE DEMOSTRACIÓN (NUEVO)

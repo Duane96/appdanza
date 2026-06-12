@@ -141,6 +141,45 @@
         .nav-link:hover {
             color: var(--text-main) !important;
         }
+
+
+
+
+        /* 🚀 MAGIA 3D: FLIP CARDS */
+        .flip-card-container {
+            perspective: 1000px;
+            height: 100%;
+            min-height: 480px; /* Asegura altura para el giro */
+        }
+        .flip-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform-style: preserve-3d;
+        }
+        .flip-card-container:hover .flip-card-inner {
+            transform: rotateY(180deg);
+        }
+        .flip-card-front, .flip-card-back {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            border-radius: 28px;
+        }
+        .flip-card-front {
+            z-index: 2;
+        }
+        .flip-card-back {
+            transform: rotateY(180deg);
+            z-index: 1;
+            background: var(--card-light);
+            border: 2px solid var(--primary-dance);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
     </style>
 </head>
 <body>
@@ -249,48 +288,71 @@
             <div class="row g-4">
                 {% for evento in eventos %}
                     <div class="col-md-6 col-xl-4">
-                        <div class="ticket-card h-100 d-flex flex-column">
-                            <div class="position-relative" style="aspect-ratio: 16/9; background: #e2e8f0;">
-                                {% if evento.imagen %}
-                                    <img src="{{ evento.imagen.url }}" alt="{{ evento.nombre }}" class="w-100 h-100 object-fit-cover">
-                                {% else %}
-                                    <div class="w-100 h-100 d-flex align-items-center justify-content-center">
-                                        <i class="bi bi-image fs-1" style="color: var(--text-muted); opacity: 0.5;"></i>
-                                    </div>
-                                {% endif %}
-                                <div class="position-absolute top-0 end-0 m-3">
-                                    <span class="badge bg-white text-dark rounded-pill px-3 py-2 shadow-sm border">
-                                        <i class="bi bi-clock-history me-1 text-gradient"></i> {{ evento.fecha|date:"h:i A" }}
-                                    </span>
-                                </div>
-                            </div>
-                            
-                            <div class="p-4 d-flex flex-column flex-grow-1">
-                                <span class="text-gradient fw-bold text-uppercase tracking-wider small mb-2 d-block">{{ evento.fecha|date:"d M, Y" }}</span>
-                                <h4 class="font-heading fw-bold mb-3">{{ evento.nombre }}</h4>
-                                <p class="small mb-4" style="color: var(--text-muted);"><i class="bi bi-geo-alt-fill text-danger me-2"></i>{{ evento.ubicacion }}</p>
-                                
-                                <div class="mt-auto">
-                                    <div class="d-flex justify-content-between align-items-end mb-4 px-3 py-3 rounded-3" style="background: #f8fafc; border: 1px solid rgba(0,0,0,0.03);">
-                                        <div>
-                                            <span class="d-block small" style="color: var(--text-muted);">Precio Preventa</span>
-                                            <strong class="fs-5 fw-bold text-dark">${{ evento.precio_preventa|floatformat:"0" }}</strong>
-                                        </div>
-                                        <div class="text-end">
-                                            <span class="d-block small" style="color: var(--text-muted);">Precio Taquilla</span>
-                                            <span class="text-decoration-line-through" style="color: var(--text-muted);">${{ evento.precio_puerta|floatformat:"0" }}</span>
-                                        </div>
-                                    </div>
-
-                                    {% if evento.estado == 'REGISTRO_ONLINE' %}
-                                        <a href="{% url 'eventos:registro_publico' academia.slug evento.slug %}" class="btn btn-ticket rounded-pill w-100 py-3 fw-bold">Comprar Ahora</a>
-                                    {% else %}
-                                        <button class="btn btn-outline-secondary rounded-pill w-100 py-3 fw-bold" disabled>Solo Taquilla Física</button>
-                                    {% endif %}
-                                </div>
-                            </div>
+    <div class="flip-card-container">
+        <div class="flip-card-inner">
+            
+            <div class="flip-card-front ticket-card d-flex flex-column">
+                <div class="position-relative h-100" style="background: #e2e8f0;">
+                    {% if evento.imagen %}
+                        <img src="{{ evento.imagen.url }}" alt="{{ evento.nombre }}" class="w-100 h-100 object-fit-cover">
+                    {% else %}
+                        <div class="w-100 h-100 d-flex align-items-center justify-content-center">
+                            <i class="bi bi-image fs-1" style="color: var(--text-muted); opacity: 0.5;"></i>
                         </div>
+                    {% endif %}
+                    
+                    <div class="position-absolute bottom-0 start-0 w-100 p-4 pt-5" style="background: linear-gradient(0deg, rgba(15,23,42,0.95) 0%, transparent 100%); z-index: 1;"></div>
+                    
+                    <div class="position-absolute top-0 end-0 m-3" style="z-index: 2;">
+                        <span class="badge bg-white text-dark rounded-pill px-3 py-2 shadow-sm border">
+                            <i class="bi bi-clock-history me-1 text-gradient"></i> {{ evento.fecha|date:"h:i A" }}
+                        </span>
                     </div>
+
+                    <div class="position-absolute bottom-0 start-0 w-100 p-4" style="z-index: 2;">
+                        <span class="text-gradient fw-bold text-uppercase tracking-wider small mb-1 d-block">{{ evento.fecha|date:"d M, Y" }}</span>
+                        <h3 class="font-heading fw-bold text-white mb-1 lh-sm fs-4">{{ evento.nombre }}</h3>
+                        <p class="small text-white opacity-75 mb-0 fw-medium"><i class="bi bi-geo-alt-fill text-primary"></i> {{ evento.ubicacion }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flip-card-back p-4 d-flex flex-column text-center align-items-center justify-content-center">
+                <i class="bi bi-ticket-perforated text-gradient display-4 mb-3"></i>
+                <h4 class="font-heading fw-bold mb-3 text-dark">Tickets Disponibles</h4>
+                
+                {% if evento.fase_actual %}
+                    <span class="badge bg-warning text-dark mb-4 px-3 py-2 rounded-pill shadow-sm"><i class="bi bi-hourglass-split me-1"></i> Fase Actual: {{ evento.fase_actual }}</span>
+                {% endif %}
+                
+                <div class="w-100 mb-4 px-2" style="max-height: 200px; overflow-y: auto;">
+                    {% for pase in evento.pases_procesados %}
+                        <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                            <div class="text-start">
+                                <strong class="text-dark d-block lh-1">{{ pase.nombre }}</strong>
+                                <small class="text-muted" style="font-size: 0.75rem;">{{ pase.accesos }} Accesos QR</small>
+                            </div>
+                            <strong class="text-gradient fs-5 font-space">${{ pase.precio|floatformat:0 }}</strong>
+                        </div>
+                    {% empty %}
+                        <p class="text-muted small">Precios disponibles en el portal.</p>
+                    {% endfor %}
+                </div>
+                
+                <div class="mt-auto w-100">
+                    {% if evento.estado == 'REGISTRO_ONLINE' %}
+                        <a href="{% url 'eventos:registro_publico' request.tenant.slug evento.slug %}" class="btn btn-dance rounded-pill w-100 py-3 fw-bold shadow-sm d-flex justify-content-center align-items-center gap-2">
+                            <i class="bi bi-cart-fill"></i> Reservar Ahora
+                        </a>
+                    {% else %}
+                        <button class="btn btn-outline-secondary rounded-pill w-100 py-3 fw-bold" disabled>Venta en Puerta</button>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
                 {% empty %}
                     <div class="col-12 text-center py-5">
                         <div class="p-5 d-inline-block bg-white rounded-4 shadow-sm border">
