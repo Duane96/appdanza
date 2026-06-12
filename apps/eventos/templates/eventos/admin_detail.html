@@ -46,11 +46,10 @@
 <div class="row g-3 mb-4">
     <div class="col-md-6 col-xl-3">
         <div class="card border-0 shadow-sm bg-white p-3 h-100 border-start border-4 border-primary">
-            <span class="text-secondary small fw-bold d-block font-monospace">BALANCE NETO CAJA</span>
-            <h2 class="fw-bold m-0 text-success">${{ balance_neto|floatformat:0 }}</h2>
-            <div class="d-flex justify-content-between mt-2 pt-2 border-top extra-small text-muted">
-                <span>Bruto: ${{ ingresos_totales|floatformat:0 }}</span>
-                <span>Gastos: ${{ gastos_totales|floatformat:0 }}</span>
+            <span class="text-secondary small fw-bold d-block font-monospace">RECAUDO ONLINE (WEB)</span>
+            <h2 class="fw-bold m-0 text-primary">${{ dinero_online|floatformat:0 }}</h2>
+            <div class="mt-2 pt-2 border-top extra-small text-muted">
+                <i class="bi bi-cloud-arrow-down me-1"></i> Ventas exclusivas por plataforma
             </div>
         </div>
     </div>
@@ -85,21 +84,69 @@
 
     <div class="col-md-6 col-xl-3">
         <div class="card border-0 shadow-sm bg-white p-3 h-100 border-start border-4 border-success">
-            <span class="text-secondary small fw-bold d-block font-monospace">CUSTODIA TOTAL GLOBAL</span>
-            <div class="extra-small mt-1">
-                <div class="d-flex justify-content-between mb-0.5">
-                    <span>Efectivo General:</span> <strong>${{ dinero_efectivo|floatformat:0 }}</strong>
-                </div>
-                <div class="d-flex justify-content-between mb-0.5">
-                    <span>Transf General:</span> <strong>${{ dinero_transferencia|floatformat:0 }}</strong>
-                </div>
-                <div class="d-flex justify-content-between">
-                    <span>Tarjeta General:</span> <strong>${{ dinero_tarjeta|floatformat:0 }}</strong>
-                </div>
+            <span class="text-secondary small fw-bold d-block font-monospace">BALANCE GLOBAL (NETO)</span>
+            <h2 class="fw-bold m-0 text-success">${{ balance_neto|floatformat:0 }}</h2>
+            
+            <div class="d-flex justify-content-between mt-2 pt-2 border-top extra-small text-muted">
+                <span title="Total recaudado en todos los canales">Bruto: <strong>${{ ingresos_totales|floatformat:0 }}</strong></span>
+                <span class="text-danger-emphasis">Gastos: <strong>${{ gastos_totales|floatformat:0 }}</strong></span>
             </div>
         </div>
     </div>
 </div>
+
+{% if evento.tiene_pases_personalizados or evento.tiene_fases_fechas %}
+<div class="row g-3 mb-4">
+    
+    {% if evento.tiene_pases_personalizados %}
+    <div class="col-lg-{% if evento.tiene_fases_fechas %}7{% else %}12{% endif %}">
+        <div class="card border-0 shadow-sm bg-white p-4 h-100 rounded-4">
+            <h6 class="fw-bold text-dark mb-3"><i class="bi bi-pie-chart-fill me-2 text-tenant-primary"></i>Rendimiento por Tipo de Pase</h6>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle m-0 border-top">
+                    <thead class="table-light text-secondary extra-small text-uppercase">
+                        <tr>
+                            <th>Pase / Ítem</th>
+                            <th class="text-center">Vendidos</th>
+                            <th class="text-end">Recaudo Bruto</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pase_m in metricas_pases %}
+                        <tr>
+                            <td class="fw-semibold text-dark small">{{ pase_m.nombre }}</td>
+                            <td class="text-center"><span class="badge bg-light text-dark">{{ pase_m.total_vendidos }} unds</span></td>
+                            <td class="text-end text-success fw-bold small">${{ pase_m.total_recaudado|floatformat:0 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if evento.tiene_fases_fechas %}
+    <div class="col-lg-{% if evento.tiene_pases_personalizados %}5{% else %}12{% endif %}">
+        <div class="card border-0 shadow-sm bg-white p-4 h-100 rounded-4">
+            <h6 class="fw-bold text-dark mb-3"><i class="bi bi-calendar-check-fill me-2 text-warning"></i>Recaudo por Fases</h6>
+            <ul class="list-group list-group-flush small">
+                {% for fase_m in metricas_fases %}
+                <li class="list-group-item px-0 d-flex justify-content-between align-items-center bg-transparent border-bottom">
+                    <div>
+                        <strong class="text-dark d-block">{{ fase_m.nombre_fase }}</strong>
+                        <span class="text-muted extra-small">Venció: {{ fase_m.fecha_limite|date:"d M, Y" }}</span>
+                    </div>
+                    <span class="text-dark fw-bold">${{ fase_m.total_recaudado|floatformat:0 }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+    
+</div>
+{% endif %}
 
 <div class="row g-4">
     <div class="col-lg-8">
@@ -132,14 +179,14 @@
                     </thead>
                     <tbody>
                         {% for recibo in recibos %}
-                        <tr class="border-bottom">
+                        <tr class="border-bottom {% if recibo.anulado %}opacity-50 text-decoration-line-through bg-light{% endif %}">
                             <td>
                                 <strong class="text-dark d-block">{{ recibo.comprador_nombre }}</strong>
                                 <span class="badge bg-light text-dark font-monospace extra-small">{{ recibo.numero_recibo }}</span>
                                 <small class="text-muted ms-1">{{ recibo.comprador_telefono }}</small>
                             </td>
                             <td class="text-center fw-bold text-secondary">{{ recibo.cantidad_entradas }}</td>
-                            <td class="fw-bold text-dark">${{ recibo.monto_total|floatformat:0 }}</td>
+                            <td class="fw-bold {% if recibo.anulado %}text-secondary{% else %}text-dark{% endif %}">${{ recibo.monto_total|floatformat:0 }}</td>
                             
                             <td>
                                 <span class="d-block text-capitalize extra-small fw-bold text-dark mb-1">
@@ -169,7 +216,6 @@
                                         </span>
                                     {% endif %}
                                 {% else %}
-                                    <!-- CÓDIGO ACTUALIZADO PARA VISUALIZAR MÚLTIPLES DÍAS -->
 <div class="d-flex flex-column gap-2 align-items-center">
     {% for boleta in recibo.boletas_qr.all %}
     <div class="w-100 p-2 border rounded bg-white shadow-sm">
@@ -180,7 +226,6 @@
             </span>
         </div>
         
-        <!-- Barra de progreso visual -->
         <div class="progress" style="height: 6px;">
             <div class="progress-bar {% if boleta.asistencias_consumidas >= boleta.asistencias_permitidas %}bg-danger{% else %}bg-success{% endif %}" 
                  role="progressbar" 
@@ -200,7 +245,15 @@
                                 {% if recibo.comprobante_pago %}
                                     <a href="{{ recibo.comprobante_pago.url }}" target="_blank" class="btn btn-sm btn-light border px-2 py-1"><i class="bi bi-image text-primary"></i></a>
                                 {% else %}
-                                    <span class="text-muted extra-small">En Puerta</span>
+                                    <span class="text-muted extra-small me-2">En Puerta</span>
+                                {% endif %}
+
+                                {% if not recibo.anulado %}
+                                    <button type="button" class="btn btn-sm btn-outline-danger px-2 py-1 ms-1" data-bs-toggle="modal" data-bs-target="#modalAnularRecibo{{ recibo.id }}" title="Anular Recibo">
+                                        <i class="bi bi-x-circle"></i>
+                                    </button>
+                                {% else %}
+                                    <span class="badge bg-danger ms-1">ANULADO</span>
                                 {% endif %}
                             </td>
                         </tr>
@@ -413,13 +466,35 @@
     </div>
 </div>
 
+{% for recibo in recibos %}
+    {% if not recibo.anulado %}
+    <div class="modal fade" id="modalAnularRecibo{{ recibo.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-body text-center p-4">
+                    <i class="bi bi-exclamation-triangle-fill text-danger display-4 mb-3"></i>
+                    <h5 class="fw-bold text-dark mb-2">¿Anular Recibo?</h5>
+                    <p class="text-muted small mb-4">Se anulará el recibo <strong>{{ recibo.numero_recibo }}</strong> de {{ recibo.comprador_nombre }}. Los QR quedarán inválidos y el dinero se restará de la caja. <strong>Esto no se puede deshacer.</strong></p>
+                    <div class="d-flex gap-2 w-100">
+                        <button type="button" class="btn btn-light w-50 fw-semibold border" data-bs-dismiss="modal">Cancelar</button>
+                        <form action="{% url 'eventos:anular_recibo' request.tenant.slug evento.slug recibo.id %}" method="POST" class="w-50">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger w-100 fw-bold">Anular</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+{% endfor %}
+
 <style>
     .extra-small { font-size: 0.7rem; }
     .fs-7 { font-size: 0.8rem; }
     #contenedor-lector video { object-fit: cover !important; width: 100% !important; height: 100% !important; }
 </style>
 
-<!-- ✅ USA ESTA LÍNEA QUE LLAMA A JSDELIVR (Dominio Autorizado en tu CSP) -->
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js" type="text/javascript"></script>
 
 <script>

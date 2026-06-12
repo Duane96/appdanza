@@ -7,8 +7,8 @@ from django.urls import reverse
 from django.utils.text import slugify
 from django.db.models import Sum, Q
 
-from .models import Evento, CodigoDescuento, ReciboEvento, GastoEvento
-from .forms import EventoForm, CodigoDescuentoForm, GastoEventoForm, VentaPuertaForm
+from .models import Evento, CodigoDescuento, FasePreventa, ReciboEvento, GastoEvento, TipoPase
+from .forms import EventoForm, CodigoDescuentoForm, FasePreventaForm, GastoEventoForm, TipoPaseForm, VentaPuertaForm
 
 from django.views.generic import FormView
 from .forms import RegistroOnlineEventoForm
@@ -27,6 +27,9 @@ from django.views.generic import UpdateView
 
 from apps.comunicaciones.services import enviar_correo_transaccional
 
+from django.db.models import Sum, DecimalField
+from django.db.models.functions import Coalesce
+
 class EventoListView(LoginRequiredMixin, ListView):
     """Lista todos los eventos de la academia (Tenant actual)."""
     model = Evento
@@ -39,7 +42,7 @@ class EventoListView(LoginRequiredMixin, ListView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Esto es lo que faltaba para que tu template tuviera acceso a los campos
+        # Instanciamos el formulario en limpio para que el modal de creación renderice los widgets correctos
         context['form'] = EventoForm() 
         return context
 
@@ -47,43 +50,73 @@ class EventoListView(LoginRequiredMixin, ListView):
 class EventoCreateView(LoginRequiredMixin, CreateView):
     model = Evento
     form_class = EventoForm
-    template_name = "eventos/admin_list.html" # Ahora renderizas el listado
+    template_name = "eventos/admin_list.html" 
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Inyectamos el formulario en el contexto del listado
+        # 🚀 FIX SENIOR: Inyectamos la lista de eventos para que la pantalla de fondo no desaparezca si el formulario falla.
+        context['eventos'] = Evento.objects.filter(academia=self.request.tenant)
         context['form'] = self.get_form()
         return context
 
     def form_valid(self, form):
         evento = form.save(commit=False)
         evento.academia = self.request.tenant
+        
+        base_slug = slugify(evento.nombre)
+        evento.slug = base_slug
+        
+        if Evento.objects.filter(academia=self.request.tenant, slug=base_slug).exists():
+            form.add_error('nombre', 'Ya cuentas con un evento activo registrado con este nombre.')
+            return self.form_invalid(form)
+            
         evento.save()
         form.save_m2m()
+
+        # 🚀 LÓGICA SENIOR: AUTO-GENERACIÓN DE PASES BASE
+        from .models import TipoPase
+        if evento.es_multidias:
+            TipoPase.objects.create(evento=evento, nombre="Full Pass", precio=0, accesos_permitidos=3)
+            TipoPase.objects.create(evento=evento, nombre="Pase 1 Día", precio=0, accesos_permitidos=1)
+        else:
+            TipoPase.objects.create(evento=evento, nombre="Entrada General", precio=0, accesos_permitidos=1)
+
+        # Inyectamos el mensaje de éxito para que aparezca arriba de la lista
+        messages.success(self.request, f"¡El evento '{evento.nombre}' se ha creado exitosamente!")
+
+        # 🎯 FIX DEFINITIVO: Redirigimos usando el nombre exacto de tu URL ('admin_lista')
         return redirect('eventos:admin_lista', slug_academia=self.request.tenant.slug)
 
 
 class EventoUpdateView(LoginRequiredMixin, UpdateView):
-    """Vista para editar un evento existente garantizando aislamiento estricto."""
+    """Vista para editar un evento existente garantizando aislamiento estricto y configuración de Pases."""
     model = Evento
     form_class = EventoForm
-    template_name = "eventos/admin_form.html" # REUTILIZA el mismo template
+    template_name = "eventos/admin_form.html" 
 
     def get_object(self):
-        # Filtro estricto Multi-Tenant: nadie puede editar el evento de otra academia cambiando argumentos en la URL
+        # Filtro estricto Multi-Tenant
         return get_object_or_404(Evento, academia=self.request.tenant, slug=self.kwargs['evento_slug'])
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Inyectamos los formularios para Pases y Fases
+        # (Asegúrate de importar TipoPaseForm al inicio del archivo)
+        from .forms import TipoPaseForm 
+        context['form_pase'] = TipoPaseForm()
+        
+        # Enviamos los pases y fases ya creados al template para mostrarlos en tablas
+        context['pases_creados'] = self.object.pases_personalizados.all()
+        context['fases_creadas'] = self.object.fases_preventa.all().order_by('fecha_limite')
+        return context
 
     def form_valid(self, form):
         evento = form.save(commit=False)
         evento.academia = self.request.tenant 
         
-        # Generamos el slug basado en el nombre (por si lo editaron)
         base_slug = slugify(evento.nombre)
         evento.slug = base_slug
         
-        # 🐛 REPARACIÓN SENIOR: 
-        # Añadimos .exclude(pk=evento.pk) para que al validar si el nombre ya existe, 
-        # la base de datos IGNORE el evento que estamos editando actualmente.
         if Evento.objects.filter(academia=self.request.tenant, slug=base_slug).exclude(pk=evento.pk).exists():
             form.add_error('nombre', 'Ya existe OTRO evento con este nombre en tu calendario.')
             return self.form_invalid(form)
@@ -92,10 +125,137 @@ class EventoUpdateView(LoginRequiredMixin, UpdateView):
         return redirect(self.get_success_url())
 
     def get_success_url(self):
-        return reverse('eventos:admin_detalle', kwargs={
+        # Redirige de vuelta a la misma vista de edición para que la experiencia sea continua
+        return reverse('eventos:admin_editar', kwargs={
             'slug_academia': self.request.tenant.slug,
             'evento_slug': self.object.slug
         })
+    
+
+class AgregarTipoPaseView(LoginRequiredMixin, CreateView):
+    """Guarda un pase a la carta desde la vista de edición."""
+    model = TipoPase
+    form_class = TipoPaseForm
+
+    def form_valid(self, form):
+        evento = get_object_or_404(Evento, academia=self.request.tenant, slug=self.kwargs['evento_slug'])
+        
+        # 🚀 BLINDAJE SENIOR: Si no es multidías, forzamos a 1 día de acceso.
+        if not evento.es_multidias:
+            form.instance.accesos_permitidos = 1
+            
+        form.instance.evento = evento
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse('eventos:admin_editar', kwargs={
+            'slug_academia': self.request.tenant.slug, 
+            'evento_slug': self.kwargs['evento_slug']
+        }) + "#pases"
+
+
+class AgregarFasePreventaView(LoginRequiredMixin, View):
+    """
+    Vista Senior: Guarda la cáscara de la fase y construye 
+    la Matriz de Precios dinámicamente con Auto-Curación.
+    """
+    def post(self, request, slug_academia, evento_slug):
+        # 1. Seguridad Multi-tenant y obtención del evento
+        evento = get_object_or_404(Evento, academia=request.tenant, slug=evento_slug)
+        
+        # 🚀 AUTO-CORRECCIÓN SENIOR: Si olvidaron guardar el Tab 1, prendemos el switch a la fuerza
+        if not evento.tiene_fases_fechas:
+            evento.tiene_fases_fechas = True
+            evento.save(update_fields=['tiene_fases_fechas'])
+        
+        # 2. Captura de datos básicos de la Fase
+        nombre_fase = request.POST.get('nombre_fase')
+        fecha_limite = request.POST.get('fecha_limite')
+        
+        # Precios clásicos (llegarán vacíos si están usando la lógica de Pases a la Carta)
+        precio_full = request.POST.get('precio_full') or None
+        precio_dia = request.POST.get('precio_dia') or None
+
+        # 3. Guardamos la Fase en la base de datos
+        from .models import FasePreventa
+        fase = FasePreventa.objects.create(
+            evento=evento,
+            nombre_fase=nombre_fase,
+            fecha_limite=fecha_limite,
+            precio_full=precio_full,
+            precio_dia=precio_dia
+        )
+
+        # 🧠 4. LÓGICA DE LA MATRIZ: Interceptar precios de Pases a la Carta
+        from .models import PrecioFasePase, TipoPase
+        pases_activos = TipoPase.objects.filter(evento=evento)
+        
+        for pase in pases_activos:
+            precio_input = request.POST.get(f'precio_pase_{pase.id}')
+            if precio_input:
+                PrecioFasePase.objects.create(
+                    fase=fase,
+                    pase=pase,
+                    precio=precio_input
+                )
+        
+        from django.contrib import messages
+        messages.success(request, f"Fase '{nombre_fase}' añadida correctamente al cronograma.")
+        
+        # 5. Redireccionamos a la vista de edición
+        return redirect(reverse('eventos:admin_editar', kwargs={
+            'slug_academia': request.tenant.slug, 
+            'evento_slug': evento.slug
+        }) + "#fases")
+
+
+
+class EditarTipoPaseView(LoginRequiredMixin, UpdateView):
+    """Edita el precio, nombre o accesos de un pase específico."""
+    model = TipoPase
+    form_class = TipoPaseForm
+    
+    def get_queryset(self):
+        return TipoPase.objects.filter(evento__academia=self.request.tenant)
+
+    def form_valid(self, form):
+        # 🚀 BLINDAJE SENIOR: Protegemos la edición también
+        if not form.instance.evento.es_multidias:
+            form.instance.accesos_permitidos = 1
+            
+        messages.success(self.request, f"Pase '{form.instance.nombre}' actualizado correctamente.")
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse('eventos:admin_editar', kwargs={
+            'slug_academia': self.request.tenant.slug, 
+            'evento_slug': self.object.evento.slug
+        }) + "#pases"
+
+class EliminarTipoPaseView(LoginRequiredMixin, View):
+    """Elimina un pase específico de la base de datos."""
+    def post(self, request, slug_academia, pk):
+        pase = get_object_or_404(TipoPase, id=pk, evento__academia=request.tenant)
+        evento_slug = pase.evento.slug
+        nombre_pase = pase.nombre
+        
+        # Opcional: Validar si el pase ya tiene ventas antes de borrarlo (Buenas prácticas)
+        if pase.recibos.exists():
+            messages.error(request, f"No puedes eliminar el pase '{nombre_pase}' porque ya tiene ventas registradas.")
+        else:
+            pase.delete()
+            messages.success(request, f"Pase '{nombre_pase}' eliminado correctamente.")
+            
+        return redirect(reverse('eventos:admin_editar', kwargs={
+            'slug_academia': request.tenant.slug, 
+            'evento_slug': evento_slug
+        }) + "#pases")
+    
+
+
+
+
+
 
 
 class EventoDetailAdminView(LoginRequiredMixin, DetailView):
@@ -128,39 +288,71 @@ class EventoDetailAdminView(LoginRequiredMixin, DetailView):
         context['q'] = query or ''
 
         # 💵 2. MÉTRICAS CONTABLES GENERALES EN TIEMPO REAL (Módulo Finanzas)
-        context['total_entradas_vendidas'] = ReciboEvento.objects.filter(evento=evento).aggregate(total=Sum('cantidad_entradas'))['total'] or 0
-        context['dinero_efectivo'] = ReciboEvento.objects.filter(evento=evento, medio_pago='EFECTIVO').aggregate(total=Sum('monto_total'))['total'] or 0
-        context['dinero_transferencia'] = ReciboEvento.objects.filter(evento=evento, medio_pago='TRANSFERENCIA').aggregate(total=Sum('monto_total'))['total'] or 0
-        context['dinero_tarjeta'] = ReciboEvento.objects.filter(evento=evento, medio_pago='TARJETA').aggregate(total=Sum('monto_total'))['total'] or 0
+        # Usamos Coalesce para que PostgreSQL/SQLite devuelva un Decimal(0.00) nativo si no hay registros.
+        # Esto blinda las operaciones matemáticas y la memoria en PythonAnywhere.
+        
+        context['total_entradas_vendidas'] = ReciboEvento.objects.filter(evento=evento, anulado=False).aggregate(
+            total=Coalesce(Sum('cantidad_entradas'), 0)
+        )['total']
+        
+        context['dinero_efectivo'] = ReciboEvento.objects.filter(evento=evento, medio_pago='EFECTIVO', anulado=False).aggregate(
+            total=Coalesce(Sum('monto_total'), 0, output_field=DecimalField())
+        )['total']
+        
+        context['dinero_transferencia'] = ReciboEvento.objects.filter(evento=evento, medio_pago='TRANSFERENCIA', anulado=False).aggregate(
+            total=Coalesce(Sum('monto_total'), 0, output_field=DecimalField())
+        )['total']
+        
+        context['dinero_tarjeta'] = ReciboEvento.objects.filter(evento=evento, medio_pago='TARJETA', anulado=False).aggregate(
+            total=Coalesce(Sum('monto_total'), 0, output_field=DecimalField())
+        )['total']
+        
+        dinero_online = ReciboEvento.objects.filter(evento=evento, origen='ONLINE', anulado=False).aggregate(
+            total=Coalesce(Sum('monto_total'), 0, output_field=DecimalField())
+        )['total']
+        context['dinero_online'] = dinero_online
         
         # Total global recolectado de forma física en la Taquilla de Puerta
-        dinero_en_puerta = ReciboEvento.objects.filter(evento=evento, origen='PUERTA').aggregate(total=Sum('monto_total'))['total'] or 0
+        dinero_en_puerta = ReciboEvento.objects.filter(evento=evento, origen='PUERTA', anulado=False).aggregate(
+            total=Coalesce(Sum('monto_total'), 0, output_field=DecimalField())
+        )['total']
         context['dinero_en_puerta'] = dinero_en_puerta
         
         # Ingresos totales brutos del evento (Online + Puerta)
-        ingresos_totales = ReciboEvento.objects.filter(evento=evento).aggregate(total=Sum('monto_total'))['total'] or 0
+        ingresos_totales = ReciboEvento.objects.filter(evento=evento, anulado=False).aggregate(
+            total=Coalesce(Sum('monto_total'), 0, output_field=DecimalField())
+        )['total']
         context['ingresos_totales'] = ingresos_totales
 
         # 🎯 3. DESGLOSE ESPECÍFICO DE DINERO ADQUIRIDO EN TAQUILLA (PUERTA)
-        context['puerta_efectivo'] = ReciboEvento.objects.filter(evento=evento, origen='PUERTA', medio_pago='EFECTIVO').aggregate(total=Sum('monto_total'))['total'] or 0
-        context['puerta_transferencia'] = ReciboEvento.objects.filter(evento=evento, origen='PUERTA', medio_pago='TRANSFERENCIA').aggregate(total=Sum('monto_total'))['total'] or 0
-        context['puerta_tarjeta'] = ReciboEvento.objects.filter(evento=evento, origen='PUERTA', medio_pago='TARJETA').aggregate(total=Sum('monto_total'))['total'] or 0
+        context['puerta_efectivo'] = ReciboEvento.objects.filter(evento=evento, origen='PUERTA', medio_pago='EFECTIVO', anulado=False).aggregate(
+            total=Coalesce(Sum('monto_total'), 0, output_field=DecimalField())
+        )['total']
+        
+        context['puerta_transferencia'] = ReciboEvento.objects.filter(evento=evento, origen='PUERTA', medio_pago='TRANSFERENCIA', anulado=False).aggregate(
+            total=Coalesce(Sum('monto_total'), 0, output_field=DecimalField())
+        )['total']
+        
+        context['puerta_tarjeta'] = ReciboEvento.objects.filter(evento=evento, origen='PUERTA', medio_pago='TARJETA', anulado=False).aggregate(
+            total=Coalesce(Sum('monto_total'), 0, output_field=DecimalField())
+        )['total']
 
         # 🔴 4. REPORTE DE EGRESOS E INVERSIONES DEL EVENTO
         gastos = GastoEvento.objects.filter(evento=evento).order_by('-id')
         context['gastos'] = gastos
-        gastos_totales = gastos.aggregate(total=Sum('monto'))['total'] or 0
+        gastos_totales = gastos.aggregate(total=Coalesce(Sum('monto'), 0, output_field=DecimalField()))['total']
         context['gastos_totales'] = gastos_totales
 
         # 📈 5. BALANCE NETO DE OPERACIÓN DE LA ACADEMIA
+        # Como todo es un Decimal asegurado, la resta jamás fallará
         context['balance_neto'] = ingresos_totales - gastos_totales
-        context['codigos'] = CodigoDescuento.objects.filter(evento=evento)
 
         # 📥 6. CONTADOR DE ASISTENCIA REAL MEDIANTE LOG DE ACCESOS
         # Sumamos los registros que ya cruzaron la puerta escaneando su QR online
         # ✅ CORRECCIÓN: Filtramos usando los campos reales de la BD
         total_ingresos_qr = EntradaQR.objects.filter(
-            recibo__evento=evento, 
+            recibo__evento=evento,
+            recibo__anulado=False, 
             asistencias_consumidas__gt=0
         ).count()
         
@@ -193,6 +385,27 @@ class EventoDetailAdminView(LoginRequiredMixin, DetailView):
             'precio_unitario_aplicado': evento.precio_puerta,
             'cantidad_entradas': 1
         })
+
+        # Agrega esta línea justo adentro del final de get_context_data, antes del 'return context':
+        context['form_pase'] = TipoPaseForm()
+
+        # 🚀 9. NUEVO: MÉTRICAS AVANZADAS POR TIPO DE PASE Y FASE
+        from django.db.models import Count
+        
+        # Cuántas entradas y cuánta plata ha generado cada pase a la carta
+        if evento.tiene_pases_personalizados:
+            pases_metricas = TipoPase.objects.filter(evento=evento).annotate(
+                total_vendidos=Coalesce(Sum('recibos__cantidad_entradas'), 0),
+                total_recaudado=Coalesce(Sum('recibos__monto_total'), 0, output_field=DecimalField())
+            )
+            context['metricas_pases'] = pases_metricas
+
+        # Cuánta plata se movió en cada fase de preventa (Para saber qué fase fue más exitosa)
+        if evento.tiene_fases_fechas:
+            fases_metricas = FasePreventa.objects.filter(evento=evento).annotate(
+                total_recaudado=Coalesce(Sum('recibos__monto_total'), 0, output_field=DecimalField())
+            )
+            context['metricas_fases'] = fases_metricas
 
         return context
 
@@ -231,7 +444,10 @@ class AgregarCodigoDescuentoView(LoginRequiredMixin, CreateView):
 
 
 class RegistrarVentaPuertaView(LoginRequiredMixin, View):
-    """Guarda recibos de taquilla manuales marcando origen en puerta y omitiendo QRs."""
+    """
+    Vista Senior: Guarda recibos manuales y enruta el dinero y los QRs 
+    dependiendo de la fase de vida del evento.
+    """
     def post(self, request, slug_academia, evento_slug):
         evento = get_object_or_404(Evento, academia=request.tenant, slug=evento_slug)
         form = VentaPuertaForm(request.POST)
@@ -239,14 +455,29 @@ class RegistrarVentaPuertaView(LoginRequiredMixin, View):
         if form.is_valid():
             recibo = form.save(commit=False)
             recibo.evento = evento
-            recibo.origen = 'PUERTA'
             recibo.revisado_por_admin = True
-            recibo.ingresado_puerta = True
+            # Calculamos el costo total
             recibo.monto_total = recibo.cantidad_entradas * recibo.precio_unitario_aplicado
-            recibo.save()
             
-        # 🎯 CORRECCIÓN AQUÍ: Cambiado 'admin_detail' por 'admin_detalle'
-        return redirect('eventos:admin_details' if False else 'eventos:admin_detalle', slug_academia=slug_academia, evento_slug=evento_slug)
+            # 🧠 LÓGICA SENIOR: Dinamismo según el estado actual del evento
+            if evento.estado == 'REGISTRO_ONLINE':
+                # Es una venta manual anticipada (Ej. Transferencia vía WhatsApp)
+                recibo.origen = 'ONLINE'
+                recibo.ingresado_puerta = False
+                recibo.save() # Al guardar con origen='ONLINE', el modelo auto-genera los QRs
+                
+                # 🔄 Configurar las asistencias a las boletas recién creadas
+                dias_a_otorgar = evento.cantidad_dias if evento.es_multidias else 1
+                for boleta in recibo.boletas_qr.all():
+                    boleta.asistencias_permitidas = dias_a_otorgar
+                    boleta.save(update_fields=['asistencias_permitidas'])
+            else:
+                # El evento ya empezó, es venta física en la taquilla del lugar
+                recibo.origen = 'PUERTA'
+                recibo.ingresado_puerta = True
+                recibo.save()
+            
+        return redirect('eventos:admin_detalle', slug_academia=slug_academia, evento_slug=evento_slug)
 
 
 from django.contrib import messages # Asegúrate de importar messages si no lo tienes arriba
@@ -298,7 +529,7 @@ def cambiar_estado_evento(request, slug_academia, evento_slug, nuevo_estado):
 class RegistroEventoPublicoView(FormView):
     """
     Controla el formulario público de registro e inscripción en línea para los alumnos.
-    Soporta eventos de 1 día o eventos multi-días (Congresos).
+    Lógica Senior: Detecta fases de preventa verificando existencia real en DB (Anti-Errores).
     """
     template_name = "eventos/public_registro.html"
     form_class = RegistroOnlineEventoForm
@@ -307,22 +538,9 @@ class RegistroEventoPublicoView(FormView):
         self.academia_obj = get_object_or_404(Academia, slug=self.kwargs['slug_academia'])
         self.evento_obj = get_object_or_404(Evento, academia=self.academia_obj, slug=self.kwargs['evento_slug'])
         
-        # ========================================================================
-        # 🚧 MODO BETA: Filtro Antifraude COMENTADO TEMPORALMENTE
-        # Como la pasarela está en pausa, los eventos no se marcan como "liquidados".
-        # Comentamos esto para que no busque 'public_mora_plataforma.html'.
-        # ========================================================================
-        # if self.evento_obj.estado in ['REGISTRO_PUERTA', 'FINALIZADO']:
-        #     if not self.evento_obj.online_liquidado or (self.evento_obj.estado == 'FINALIZADO' and not self.evento_obj.puerta_liquidado):
-        #         return render(request, 'eventos/public_mora_plataforma.html', {
-        #             'evento': self.evento_obj, 'academia': self.academia_obj
-        #         })
-
-        # 🎯 Flujo normal de redirección
         if self.evento_obj.estado == 'FINALIZADO':
             return render(request, 'eventos/public_finalizado.html', {'evento': self.evento_obj, 'academia': self.academia_obj})
         elif self.evento_obj.estado == 'REGISTRO_PUERTA':
-            # 👉 AQUÍ ENRUTAMOS CORRECTAMENTE AL AVISO DE TAQUILLA
             return render(request, 'eventos/public_solo_puerta.html', {'evento': self.evento_obj, 'academia': self.academia_obj})
             
         return super().dispatch(request, *args, **kwargs)
@@ -331,13 +549,42 @@ class RegistroEventoPublicoView(FormView):
         context = super().get_context_data(**kwargs)
         context['evento'] = self.evento_obj
         context['academia'] = self.academia_obj
-        # Pasamos precios al template para el cálculo JS
-        context['precio_por_dia'] = float(self.evento_obj.precio_por_dia)
-        context['precio_full'] = float(self.evento_obj.precio_preventa)
+        
+        # 🕒 1. BUSCAR LA FASE ACTIVA 
+        fase_activa = None
+        if self.evento_obj.fases_preventa.exists():
+            fase_activa = self.evento_obj.fases_preventa.filter(fecha_limite__gte=timezone.now()).order_by('fecha_limite').first()
+            if not fase_activa:
+                fase_activa = self.evento_obj.fases_preventa.order_by('-fecha_limite').first()
+                context['fase_vencida'] = True
+        
+        context['fase_activa'] = fase_activa
+
+        # 🎟️ 2. PREPARAR LOS PASES (DICCIONARIO PURO ANTI-FALLOS)
+        pases_data = []
+        for pase in self.evento_obj.pases_personalizados.all():
+            precio_final = pase.precio
+            
+            if fase_activa: 
+                pivote = fase_activa.precios_pases.filter(pase=pase).first()
+                if pivote and pivote.precio is not None:
+                    precio_final = pivote.precio
+            
+            # Armamos un diccionario plano para que el HTML lo lea sin problemas de ORM
+            pases_data.append({
+                'id': pase.id,
+                'nombre': pase.nombre,
+                'accesos_permitidos': pase.accesos_permitidos,
+                'precio_actual': float(precio_final or 0)
+            })
+                
+        context['pases_disponibles'] = pases_data
+        
+        context['precio_por_dia'] = float(self.evento_obj.precio_por_dia or 0)
+        context['precio_full'] = float(self.evento_obj.precio_preventa or 0)
         return context
 
     def form_valid(self, form):
-        # Validación temporal de pasarela
         medio_seleccionado = self.request.POST.get('medio_pago_seleccionado', 'MANUAL')
         if medio_seleccionado == 'TARJETA_ONLINE':
             from django.contrib import messages
@@ -349,41 +596,66 @@ class RegistroEventoPublicoView(FormView):
         recibo.origen = 'ONLINE'
         recibo.medio_pago = 'TRANSFERENCIA'
         
-        # 🎯 1. CAPTURA SEGURA DEL TIPO DE PASE
-        # Buscamos 'tipo_pase' en el HTML. Si no viene, asumimos FULL por seguridad para no afectar al cliente.
-        tipo_pase = self.request.POST.get('tipo_pase', 'FULL') 
+        tipo_pase_input = self.request.POST.get('tipo_pase', 'FULL') 
+        pase_personalizado = None
+        tipo_pase_cupon = 'FULL' 
+        
+        # 🛡️ Aplicamos el mismo blindaje al guardar la venta
+        fase_activa = None
+        if self.evento_obj.fases_preventa.exists(): # <--- 🚀 AQUÍ ESTÁ EL BLINDAJE
+            fase_activa = self.evento_obj.fases_preventa.filter(fecha_limite__gte=timezone.now()).order_by('fecha_limite').first()
+            if not fase_activa:
+                fase_activa = self.evento_obj.fases_preventa.order_by('-fecha_limite').first()
 
-        # 🧠 2. LÓGICA DE PRECIOS Y ASIGNACIÓN DE DÍAS DINÁMICA
-        if self.evento_obj.es_multidias and tipo_pase == 'FULL':
+        if tipo_pase_input.startswith('PASE_'):
+            pase_id = tipo_pase_input.split('_')[1]
+            from .models import TipoPase 
+            pase_personalizado = TipoPase.objects.filter(id=pase_id, evento=self.evento_obj).first()
+
+        # 🧠 2. ASIGNACIÓN DE PRECIO MATRIZ
+        if pase_personalizado:
+            if fase_activa: # Extrae directo de la matriz si hay fase
+                pivote = fase_activa.precios_pases.filter(pase=pase_personalizado).first()
+                precio_unidad = pivote.precio if pivote else (pase_personalizado.precio or 0)
+            else:
+                precio_unidad = pase_personalizado.precio or 0
+                
+            dias_a_otorgar = pase_personalizado.accesos_permitidos
+            tipo_pase_cupon = 'FULL' if dias_a_otorgar > 1 else 'DIA'
+            
+        elif not self.evento_obj.es_multidias:
+            precio_unidad = self.evento_obj.precio_preventa
+            dias_a_otorgar = 1
+            tipo_pase_cupon = 'FULL'
+        elif self.evento_obj.es_multidias and tipo_pase_input == 'FULL':
             precio_unidad = self.evento_obj.precio_preventa
             dias_a_otorgar = self.evento_obj.cantidad_dias
+            tipo_pase_cupon = 'FULL'
         else:
             precio_unidad = self.evento_obj.precio_por_dia
             dias_a_otorgar = 1
+            tipo_pase_cupon = 'DIA'
 
-        # 🎟️ 3. MOTOR DE CUPONES INTELIGENTE (ACTUALIZADO)
+        # 🎟️ 3. MOTOR DE CUPONES INTELIGENTE
         codigo_texto = form.cleaned_data.get('codigo_cupon', '').strip().upper()
         if codigo_texto:
             cupon = CodigoDescuento.objects.filter(evento=self.evento_obj, nombre_codigo=codigo_texto).first()
             if cupon and cupon.es_valido:
                 recibo.codigo_descuento_usado = cupon
                 
-                # Evaluación dinámica Multi-día
-                if self.evento_obj.es_multidias:
-                    if tipo_pase == 'FULL':
-                        precio_unidad = cupon.precio_especial
-                    else:
-                        # Si compró 1 día, usa precio_especial_dia (si existe), si no, fallback al especial normal
-                        precio_unidad = cupon.precio_especial_dia if cupon.precio_especial_dia else cupon.precio_especial
-                else:
-                    # Evento normal de 1 día
+                if tipo_pase_cupon == 'FULL':
                     precio_unidad = cupon.precio_especial
+                else:
+                    precio_unidad = cupon.precio_especial_dia if cupon.precio_especial_dia else cupon.precio_especial
 
                 cupon.usos_actuales += 1
                 cupon.save(update_fields=['usos_actuales'])
 
         recibo.precio_unitario_aplicado = precio_unidad
         recibo.monto_total = recibo.cantidad_entradas * precio_unidad
+        # 🚀 NUEVO: Guardamos el rastro en la base de datos
+        recibo.tipo_pase = pase_personalizado
+        recibo.fase_preventa = fase_activa
         recibo.save()
         form.save_m2m()
 
@@ -392,7 +664,7 @@ class RegistroEventoPublicoView(FormView):
             boleta.asistencias_permitidas = dias_a_otorgar
             boleta.save(update_fields=['asistencias_permitidas'])
 
-        # 📷 5. GENERACIÓN DE QRs (Se mantiene idéntico)
+        # 📷 5. GENERACIÓN DE QRs
         boletas_sesion = []
         for i, boleta in enumerate(recibo.boletas_qr.all(), start=1):
             qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_H, box_size=10, border=4)
@@ -412,14 +684,12 @@ class RegistroEventoPublicoView(FormView):
         
         self.request.session['boletas_recien_compradas'] = boletas_sesion
 
-        # 🚀 DISPARADOR DE CORREO: Tickets de Evento y QR
+        # 🚀 DISPARADOR DE CORREO
         if recibo.comprador_correo:
-            # Preparamos las boletas para el template del correo
             boletas_correo = []
             for b in boletas_sesion:
                 boletas_correo.append({
                     'codigo': b['codigo_unico'],
-                    # Usamos una API pública para garantizar que Gmail/Outlook muestren la imagen del QR
                     'qr_url': f"https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={b['codigo_unico']}"
                 })
 
@@ -436,7 +706,6 @@ class RegistroEventoPublicoView(FormView):
             )
         
         return redirect('eventos:registro_exito', slug_academia=self.academia_obj.slug, recibo_id=recibo.id)
-    
 
 class ValidarCuponAPIView(View):
     """API ultra rápida que valida el cupón vía AJAX/Fetch desde el cliente."""
@@ -491,6 +760,13 @@ class ValidarIngresoQRAPIView(LoginRequiredMixin, View):
             recibo__evento__academia=request.tenant
         ).select_related('recibo', 'recibo__evento').first()
 
+        if boleta.recibo.anulado:
+            return JsonResponse({
+                'status': 'fraud', 
+                'message': '❌ RECIBO ANULADO. ACCESO DENEGADO.',
+                'comprador': boleta.recibo.comprador_nombre
+            }, status=200)
+
         if not boleta:
             return JsonResponse({'status': 'error', 'message': '❌ BOLETA NO VÁLIDA.'}, status=404)
 
@@ -519,3 +795,17 @@ class ValidarIngresoQRAPIView(LoginRequiredMixin, View):
             'recibo': boleta.recibo.numero_recibo,
             'asistencias_consumidas': boleta.asistencias_consumidas
         }, status=200)
+    
+
+
+class AnularReciboView(LoginRequiredMixin, View):
+    """Anula un recibo y bloquea el acceso de todas sus boletas asociadas."""
+    def post(self, request, slug_academia, evento_slug, recibo_id):
+        recibo = get_object_or_404(ReciboEvento, id=recibo_id, evento__academia=request.tenant, evento__slug=evento_slug)
+        
+        # Anulamos el recibo
+        recibo.anulado = True
+        recibo.save(update_fields=['anulado'])
+        
+        messages.success(request, f"El recibo #{recibo.numero_recibo} y sus entradas han sido anulados correctamente.")
+        return redirect('eventos:admin_detalle', slug_academia=slug_academia, evento_slug=evento_slug)

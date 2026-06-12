@@ -2,28 +2,44 @@
 
 {% block content %}
 <div class="container py-4">
-    
-    <div class="mb-4 text-center text-md-start">
-        <a href="{% url 'eventos:admin_lista' request.tenant.slug %}" class="btn btn-sm btn-light border small text-muted mb-2 shadow-sm">
-            <i class="bi bi-arrow-left me-1"></i> Volver al listado
-        </a>
-        <h2 class="fw-bold text-dark m-0">
-            {% if object %}Editar Evento: {{ object.nombre }}{% else %}Crear Nuevo Evento{% endif %}
-        </h2>
-        <p class="text-muted small">Registra o modifica los datos del taller, fiesta o competencia para actualizar tu ticketera automática.</p>
+    <div class="mb-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+            <a href="{% url 'eventos:admin_lista' request.tenant.slug %}" class="btn btn-sm btn-light border small text-muted mb-2 shadow-sm">
+                <i class="bi bi-arrow-left me-1"></i> Volver al listado
+            </a>
+            <h2 class="fw-bold text-dark m-0">Configuración: {{ object.nombre }}</h2>
+        </div>
     </div>
 
-    <div class="row justify-content-center">
-        <div class="col-xl-9 col-lg-10">
+    <ul class="nav nav-pills mb-4 gap-2 bg-white p-2 rounded-4 shadow-sm border" id="configTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active fw-semibold px-4 rounded-pill" data-bs-toggle="pill" data-bs-target="#basico" type="button">
+                1. Info y Pagos
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link fw-semibold px-4 rounded-pill" data-bs-toggle="pill" data-bs-target="#pases" type="button">
+                2. Entradas / Pases
+            </button>
+        </li>
+        <li class="nav-item" role="presentation" id="nav-item-fases">
+            <button class="nav-link fw-semibold px-4 rounded-pill bg-warning text-dark" data-bs-toggle="pill" data-bs-target="#fases" type="button">
+                3. Precios y Fechas (Preventas)
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="configTabsContent">
+        
+        <div class="tab-pane fade show active" id="basico" role="tabpanel">
             <div class="card border-0 shadow-sm bg-white p-4 p-md-5 rounded-4">
-                
                 {% if form.errors %}
                     <div class="alert alert-danger rounded-3 small" role="alert">
-                        <i class="bi bi-exclamation-triangle-fill me-2"></i> Por favor corrige los errores del formulario:
-                        <ul class="mb-0 mt-2">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i> <strong>Atención:</strong>
+                        <ul class="mb-0 mt-1">
                             {% for field in form %}
                                 {% for error in field.errors %}
-                                    <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                                    <li>{{ field.label }}: {{ error }}</li>
                                 {% endfor %}
                             {% endfor %}
                             {% for error in form.non_field_errors %}
@@ -32,163 +48,332 @@
                         </ul>
                     </div>
                 {% endif %}
-
-                <form method="POST" class="needs-validation" enctype="multipart/form-data" novalidate>
+                <form method="POST" action="{% url 'eventos:admin_editar' request.tenant.slug object.slug %}" enctype="multipart/form-data">
                     {% csrf_token %}
                     
-                    <div class="mb-4 p-3 bg-light rounded-3 border border-dashed text-center text-md-start">
-                        <label class="form-label fw-bold text-dark small d-block mb-2">
-                            <i class="bi bi-image text-tenant-primary me-1"></i> Afiche publicitario del Evento (Formato cuadrado 1:1 sugerido)
-                        </label>
-                        
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold text-secondary small">Banner / Afiche</label>
                         {% if object.imagen %}
-                            <div class="d-flex flex-column flex-md-row align-items-center gap-3 mb-3">
-                                <img src="{{ object.imagen.url }}" alt="Actual" class="rounded border shadow-sm object-fit-cover" style="width: 100px; height: 100px;">
-                                <div class="text-center text-md-start">
-                                    <span class="badge bg-success mb-1">Imagen Actual Activa</span>
-                                    <p class="text-muted small mb-0">Si seleccionas un archivo nuevo, se reemplazará este afiche de inmediato.</p>
-                                </div>
+                            <div class="d-flex align-items-center gap-3 mb-2">
+                                <img src="{{ object.imagen.url }}" alt="Actual" class="rounded border shadow-sm object-fit-cover" style="width: 60px; height: 60px;">
                             </div>
                         {% endif %}
-                        
-                        <div class="input-group">
-                            <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-cloud-arrow-up"></i></span>
-                            {{ form.imagen }}
-                        </div>
-                        {% if form.imagen.errors %}
-                            <div class="text-danger small mt-1">{{ form.imagen.errors }}</div>
-                        {% endif %}
+                        {{ form.imagen }}
                     </div>
-
-                    <div class="mb-4">
-                        <label class="form-label fw-semibold text-secondary small">Nombre del Evento</label>
-                        {{ form.nombre }}
+                    
+                    <div class="mb-3">{{ form.nombre.label_tag }} {{ form.nombre }}</div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">{{ form.fecha.label_tag }} {{ form.fecha }}</div>
+                        <div class="col-md-6">{{ form.ubicacion.label_tag }} {{ form.ubicacion }}</div>
                     </div>
+                    
+                    <div class="row g-3 mb-4 bg-light p-4 rounded border mt-2">
+                        <h6 class="fw-bold text-dark mb-0"><i class="bi bi-sliders me-2"></i>Arquitectura del Evento</h6>
+                        <p class="text-muted small mb-3">Activa o desactiva módulos. Las pestañas superiores se actualizarán automáticamente.</p>
 
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold text-secondary small">Fecha y Hora de Inicio</label>
-                            {{ form.fecha }}
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold text-secondary small">Ubicación / Lugar</label>
-                            {{ form.ubicacion }}
-                        </div>
-                    </div>
-
-                    <div class="row g-3 mb-4 bg-light p-3 rounded border">
-                        <div class="col-12 border-bottom pb-2 mb-2">
+                        <div class="col-12 border-bottom pb-3 mb-2">
                             <div class="form-check form-switch">
                                 {{ form.es_multidias }}
-                                <label class="form-check-label fw-bold text-dark">¿Es un evento de varios días (Ej: Congreso)?</label>
+                                <label class="form-check-label fw-bold text-dark ms-1">¿Es un evento de varios días?</label>
                             </div>
                         </div>
                         
-                        <div class="col-md-4 d-none" id="cont_fecha_fin">
-                            <label class="form-label fw-semibold text-secondary small">Fecha y Hora de Fin</label>
+                        <div class="col-md-6 d-none" id="cont_fecha_fin">
+                            <label class="form-label fw-semibold text-secondary small">Fecha Fin</label>
                             {{ form.fecha_fin }}
                         </div>
-                        <div class="col-md-4 d-none" id="cont_multidias">
-                            <label class="form-label fw-semibold text-secondary small">Total de días</label>
+                        <div class="col-md-6 d-none" id="cont_multidias">
+                            <label class="form-label fw-semibold text-secondary small">Total días</label>
                             {{ form.cantidad_dias }}
                         </div>
-                        <div class="col-md-4 d-none" id="cont_precio_dia">
-                            <label class="form-label fw-semibold text-secondary small">Precio por día</label>
-                            {{ form.precio_por_dia }}
-                        </div>
-                    </div>
 
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold text-secondary small">Precio de Preventa (Registro Web)</label>
-                            <div class="input-group">
-                                {{ form.precio_preventa }}
-                                <span class="input-group-text bg-light fw-bold text-muted">COP</span>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold text-secondary small">Precio Completo (En Puerta)</label>
-                            <div class="input-group">
-                                {{ form.precio_puerta }}
-                                <span class="input-group-text bg-light fw-bold text-muted">COP</span>
+                        <div class="d-none">{{ form.precio_por_dia }}</div>
+
+                        <div class="col-12 mt-3">
+                            <div class="form-check form-switch mb-0">
+                                {{ form.tiene_fases_fechas }}
+                                <label class="form-check-label fw-bold text-dark ms-1">¿Tendrás fechas de preventa? <span class="text-muted fw-normal">(Abre Pestaña 3)</span></label>
                             </div>
                         </div>
                     </div>
 
-                    <div class="card bg-light border p-3 mb-4">
-                        <h6 class="fw-bold text-dark mb-3"><i class="bi bi-wallet2 me-2"></i>Configuración de Pagos</h6>
-                        
-                        <div class="row g-3">
-                            <div class="col-12">
-                                <div class="form-check form-switch">
-                                    {{ form.acepta_nequi_daviplata }}
-                                    <label class="form-check-label fw-semibold">Habilitar Nequi / Daviplata</label>
-                                </div>
-                                <div class="mt-2">
-                                    {{ form.numero_nequi_daviplata }}
-                                </div>
-                            </div>
+                    <div class="card bg-white border p-3 mb-4 mt-4">
+                        <h6 class="fw-bold text-dark mb-3"><i class="bi bi-wallet2 me-2"></i>Canales de Recaudo</h6>
+                        <div class="form-check form-switch mb-2">{{ form.acepta_nequi_daviplata }} Nequi/Daviplata</div>
+                        {{ form.numero_nequi_daviplata }}
+                        <div class="form-check form-switch mt-3 mb-2">{{ form.acepta_banco_manual }} Transferencia</div>
+                        {{ form.datos_banco_manual }}
+                    </div>
 
-                            <div class="col-12 mt-3">
-                                <div class="form-check form-switch">
-                                    {{ form.acepta_banco_manual }}
-                                    <label class="form-check-label fw-semibold">Habilitar Transferencia Bancaria</label>
-                                </div>
-                                <div class="mt-2">
-                                    {{ form.datos_banco_manual }}
-                                </div>
+                    <div class="text-end">
+                        <button type="submit" class="btn btn-dark px-5 rounded-pill fw-bold">Actualizar Arquitectura</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="pases" role="tabpanel">
+            <div class="row g-4">
+                <div class="col-lg-4">
+                    <div class="card border-0 shadow-sm bg-white p-4 rounded-4">
+                        <h5 class="fw-bold text-dark mb-3">Añadir Pase</h5>
+                        <form action="{% url 'eventos:agregar_pase' request.tenant.slug object.slug %}" method="POST">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label class="small fw-semibold text-secondary">Nombre del Pase</label>
+                                {{ form_pase.nombre }}
                             </div>
+                            {% if object.es_multidias %}
+    <div class="mb-3">
+        <label class="small fw-semibold text-secondary">Días/Accesos QR</label>
+        {{ form_pase.accesos_permitidos }}
+    </div>
+{% else %}
+    <div class="d-none">{{ form_pase.accesos_permitidos }}</div>
+{% endif %}
                             
-                            <div class="col-12 mt-3 border-top pt-3">
-                                <div class="form-check form-switch">
-                                    {{ form.acepta_tarjetas_online }}
-                                    <label class="form-check-label fw-semibold text-primary">Habilitar Pago con Tarjeta Online (Stripe/PayU)</label>
+                            {% if not object.tiene_fases_fechas %}
+                                <div class="mb-4" id="div_precio_pase">
+                                    <label class="small fw-bold text-dark">Precio Fijo (COP)</label>
+                                    {{ form_pase.precio }}
                                 </div>
+                            {% else %}
+                                <div class="alert alert-warning small border-0 mt-3 mb-4">
+                                    <i class="bi bi-info-circle me-1"></i> Precios deshabilitados aquí. Asígnalos en la pestaña <strong>"Precios y Fechas"</strong>.
+                                </div>
+                                <div class="d-none">{{ form_pase.precio }}</div> 
+                            {% endif %}
+
+                            <button type="submit" class="btn btn-dark w-100 fw-semibold rounded-pill">Guardar Pase</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="col-lg-8">
+                    <div class="card border-0 shadow-sm bg-white p-4 rounded-4 h-100">
+                        <h5 class="fw-bold text-dark mb-4">Pases Activos</h5>
+                        <table class="table align-middle">
+    <thead class="table-light small">
+        <tr>
+            <th>Pase</th>
+            {% if object.es_multidias %}<th>Accesos QR</th>{% endif %}
+            {% if not object.tiene_fases_fechas %}<th>Precio Único</th>{% endif %}
+            <th class="text-end">Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for pase in pases_creados %}
+        <tr>
+            <td class="fw-bold text-dark">{{ pase.nombre }}</td>
+            {% if object.es_multidias %}
+                <td><span class="badge bg-secondary">{{ pase.accesos_permitidos }}</span></td>
+            {% endif %}
+            {% if not object.tiene_fases_fechas %}
+                <td class="text-success fw-bold">${{ pase.precio|floatformat:0 }}</td>
+            {% endif %}
+            <td class="text-end">
+                <button type="button" class="btn btn-sm btn-light border text-primary me-1" data-bs-toggle="modal" data-bs-target="#modalEditarPase{{ pase.id }}">
+                    <i class="bi bi-pencil-square"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalEliminarPase{{ pase.id }}">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="fases" role="tabpanel">
+            <div class="row g-4">
+                <div class="col-lg-4">
+                    <div class="card border-0 shadow-sm bg-white p-4 rounded-4 border-top border-4 border-warning">
+                        <h5 class="fw-bold text-dark mb-3">Añadir Preventa</h5>
+                        <form action="{% url 'eventos:agregar_fase' request.tenant.slug object.slug %}" method="POST">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label class="small fw-semibold text-secondary">Nombre (Ej: Lote 1)</label>
+                                <input type="text" name="nombre_fase" class="form-control" required>
                             </div>
-                        </div>
-                    </div>
+                            <div class="mb-4">
+                                <label class="small fw-semibold text-secondary">Vence el:</label>
+                                <input type="datetime-local" name="fecha_limite" class="form-control" required>
+                            </div>
 
-                    <div class="mb-5">
-                        <label class="form-label fw-semibold text-secondary small">Términos y Condiciones del Evento</label>
-                        {{ form.terminos_condiciones }}
+                            <h6 class="fw-bold text-dark small mb-3 border-bottom pb-2">Precios en esta Fase:</h6>
+                            {% for pase in pases_creados %}
+                                <div class="mb-3">
+                                    <label class="extra-small fw-semibold text-secondary">{{ pase.nombre }}</label>
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text bg-light">$</span>
+                                        <input type="number" name="precio_pase_{{ pase.id }}" class="form-control" required>
+                                    </div>
+                                </div>
+                            {% empty %}
+                                <div class="alert alert-danger small py-2">Primero crea "Pases" en la Pestaña 2 para poder asignarles precio aquí.</div>
+                            {% endfor %}
+                            
+                            <button type="submit" class="btn btn-warning w-100 fw-bold text-dark rounded-pill mt-2">Guardar Fase y Precios</button>
+                        </form>
                     </div>
+                </div>
 
-                    <div class="d-flex gap-2 justify-content-end border-top pt-4">
-                        <a href="{% url 'eventos:admin_lista' request.tenant.slug %}" class="btn btn-light border px-4 rounded-pill">Cancelar</a>
-                        <button type="submit" class="btn btn-tenant-primary px-5 rounded-pill fw-semibold shadow-sm">
-                            {% if object %}<i class="bi bi-check-circle-fill me-1"></i> Actualizar Evento{% else %}<i class="bi bi-plus-circle-fill me-1"></i> Guardar Evento{% endif %}
-                        </button>
+                <div class="col-lg-8">
+                    <div class="card border-0 shadow-sm bg-white p-4 rounded-4 h-100">
+                        <h5 class="fw-bold text-dark mb-4">Cronograma de Matriz de Precios</h5>
+                        <table class="table align-middle">
+                            <thead class="table-light small">
+                                <tr>
+                                    <th>Fase</th>
+                                    <th>Vence</th>
+                                    <th>Matriz de Precios</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for fase in fases_creadas %}
+                                <tr>
+                                    <td class="fw-bold text-dark">{{ fase.nombre_fase }}</td>
+                                    <td><span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle"><i class="bi bi-clock me-1"></i>{{ fase.fecha_limite|date:"d M - H:i" }}</span></td>
+                                    <td class="small">
+                                        <ul class="list-unstyled m-0 extra-small">
+                                            {% for pivote in fase.precios_pases.all %}
+                                                <li class="mb-1"><span class="text-secondary">{{ pivote.pase.nombre }}:</span> <strong class="text-success">${{ pivote.precio|floatformat:0 }}</strong></li>
+                                            {% endfor %}
+                                        </ul>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+{% for pase in pases_creados %}
+    <div class="modal fade" id="modalEditarPase{{ pase.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <form action="{% url 'eventos:editar_pase' request.tenant.slug pase.id %}" method="POST">
+                    {% csrf_token %}
+                    <div class="modal-header bg-light border-0">
+                        <h5 class="modal-title fw-bold text-dark">Editar Pase</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+    <div class="mb-3">
+        <label class="small fw-semibold text-secondary">Nombre del Pase</label>
+        <input type="text" name="nombre" class="form-control" value="{{ pase.nombre }}" required>
+    </div>
+    
+    {% if object.es_multidias %}
+        <div class="mb-3">
+            <label class="small fw-semibold text-secondary">Días/Accesos QR</label>
+            <input type="number" name="accesos_permitidos" class="form-control" value="{{ pase.accesos_permitidos }}" min="1" required>
+        </div>
+    {% else %}
+        <input type="hidden" name="accesos_permitidos" value="1">
+    {% endif %}
+                        
+                        {% if not object.tiene_fases_fechas %}
+                            <div class="mb-2">
+                                <label class="small fw-bold text-dark">Precio Fijo (COP)</label>
+                                <input type="number" name="precio" class="form-control" value="{{ pase.precio|floatformat:0 }}" required>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-warning small border-0 mt-3 mb-0">
+                                <i class="bi bi-info-circle me-1"></i> Precios manejados en la Pestaña 3 (Preventas).
+                            </div>
+                            <input type="hidden" name="precio" value="0">
+                        {% endif %}
+                        <input type="hidden" name="evento" value="{{ object.id }}">
+                    </div>
+                    <div class="modal-footer border-0 bg-light">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary fw-semibold">Guardar Cambios</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
-</div>
+
+    <div class="modal fade" id="modalEliminarPase{{ pase.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-body text-center p-4">
+                    <i class="bi bi-exclamation-circle text-danger display-4 mb-3"></i>
+                    <h5 class="fw-bold text-dark mb-2">¿Eliminar pase?</h5>
+                    <p class="text-muted small mb-4">Esta acción borrará el pase <strong>{{ pase.nombre }}</strong> y no se puede deshacer.</p>
+                    <div class="d-flex gap-2 w-100">
+                        <button type="button" class="btn btn-light w-50" data-bs-dismiss="modal">Cancelar</button>
+                        <form action="{% url 'eventos:eliminar_pase' request.tenant.slug pase.id %}" method="POST" class="w-50">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger w-100 fw-bold">Eliminar</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endfor %}
 
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        // Obtenemos los elementos
-        const check = document.getElementById("id_es_multidias"); 
-        const divMultidias = document.getElementById("cont_multidias");
-        const divPrecioDia = document.getElementById("cont_precio_dia");
-        const divFechaFin = document.getElementById("cont_fecha_fin"); // NUEVO
+        
+        // --- 1. MEMORIA DE PESTAÑAS (Mantiene el tab al recargar) ---
+        let url = location.href.replace(/\/$/, "");
+        if (location.hash) {
+            const hash = url.split("#");
+            const triggerEl = document.querySelector('#configTabs button[data-bs-target="#' + hash[1] + '"]');
+            if (triggerEl && triggerEl.parentElement.style.display !== "none") {
+                const tab = new bootstrap.Tab(triggerEl);
+                tab.show();
+            }
+        }
+        
+        const tabList = document.querySelectorAll('button[data-bs-toggle="pill"]');
+        tabList.forEach(tab => {
+            tab.addEventListener('shown.bs.tab', function (event) {
+                const target = event.target.getAttribute("data-bs-target").substring(1);
+                window.location.hash = target;
+            });
+        });
 
-        function toggleMultidias() {
-            if(check && check.checked) {
+        // --- 2. LÓGICA DE SWITCHES DINÁMICOS ---
+        const checkMultidias = document.getElementById("id_es_multidias"); 
+        const divMultidias = document.getElementById("cont_multidias");
+        const divFechaFin = document.getElementById("cont_fecha_fin");
+        
+        const checkFases = document.getElementById("id_tiene_fases_fechas");
+        const navItemFases = document.getElementById("nav-item-fases");
+
+        function toggleVisibility() {
+            // Multidías
+            if(checkMultidias && checkMultidias.checked) {
                 divMultidias.classList.remove("d-none");
-                divPrecioDia.classList.remove("d-none");
                 divFechaFin.classList.remove("d-none");
-            } else if (check) {
+            } else if (checkMultidias) {
                 divMultidias.classList.add("d-none");
-                divPrecioDia.classList.add("d-none");
                 divFechaFin.classList.add("d-none");
+            }
+
+            // Pestaña de Preventas
+            if(checkFases) {
+                navItemFases.style.display = checkFases.checked ? "block" : "none";
             }
         }
 
-        if (check) {
-            check.addEventListener("change", toggleMultidias);
-            toggleMultidias(); // Ejecutar al cargar la vista
-        }
+        if (checkMultidias) checkMultidias.addEventListener("change", toggleVisibility);
+        if (checkFases) checkFases.addEventListener("change", toggleVisibility);
+        
+        toggleVisibility(); 
     });
 </script>
 {% endblock %}

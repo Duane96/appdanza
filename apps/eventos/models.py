@@ -35,8 +35,8 @@ class Evento(TenantModel):
     fecha = models.DateTimeField()
     ubicacion = models.CharField(max_length=255)
     
-    precio_preventa = models.DecimalField(max_digits=10, decimal_places=2)
-    precio_puerta = models.DecimalField(max_digits=10, decimal_places=2)
+    precio_preventa = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, default=0)
+    precio_puerta = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, default=0)
     
     # 🏦 CANALES ESTRUCTURADOS DE RECAUDO PROPIO DE LA ACADEMIA
     acepta_nequi_daviplata = models.BooleanField(default=False, verbose_name="Habilitar Nequi/Daviplata/Llave")
@@ -69,6 +69,9 @@ class Evento(TenantModel):
     # Nuevo: Permitir compra por día individual
     permite_compra_por_dia = models.BooleanField(default=False)
     precio_por_dia = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    # 🚀 NUEVOS SWITCHES DE ARQUITECTURA
+    tiene_pases_personalizados = models.BooleanField(default=False, verbose_name="¿Tiene varios tipos de entrada/pases?")
+    tiene_fases_fechas = models.BooleanField(default=False, verbose_name="¿Tiene múltiples fechas de pago (Preventas)?")
 
     class Meta:
         unique_together = ('academia', 'slug')
@@ -164,12 +167,7 @@ class Evento(TenantModel):
         super().save(*args, **kwargs)
 
 
-class FasePreventa(models.Model):
-    evento = models.ForeignKey(Evento, on_delete=models.CASCADE, related_name='fases_preventa')
-    nombre_fase = models.CharField(max_length=50) # Ej: "Early Bird", "Preventa 1"
-    fecha_limite = models.DateTimeField()
-    precio_full = models.DecimalField(max_digits=10, decimal_places=2) # Precio por el evento completo
-    precio_dia = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
 
 
 class CodigoDescuento(models.Model):
@@ -193,6 +191,63 @@ class CodigoDescuento(models.Model):
         from django.utils import timezone
         return timezone.now() <= self.fecha_caducidad and self.usos_actuales < self.limite_usos
 
+
+class TipoPase(models.Model):
+    """
+    Modelo Avanzado: Permite a las academias crear múltiples opciones de compra 
+    para un mismo evento (Ej: Solo Social, Full Pass, Taller Especial).
+    """
+    evento = models.ForeignKey(Evento, on_delete=models.CASCADE, related_name='pases_personalizados')
+    nombre = models.CharField(max_length=100) # Ej: "Solo Social - Viernes"
+    precio = models.DecimalField(max_digits=10, decimal_places=2)
+    
+    # 🧠 CLAVE PARA LOS QRs: Le decimos al sistema cuántas veces puede entrar con este pase
+    accesos_permitidos = models.PositiveIntegerField(
+        default=1, 
+        help_text="¿Cuántos días/veces puede escanear su QR con este pase?"
+    )
+
+    class Meta:
+        ordering = ['precio'] # Ordena del más barato al más caro en el select
+
+    def __str__(self):
+        return f"{self.nombre} - ${self.precio} ({self.evento.nombre})"
+    
+class FasePreventa(models.Model):
+    """
+    Define los bloques de tiempo (Tiers) para las ventas.
+    Ej: "Preventa 1" (hasta el 15 de Julio), "Preventa 2" (hasta el 1 de Agosto).
+    """
+    evento = models.ForeignKey(Evento, on_delete=models.CASCADE, related_name='fases_preventa')
+    nombre_fase = models.CharField(max_length=50) # Ej: "Lote 1", "Early Bird"
+    fecha_limite = models.DateTimeField(help_text="Hasta cuándo estará activa esta fase")
+    
+    # 🛡️ MODO CLÁSICO: Precios que se usan SÓLO si el evento NO tiene "Pases a la carta"
+    precio_full = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    precio_dia = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    class Meta:
+        ordering = ['fecha_limite'] # Orden cronológico automático
+
+    def __str__(self):
+        return f"{self.nombre_fase} - Vence: {self.fecha_limite.strftime('%d/%m/%Y')} ({self.evento.nombre})"
+
+
+class PrecioFasePase(models.Model):
+    """
+    MATRIZ DE PRECIOS (Tabla Pivote): 
+    Define exactamente cuánto cuesta un "Tipo de Pase" específico dentro de una "Fase" específica.
+    """
+    fase = models.ForeignKey(FasePreventa, on_delete=models.CASCADE, related_name='precios_pases')
+    pase = models.ForeignKey(TipoPase, on_delete=models.CASCADE, related_name='precios_fases')
+    precio = models.DecimalField(max_digits=10, decimal_places=2)
+
+    class Meta:
+        # 🔒 Seguridad: Un mismo pase no puede tener dos precios distintos en la misma fase
+        unique_together = ('fase', 'pase') 
+
+    def __str__(self):
+        return f"{self.pase.nombre} en {self.fase.nombre_fase}: ${self.precio}"
 
 class ReciboEvento(models.Model):
     MEDIOS_PAGO = (
@@ -228,6 +283,11 @@ class ReciboEvento(models.Model):
     # Campo booleano para taquilla: registra si la persona que compró en puerta ya pasó directo al salón
     ingresado_puerta = models.BooleanField(default=False)
     fecha = models.DateTimeField(auto_now_add=True)
+    # 🚀 NUEVO: Conectamos la venta con el Pase y la Fase exacta
+    tipo_pase = models.ForeignKey(TipoPase, on_delete=models.SET_NULL, null=True, blank=True, related_name='recibos')
+    fase_preventa = models.ForeignKey(FasePreventa, on_delete=models.SET_NULL, null=True, blank=True, related_name='recibos')
+
+    anulado = models.BooleanField(default=False, verbose_name="¿Recibo Anulado?")
 
     def save(self, *args, **kwargs):
         # 1. Asignar numeración secuencial robusta orientada a SaaS (Multi-Tenant)
@@ -292,3 +352,8 @@ class GastoEvento(models.Model):
 
     def __str__(self):
         return f"Gasto: {self.concepto} - ${self.monto:,.0f}"
+    
+
+
+    
+

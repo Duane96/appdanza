@@ -25,6 +25,13 @@
                 <h5 class="text-muted text-uppercase tracking-wider small fw-bold">{{ academia.nombre }}</h5>
                 <h1 class="fw-black text-dark">{{ evento.nombre }}</h1>
                 <p class="text-secondary small"><i class="bi bi-geo-alt me-1"></i> {{ evento.ubicacion }} | <i class="bi bi-calendar3 me-1"></i> {{ evento.fecha|date:"d M, Y - g:i a" }}</p>
+                
+                {% if fase_activa %}
+                <div class="d-inline-block bg-warning bg-opacity-10 text-dark border border-warning px-3 py-1 rounded-pill small fw-bold mt-2 shadow-sm">
+                    <i class="bi bi-clock-history me-1"></i> Fase Actual: {{ fase_activa.nombre_fase }} 
+                    {% if fase_vencida %} (Última Fase) {% else %} (Hasta el {{ fase_activa.fecha_limite|date:"d M" }}) {% endif %}
+                </div>
+                {% endif %}
             </div>
 
             <div class="card card-evento shadow-lg bg-white p-4 p-md-5 mb-4">
@@ -51,24 +58,41 @@
 
                     <h5 class="fw-bold text-dark mb-3"><i class="bi bi-ticket-detailed me-2"></i>2. Selección de Entradas</h5>
                     <div class="row g-3 align-items-end mb-4">
-                        {% if evento.es_multidias %}
+                        
+                        {% if pases_disponibles or evento.es_multidias %}
                         <div class="col-md-4">
-                            <label class="form-label small text-secondary fw-semibold">Días a adquirir</label>
-                            <!-- 🎯 CORRECCIÓN: Agregamos name="tipo_pase" y valores DIA/FULL -->
+                            <label class="form-label small text-secondary fw-semibold">Tipo de Entrada</label>
                             <select name="tipo_pase" id="id_dias_adquirir" class="form-select">
-                                <option value="DIA">1 Día (Individual)</option>
-                                <option value="FULL">Full Pass ({{ evento.cantidad_dias }} días)</option>
+                                {% if pases_disponibles %}
+                                    {% for pase in pases_disponibles %}
+                                        <option value="PASE_{{ pase.id }}" 
+                                                data-precio="{{ pase.precio_actual|floatformat:0|default:0 }}"
+                                                data-tipo="{% if pase.accesos_permitidos > 1 %}FULL{% else %}DIA{% endif %}">
+                                            {{ pase.nombre }} - ${{ pase.precio_actual|floatformat:0 }}
+                                        </option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option value="FULL" data-precio="{{ evento.precio_preventa|stringformat:'f' }}" data-tipo="FULL">
+                                        Full Pass ({{ evento.cantidad_dias }} días) - ${{ evento.precio_preventa|floatformat:0 }}
+                                    </option>
+                                    <option value="DIA" data-precio="{{ evento.precio_por_dia|stringformat:'f' }}" data-tipo="DIA">
+                                        1 Día (Individual) - ${{ evento.precio_por_dia|floatformat:0 }}
+                                    </option>
+                                {% endif %}
                             </select>
                         </div>
+                        {% else %}
+                            <input type="hidden" name="tipo_pase" id="id_dias_adquirir" value="FULL" 
+                                   data-precio="{{ evento.precio_preventa|stringformat:'f' }}" data-tipo="FULL">
                         {% endif %}
 
-                        <div class="{% if evento.es_multidias %}col-md-4{% else %}col-6{% endif %}">
+                        <div class="{% if pases_disponibles or evento.es_multidias %}col-md-4{% else %}col-6{% endif %}">
                             <label class="form-label small text-secondary fw-semibold">¿Cuántas boletas?</label>
                             {{ form.cantidad_entradas }}
                         </div>
 
-                        <div class="{% if evento.es_multidias %}col-md-4{% else %}col-6{% endif %}">
-                            <label class="form-label small text-secondary fw-semibold">Código de Descuento</label>
+                        <div class="{% if pases_disponibles or evento.es_multidias %}col-md-4{% else %}col-6{% endif %}">
+                            <label class="form-label small text-secondary fw-semibold">Código Descuento</label>
                             <div class="input-group">
                                 {{ form.codigo_cupon }}
                                 <button class="btn btn-outline-dark btn-sm" type="button" id="btn_aplicar_cupon">Aplicar</button>
@@ -78,31 +102,38 @@
                     </div>
 
                     <div class="bg-light rounded p-3 mb-4 border-start border-3 border-dark">
-    <h6 class="fw-bold text-dark small mb-2"><i class="bi bi-bank me-1"></i> Información de Pago:</h6>
-    
-    {% if evento.acepta_nequi_daviplata %}
-        <div class="mb-2">
-            <span class="badge bg-dark">Nequi/Daviplata</span>
-            <p class="text-secondary small mb-1">Copia esta llave: <strong>{{ evento.numero_nequi_daviplata }}</strong></p>
-        </div>
-    {% endif %}
+                        <h6 class="fw-bold text-dark small mb-2"><i class="bi bi-bank me-1"></i> Información de Pago:</h6>
+                        
+                        {% if evento.acepta_nequi_daviplata %}
+                            <div class="mb-2">
+                                <span class="badge bg-dark">Nequi/Daviplata</span>
+                                <p class="text-secondary small mb-1">Copia esta llave: <strong>{{ evento.numero_nequi_daviplata }}</strong></p>
+                            </div>
+                        {% endif %}
 
-    {% if evento.acepta_banco_manual %}
-        <div>
-            <span class="badge bg-dark">Transferencia Bancaria</span>
-            <p class="text-secondary small mb-0" style="white-space: pre-line;">{{ evento.datos_banco_manual }}</p>
-        </div>
-    {% endif %}
-    
-    {% if not evento.acepta_nequi_daviplata and not evento.acepta_banco_manual %}
-        <p class="text-muted small m-0">No hay métodos de pago habilitados en este momento.</p>
-    {% endif %}
-</div>
+                        {% if evento.acepta_banco_manual %}
+                            <div>
+                                <span class="badge bg-dark">Transferencia Bancaria</span>
+                                <p class="text-secondary small mb-0" style="white-space: pre-line;">{{ evento.datos_banco_manual }}</p>
+                            </div>
+                        {% endif %}
+                        
+                        {% if not evento.acepta_nequi_daviplata and not evento.acepta_banco_manual %}
+                            <p class="text-muted small m-0">No hay métodos de pago habilitados en este momento.</p>
+                        {% endif %}
+                    </div>
 
                     <h5 class="fw-bold text-dark mb-3"><i class="bi bi-cloud-arrow-up me-2"></i>3. Soporte de Pago</h5>
                     <div class="mb-4">
                         {{ form.comprobante_pago }}
                         <div class="form-text extra-small">Formatos permitidos: JPG, PNG. Máximo 5MB.</div>
+                    </div>
+
+                    <div class="form-check mb-4">
+                        <input class="form-check-input border-dark" type="checkbox" id="checkTerminos" required>
+                        <label class="form-check-label small text-muted" for="checkTerminos">
+                            He leído y acepto los <a href="#" data-bs-toggle="modal" data-bs-target="#modalTerminos" class="text-primary fw-bold text-decoration-none">Términos y Condiciones</a> de esta compra.
+                        </label>
                     </div>
 
                     <div class="bg-dark text-white rounded p-4 d-flex justify-content-between align-items-center mb-4 shadow-sm">
@@ -126,43 +157,70 @@
     </div>
 </div>
 
+<div class="modal fade" id="modalTerminos" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-dark text-white border-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-shield-check me-2 text-warning"></i>Políticas del Evento</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-secondary small p-4" style="line-height: 1.6;">
+                <p>Al adquirir tu entrada para <strong>{{ evento.nombre }}</strong>, aceptas las siguientes políticas globales de participación:</p>
+                <ul class="mb-0">
+                    <li class="mb-2"><strong>No hay devoluciones:</strong> Una vez realizado el pago, no existen reembolsos de dinero bajo ninguna circunstancia personal.</li>
+                    <li class="mb-2"><strong>Intransferible:</strong> Tu entrada está vinculada a tu nombre y código QR generado, no puede ser cedida a un tercero.</li>
+                    <li class="mb-2"><strong>Inasistencia:</strong> No existen compensaciones si compras tu entrada y no asistes al evento por motivos personales.</li>
+                    <li><strong>Cancelación oficial:</strong> Solo en caso de cancelación total del evento por parte de la organización se procederá a la devolución íntegra del dinero en los siguientes 30 días hábiles.</li>
+                </ul>
+            </div>
+            <div class="modal-footer border-0 bg-light">
+                <button type="button" class="btn btn-dark fw-bold w-100 rounded-pill" data-bs-dismiss="modal">Entendido</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
     document.addEventListener("DOMContentLoaded", function () {
-        // 🚀 CORRECCIÓN SENIOR: Blindaje de parsing contra configuraciones de idioma (comas vs puntos)
-        // Usamos las variables flotantes que ya inyectaste desde la vista
-        let precioIndividual = parseFloat("{{ precio_por_dia|stringformat:'f' }}") || 0;
-        let precioFull = parseFloat("{{ precio_full|stringformat:'f' }}") || 0;
-        let precioCupon = 0; 
+        let cuponAplicado = false;
+        let precioCuponFull = 0; 
+        let precioCuponDia = 0;
 
-        // Variable clave: Le decimos a JS si estamos en un evento multidía o no
-        const esMultiDia = {{ evento.es_multidias|yesno:"true,false" }};
-
-        const selectDias = document.getElementById("id_dias_adquirir");
+        const inputTipoPase = document.getElementById("id_dias_adquirir");
         const inputCantidad = document.getElementById("id_cantidad_entradas");
         const inputCupon = document.getElementById("id_codigo_cupon");
         const btnCupon = document.getElementById("btn_aplicar_cupon");
         const feedbackCupon = document.getElementById("cupon_feedback");
 
         function getPrecioBase() {
-            // 🎯 LÓGICA CORREGIDA: Si NO es multidía, el precio siempre es preventa (precioFull)
-            if (!esMultiDia) {
-                return precioFull;
+            if (!inputTipoPase) return 0;
+
+            let precioNormal = 0;
+            let tipoParaCupon = "FULL";
+
+            if (inputTipoPase.tagName.toLowerCase() === 'select') {
+                const selectedOption = inputTipoPase.options[inputTipoPase.selectedIndex];
+                precioNormal = parseFloat(selectedOption.getAttribute("data-precio")) || 0;
+                tipoParaCupon = selectedOption.getAttribute("data-tipo") || "FULL";
+            } else {
+                precioNormal = parseFloat(inputTipoPase.getAttribute("data-precio")) || 0;
+                tipoParaCupon = inputTipoPase.getAttribute("data-tipo") || "FULL";
             }
-            
-            // Si ES multidía, evaluamos qué seleccionó el usuario
-            if (selectDias && selectDias.value === "FULL") {
-                return precioFull;
+
+            if (cuponAplicado) {
+                return tipoParaCupon === "FULL" ? precioCuponFull : precioCuponDia;
             }
-            return precioIndividual;
+            return precioNormal;
         }
 
         function liquidarPrecios() {
-            let base = precioCupon > 0 ? precioCupon : getPrecioBase();
+            let base = getPrecioBase();
             const cantidad = parseInt(inputCantidad.value) || 1;
             const total = cantidad * base;
             
-            document.getElementById("display_desglose").innerText = 
-                `${cantidad} Entrada(s) × $${base.toLocaleString('es-CO')}`;
+            document.getElementById("display_desglose").innerText = `${cantidad} Entrada(s) × $${base.toLocaleString('es-CO')}`;
             document.getElementById("display_total_pagar").innerText = `$ ${total.toLocaleString('es-CO')} COP`;
         }
 
@@ -170,24 +228,36 @@
             const codigo = inputCupon.value.trim();
             if (!codigo) return;
 
+            btnCupon.disabled = true;
+            feedbackCupon.innerHTML = `<span class="text-muted"><div class="spinner-border spinner-border-sm me-1" role="status"></div>Validando...</span>`;
+
             fetch(`/{% if request.tenant %}{{ request.tenant.slug }}{% else %}{{ academia.slug }}{% endif %}/eventos/{{ evento.slug }}/validar-cupon/?codigo=${codigo}`)
                 .then(res => res.json())
                 .then(data => {
                     if (data.valido) {
-                        precioCupon = data.precio_especial;
+                        cuponAplicado = true;
+                        precioCuponFull = data.precio_especial_full;
+                        precioCuponDia = data.precio_especial_dia;
+                        
                         feedbackCupon.className = "text-success extra-small mt-1 fw-semibold";
-                        feedbackCupon.innerHTML = `<i class="bi bi-patch-check-fill"></i> ¡Cupón aplicado!`;
+                        feedbackCupon.innerHTML = `<i class="bi bi-patch-check-fill"></i> ¡Cupón aplicado exitosamente!`;
                     } else {
-                        precioCupon = 0;
+                        cuponAplicado = false;
                         feedbackCupon.className = "text-danger extra-small mt-1 fw-semibold";
-                        feedbackCupon.innerHTML = `Cupón inválido.`;
+                        feedbackCupon.innerHTML = `<i class="bi bi-x-circle-fill"></i> Cupón inválido o expirado.`;
                     }
                     liquidarPrecios();
+                })
+                .catch(err => {
+                    feedbackCupon.innerHTML = `<span class="text-danger">Error de conexión.</span>`;
+                })
+                .finally(() => {
+                    btnCupon.disabled = false;
                 });
         });
 
-        if(selectDias) selectDias.addEventListener("change", liquidarPrecios);
-        inputCantidad.addEventListener("input", liquidarPrecios);
+        if(inputTipoPase) inputTipoPase.addEventListener("change", liquidarPrecios);
+        if(inputCantidad) inputCantidad.addEventListener("input", liquidarPrecios);
         
         liquidarPrecios();
     });

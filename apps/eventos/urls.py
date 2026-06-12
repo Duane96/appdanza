@@ -30,4 +30,12 @@ urlpatterns = [
 
     # NUEVA RUTA: Edición del evento basada en la vista UpdateView
     path('<slug:slug_academia>/eventos/<slug:evento_slug>/editar/', views.EventoUpdateView.as_view(), name='admin_editar'),
+
+    path('<slug:slug_academia>/eventos/<slug:evento_slug>/agregar-pase/', views.AgregarTipoPaseView.as_view(), name='agregar_pase'),
+    path('<slug:slug_academia>/eventos/<slug:evento_slug>/agregar-fase/', views.AgregarFasePreventaView.as_view(), name='agregar_fase'),
+
+    path('<slug:slug_academia>/pases/<int:pk>/editar/', views.EditarTipoPaseView.as_view(), name='editar_pase'),
+    path('<slug:slug_academia>/pases/<int:pk>/eliminar/', views.EliminarTipoPaseView.as_view(), name='eliminar_pase'),
+
+    path('<slug:slug_academia>/eventos/<slug:evento_slug>/recibos/<int:recibo_id>/anular/', views.AnularReciboView.as_view(), name='anular_recibo'),
 ]
