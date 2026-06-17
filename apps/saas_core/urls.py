@@ -35,4 +35,6 @@ urlpatterns = [
     path('master/finanzas/exportar-csv/', views.ExportarContabilidadSaaSView.as_view(), name='master_exportar_csv'),
 
     path('master/asignar-plan/', views.MasterAsignarYRenovarPlanView.as_view(), name='master_asignar_plan'),
+
+    path('master/evento/crear/', views.MasterCrearEventoView.as_view(), name='master_crear_evento'),
 ]

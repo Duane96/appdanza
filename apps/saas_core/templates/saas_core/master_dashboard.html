@@ -445,6 +445,60 @@
         </form>
     </div>
 </div>
+
+<div class="modal fade" id="crearEventoMasterModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" action="{% url 'saas_core:master_crear_evento' %}" enctype="multipart/form-data" class="modal-content border-0 shadow rounded-4">
+            {% csrf_token %}
+            <div class="modal-header border-0 pt-4 px-4">
+                <h5 class="modal-title fw-bold text-dark"><i class="bi bi-lightning-charge-fill text-warning me-2"></i>Inyección Rápida de Evento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body px-4 py-2">
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Asignar a Academia / Productora</label>
+                    <select name="academia_id" class="form-select rounded-3" required>
+                        <option value="" disabled selected>-- Selecciona la organizadora --</option>
+                        {% for aca in academias %}
+                            <option value="{{ aca.id }}">{{ aca.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Nombre del Evento</label>
+                    <input type="text" name="nombre" class="form-control rounded-3" required>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Fecha y Hora</label>
+                        <input type="datetime-local" name="fecha" class="form-control rounded-3" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Precio Mostrar (COP)</label>
+                        <input type="number" name="precio_preventa" class="form-control rounded-3" placeholder="Ej: 50000">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Ubicación</label>
+                    <input type="text" name="ubicacion" class="form-control rounded-3" required>
+                </div>
+                <div class="mb-3 p-3 bg-light border border-info border-opacity-25 rounded-3">
+                    <label class="form-label small fw-bold text-info"><i class="bi bi-link-45deg"></i> Enlace Externo (Opcional)</label>
+                    <input type="url" name="enlace_externo" class="form-control rounded-3" placeholder="https://www.otra-web.com/registro">
+                    <div class="form-text text-xs">Si dejas esto vacío, el botón llevará al panel interno de AppDanza.</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Afiche / Banner (Recomendado vertical 4:5)</label>
+                    <input type="file" name="imagen" class="form-control rounded-3" accept="image/*" required>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pb-4 px-4 bg-light rounded-bottom-4">
+                <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary rounded-3 px-4">Publicar Evento</button>
+            </div>
+        </form>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}

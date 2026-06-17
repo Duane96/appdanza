@@ -905,3 +905,41 @@ class ExportarContabilidadSaaSView(UserPassesTestMixin, View):
             ])
             
         return response
+    
+
+
+class MasterCrearEventoView(UserPassesTestMixin, View):
+    """Vista Súper Admin: Permite al dueño inyectar eventos rápidos a cualquier academia."""
+    def test_func(self):
+        return self.request.user.is_superuser and self.request.user.is_staff
+
+    def post(self, request, *args, **kwargs):
+        academia_id = request.POST.get('academia_id')
+        nombre = request.POST.get('nombre')
+        fecha = request.POST.get('fecha')
+        ubicacion = request.POST.get('ubicacion')
+        precio_preventa = request.POST.get('precio_preventa') or 0
+        enlace_externo = request.POST.get('enlace_externo')
+        imagen = request.FILES.get('imagen')
+
+        # Traemos la academia usando unfiltered_objects por ser vista maestra
+        academia = get_object_or_404(Academia.unfiltered_objects, id=academia_id)
+
+        try:
+            # Creamos el evento saltando el aislamiento (ya que somos el Master)
+            # Asegúrate de usar unfiltered_objects si tu TenantModel lo requiere
+            Evento.objects.create(
+                academia=academia,
+                nombre=nombre,
+                fecha=fecha,
+                ubicacion=ubicacion,
+                precio_preventa=precio_preventa,
+                enlace_externo=enlace_externo,
+                estado='REGISTRO_ONLINE',
+                imagen=imagen
+            )
+            messages.success(request, f"Evento '{nombre}' inyectado exitosamente en la cartelera.")
+        except Exception as e:
+            messages.error(request, f"Error al crear evento: {str(e)}")
+
+        return redirect('saas_core:panel_maestro_dashboard')

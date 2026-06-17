@@ -73,6 +73,15 @@ class Evento(TenantModel):
     tiene_pases_personalizados = models.BooleanField(default=False, verbose_name="¿Tiene varios tipos de entrada/pases?")
     tiene_fases_fechas = models.BooleanField(default=False, verbose_name="¿Tiene múltiples fechas de pago (Preventas)?")
 
+    # 🚀 NUEVO: Campo para URLs externas (Ticketera, Web propia, Google Form, etc.)
+    enlace_externo = models.URLField(
+        max_length=500, 
+        blank=True, 
+        null=True, 
+        verbose_name="Enlace de Registro Externo",
+        help_text="Si se llena, el botón 'Conseguir Tickets' abrirá esta URL en otra pestaña."
+    )
+
     class Meta:
         unique_together = ('academia', 'slug')
         ordering = ['-fecha']
