@@ -448,38 +448,7 @@
         </div>
     </section>
 
-    {% if academias_trust %}
-    <section id="academias" class="py-5 bg-white border-top border-bottom border-warning border-opacity-10">
-        <div class="container py-4">
-            <div class="text-center mb-5 mx-auto" style="max-width: 700px;">
-                <span class="badge bg-warning bg-opacity-25 text-dark border border-warning border-opacity-50 rounded-pill px-3 py-2 mb-3 fw-bold">Ecosistema Activo</span>
-                <h2 class="font-space fw-bold display-5 text-dark mb-3">Dónde aprender a bailar</h2>
-                <p class="text-muted fs-5">Estas son las escuelas y productoras de la comunidad que gestionan sus alumnos con nuestra tecnología.</p>
-            </div>
-
-            <div class="row g-4 justify-content-center">
-                {% for academia in academias_trust %}
-                <div class="col-6 col-md-4 col-lg-3">
-                    <a href="{% url 'academias:index' academia.slug %}" target="_blank" class="text-decoration-none">
-                        <div class="academy-card">
-                            {% if academia.logo %}
-                                <img src="{{ academia.logo.url }}" alt="Logo Academia de Baile {{ academia.nombre }}" class="img-fluid mb-3" style="max-height: 80px; object-fit: contain;" loading="lazy">
-                            {% else %}
-                                <div class="d-flex align-items-center justify-content-center rounded-circle mb-3 mx-auto shadow-sm border border-primary border-opacity-10" style="width: 80px; height: 80px; background: var(--primary-light); color: var(--primary); font-size: 2.5rem;">
-                                    <span class="font-space fw-bold">{{ academia.nombre|slice:":1"|upper }}</span>
-                                </div>
-                            {% endif %}
-                            
-                            <h3 class="text-dark fw-bold mb-0 font-space fs-6">{{ academia.nombre }}</h3>
-                            <span class="small text-primary mt-2">Visitar Sede <i class="bi bi-box-arrow-up-right"></i></span>
-                        </div>
-                    </a>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-    </section>
-    {% endif %}
+    
 
     <section class="container py-5 my-5">
         <div class="metrics-section p-5 p-md-5 shadow-lg">
@@ -560,26 +529,29 @@
                 
                 <div class="p-4 p-md-5">
                     <form action="#" method="POST" id="leadForm">
-                        {% csrf_token %}
-                        <div class="mb-3">
-                            <label class="form-label text-dark small fw-bold">Tu Nombre <span class="text-danger">*</span></label>
-                            <input type="text" id="directorName" class="form-control form-control-lg bg-light border-0 px-4 fs-6 rounded-4" placeholder="Ej: Duane Yaleja" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label text-dark small fw-bold">Nombre de la Escuela/Productora <span class="text-danger">*</span></label>
-                            <input type="text" id="academyName" class="form-control form-control-lg bg-light border-0 px-4 fs-6 rounded-4" placeholder="Ej: Ritmo Social" required>
-                        </div>
-                        <div class="mb-4">
-                            <label class="form-label text-dark small fw-bold">WhatsApp de Contacto <span class="text-danger">*</span></label>
-                            <div class="input-group input-group-lg">
-                                <span class="input-group-text bg-light border-0 text-muted ps-4 pe-2 rounded-start-4"><i class="bi bi-whatsapp"></i></span>
-                                <input type="tel" id="directorPhone" class="form-control bg-light border-0 fs-6 rounded-end-4 px-3" placeholder="+57 300 123 4567" required>
-                            </div>
-                        </div>
-                        <button type="submit" class="btn btn-primary-custom w-100 rounded-pill py-3 fw-bold font-space fs-5 mt-2">
-                            Solicitar Acceso
-                        </button>
-                    </form>
+    {% csrf_token %}
+    <div class="mb-3">
+        <label class="form-label text-dark small fw-bold">Tu Nombre <span class="text-danger">*</span></label>
+        <!-- 🚀 Añadimos name="director_name" -->
+        <input type="text" id="directorName" name="director_name" class="form-control form-control-lg bg-light border-0 px-4 fs-6 rounded-4" placeholder="Ej: Duane Yaleja" required>
+    </div>
+    <div class="mb-3">
+        <label class="form-label text-dark small fw-bold">Nombre de la Escuela/Productora <span class="text-danger">*</span></label>
+        <!-- 🚀 Añadimos name="academy_name" -->
+        <input type="text" id="academyName" name="academy_name" class="form-control form-control-lg bg-light border-0 px-4 fs-6 rounded-4" placeholder="Ej: Ritmo Social" required>
+    </div>
+    <div class="mb-4">
+        <label class="form-label text-dark small fw-bold">WhatsApp de Contacto <span class="text-danger">*</span></label>
+        <div class="input-group input-group-lg">
+            <span class="input-group-text bg-light border-0 text-muted ps-4 pe-2 rounded-start-4"><i class="bi bi-whatsapp"></i></span>
+            <!-- 🚀 Añadimos name="phone" -->
+            <input type="tel" id="directorPhone" name="phone" class="form-control bg-light border-0 fs-6 rounded-end-4 px-3" placeholder="+57 300 123 4567" required>
+        </div>
+    </div>
+    <button type="submit" id="btnSubmitLead" class="btn btn-primary-custom w-100 rounded-pill py-3 fw-bold font-space fs-5 mt-2">
+        Solicitar Acceso
+    </button>
+</form>
                 </div>
             </div>
         </div>
@@ -604,7 +576,7 @@
         </div>
     </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
         // Sombra suave en Navbar al hacer Scroll
@@ -617,19 +589,54 @@
             }
         });
 
-        // Lógica del Lead Magnet SaaS
+        // 🚀 ÚNICA Lógica del Lead Magnet SaaS (Envío de Email vía AJAX)
         document.getElementById('leadForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const name = document.getElementById('directorName').value.trim();
-            const academy = document.getElementById('academyName').value.trim();
-            const phone = document.getElementById('directorPhone').value.trim();
-            const whatsappSaaS = "{{ config.whatsapp|default:'573000000000' }}"; 
+            e.preventDefault(); // Evitamos recargar la página
+
+            const form = this;
+            const btn = document.getElementById('btnSubmitLead');
+            const originalText = btn.innerHTML;
             
-            const text = `¡Hola AppDanza! Me interesa el sistema para mi academia y salir en la cartelera.%0A%0A*Director:* ${name}%0A*Academia:* ${academy}%0A*Teléfono:* ${phone}`;
-            window.open(`https://api.whatsapp.com/send?phone=${whatsappSaaS}&text=${text}`, '_blank');
-            
-            bootstrap.Modal.getInstance(document.getElementById('leadModal')).hide();
-            this.reset();
+            // Cambiamos el estado del botón a "Cargando"
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Enviando...';
+            btn.disabled = true;
+
+            // Extraemos la data (Incluye automáticamente el CSRF Token)
+            const formData = new FormData(form);
+
+            fetch("{% url 'saas_core:procesar_lead_landing' %}", {
+                method: "POST",
+                body: formData,
+                headers: { 
+                    "X-Requested-With": "XMLHttpRequest",
+                    // Refuerzo de seguridad: mandamos el token explícitamente en los headers
+                    "X-CSRFToken": form.querySelector('[name=csrfmiddlewaretoken]').value 
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    // Reemplazamos el formulario entero por un mensaje de Éxito Visual
+                    const modalBody = form.parentElement;
+                    modalBody.innerHTML = `
+                        <div class="text-center py-4 slide-in">
+                            <i class="bi bi-check-circle-fill text-success" style="font-size: 5rem;"></i>
+                            <h3 class="font-space fw-bold text-dark mt-4">¡Solicitud Exitosa!</h3>
+                            <p class="text-muted fs-6 mb-4 px-3">Tus datos han sido enviados a nuestro equipo. Te escribiremos muy pronto vía WhatsApp para darte acceso a tu panel.</p>
+                            <button type="button" class="btn btn-light rounded-pill px-5 py-2 fw-bold" data-bs-dismiss="modal">Entendido</button>
+                        </div>
+                    `;
+                } else {
+                    alert("Atención: " + data.message);
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+            })
+            .catch(err => {
+                alert("Ocurrió un error de conexión. Por favor, intenta de nuevo.");
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            });
         });
     </script>
 </body>

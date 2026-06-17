@@ -37,4 +37,5 @@ urlpatterns = [
     path('master/asignar-plan/', views.MasterAsignarYRenovarPlanView.as_view(), name='master_asignar_plan'),
 
     path('master/evento/crear/', views.MasterCrearEventoView.as_view(), name='master_crear_evento'),
+    path('api/landing/lead/', views.ProcesarLeadLandingView.as_view(), name='procesar_lead_landing'),
 ]

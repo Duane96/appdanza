@@ -423,6 +423,76 @@ class IndexSaaSGlobalView(TemplateView):
         return context
     
 
+from django.utils.html import strip_tags
+
+class ProcesarLeadLandingView(View):
+    """
+    Recibe los datos del formulario de la landing page vía AJAX,
+    y envía un correo HTML estilizado al administrador.
+    """
+    def post(self, request, *args, **kwargs):
+        # 1. Capturamos los datos del POST (usando los atributos 'name' del form)
+        nombre_director = request.POST.get('director_name')
+        nombre_academia = request.POST.get('academy_name')
+        telefono = request.POST.get('phone')
+
+        if not nombre_director or not nombre_academia or not telefono:
+            return JsonResponse({'status': 'error', 'message': 'Todos los campos son obligatorios.'}, status=400)
+
+        # 2. Diseñamos un correo HTML moderno y atractivo
+        html_message = f"""
+        <html>
+        <body style="font-family: 'Arial', sans-serif; background-color: #f8fafc; padding: 20px;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-top: 6px solid #f97316;">
+                <h2 style="color: #1e1b4b; margin-top: 0;">🚀 ¡Nuevo Lead desde la Landing!</h2>
+                <p style="color: #64748b; font-size: 16px; line-height: 1.5;">Tienes una nueva solicitud de una academia que quiere unirse a la cartelera global de AppDanza.</p>
+                
+                <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 25px 0;">
+                
+                <table style="width: 100%; border-collapse: collapse; font-size: 16px;">
+                    <tr>
+                        <td style="padding: 10px 0; color: #475569;"><strong>👤 Director:</strong></td>
+                        <td style="padding: 10px 0; color: #0f172a; font-weight: bold;">{nombre_director}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px 0; color: #475569;"><strong>🏢 Academia:</strong></td>
+                        <td style="padding: 10px 0; color: #0f172a; font-weight: bold;">{nombre_academia}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px 0; color: #475569;"><strong>📱 WhatsApp:</strong></td>
+                        <td style="padding: 10px 0; color: #0f172a; font-weight: bold;">{telefono}</td>
+                    </tr>
+                </table>
+
+                <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 25px 0;">
+                
+                <div style="text-align: center; margin-top: 30px;">
+                    <a href="https://wa.me/{''.join(filter(str.isdigit, telefono))}" style="background-color: #25D366; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Contactar por WhatsApp</a>
+                </div>
+                <p style="text-align: center; color: #94a3b8; font-size: 12px; margin-top: 20px;">Este es un mensaje automático del sistema AppDanza Core.</p>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Generamos versión en texto plano como respaldo de seguridad
+        plain_message = strip_tags(html_message)
+
+        try:
+            # 3. Disparamos el correo
+            send_mail(
+                subject=f"🔥 NUEVO LEAD: {nombre_academia} quiere unirse a AppDanza",
+                message=plain_message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=['appdanza2026@gmail.com'], # Tu correo destino
+                html_message=html_message,
+                fail_silently=False
+            )
+            return JsonResponse({'status': 'success', 'message': 'Correo enviado con éxito.'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': 'Fallo al enviar correo. Verifica tu configuración SMTP.'}, status=500)
+    
+
 class MasterActualizarLandingView(UserPassesTestMixin, View):
     def test_func(self):
         return self.request.user.is_superuser
