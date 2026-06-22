@@ -16,7 +16,7 @@
             --fusion-bg-base: #100020; /* Púrpura profundo y rico */
             --fusion-magenta: #FF007F; /* Fucsia eléctrico */
             --fusion-cyan: #00FFFF; /* Cian eléctrico */
-            --brand-yellow: #FFC800; /* Amarillo de image 0, ahora es acento VIP */
+            --brand-yellow: #FFC800; /* Amarillo acento VIP */
             
             /* Textos */
             --fusion-text-light: #FFFFFF;
@@ -29,14 +29,12 @@
         }
 
         body {
-            font-family: 'Urbanist', sans-serif; /* Más urbana y moderna */
+            font-family: 'Urbanist', sans-serif;
             background-color: var(--fusion-bg-base);
             /* ATMÓSFERA DE FUSIÓN ABSTRACTA */
             background-image: 
-                /* Luces de escenario abstractas (humo magenta/púrpura) */
                 radial-gradient(circle at 15% 15%, var(--glow-magenta) 0%, transparent 40%),
                 radial-gradient(circle at 85% 85%, rgba(16, 0, 32, 0.8) 0%, #000 100%),
-                /* Efecto de ruido o grano para textura */
                 url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1IiBoZWlnaHQ9IjUiPgo8cmVjdCB3aWR0aD0iNSIgaGVpZHRoPSI1IiBmaWxsPSIjMDAwIiBmaWxsLW9wYWNpdHk9IjAuMDUiPjwvcmVjdD4KPC9zdmc+');
             background-attachment: fixed;
             color: var(--fusion-text-light);
@@ -44,11 +42,11 @@
             scroll-behavior: smooth;
         }
 
-        /* TIPOGRAFÍA DE IMPACTO CON DEGRADADO ( provided in image_0.png) */
+        /* TIPOGRAFÍA DE IMPACTO CON DEGRADADO */
         h1, h2, h3, h4, h5, .font-heading {
             font-family: 'Arial Black', Arial, sans-serif;
             text-transform: uppercase;
-            letter-spacing: -2px; /* Super compacto, agresivo */
+            letter-spacing: -2px;
             font-weight: 900;
         }
         
@@ -56,12 +54,10 @@
             background: linear-gradient(135deg, var(--fusion-cyan) 0%, var(--fusion-magenta) 50%, var(--brand-yellow) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            /* Brillo de texto vibrante */
             filter: drop-shadow(0 0 8px rgba(255, 0, 127, 0.6));
         }
 
-        /* --- BOTONES PREMIUM DE FUSIÓN (¡WOW!) --- */
-        /* Botón Magenta-Cian (Eléctrico) */
+        /* --- BOTONES PREMIUM DE FUSIÓN --- */
         .btn-fusion-electric {
             background: linear-gradient(90deg, var(--fusion-cyan) 0%, var(--fusion-magenta) 100%);
             color: #000 !important;
@@ -78,7 +74,6 @@
             box-shadow: 0 0 35px rgba(255, 0, 127, 1), 0 0 15px rgba(0, 255, 255, 1);
         }
 
-        /* Botón Amarillo VIP ( provided in image_0.png) */
         .btn-fusion-vip {
             background: #000;
             border: 2px solid var(--brand-yellow);
@@ -101,7 +96,6 @@
             backdrop-filter: blur(15px);
             -webkit-backdrop-filter: blur(15px);
             border-radius: 20px;
-            /* BORDE NEÓN MULTICOLOR */
             border: 2px solid;
             border-image: linear-gradient(135deg, var(--fusion-cyan) 0%, var(--fusion-magenta) 100%) 1;
             box-shadow: 0 20px 50px rgba(0,0,0,0.6);
@@ -112,13 +106,11 @@
             background: linear-gradient(135deg, rgba(16, 0, 32, 0.8) 0%, rgba(0,0,0,0.9) 100%);
             border-radius: 16px;
             overflow: hidden;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Salto dinámico */
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
             position: relative;
-            /* Borde neón fucsia sutil */
             border: 2px solid rgba(255, 0, 127, 0.2);
         }
         
-        /* Línea neón superior dinámica */
         .ticket-card-fusion::before {
             content: '';
             position: absolute;
@@ -164,15 +156,12 @@
         }
         
         .gallery-img-fusion:hover {
-            transform: scale(1.08) rotate(2deg); /* Animación de baile */
+            transform: scale(1.08) rotate(2deg);
             border-image: linear-gradient(135deg, var(--fusion-magenta) 0%, var(--fusion-cyan) 100%) 1;
             box-shadow: 0 15px 40px rgba(0,0,0,0.7), 0 0 20px var(--glow-magenta);
         }
 
-
-
-
-        /* 🚀 MAGIA 3D FUSION NIGHT: FLIP CARDS */
+        /* 🚀 CONFIGURACIÓN 3D FLIP CARDS BLINDADA CONTRA ERRORES DE CLIC */
         .flip-card-container {
             perspective: 1000px;
             height: 100%;
@@ -199,6 +188,7 @@
         }
         .flip-card-front {
             z-index: 2;
+            pointer-events: auto; /* Escucha eventos por defecto */
         }
         .flip-card-back {
             transform: rotateY(180deg);
@@ -207,6 +197,17 @@
             border: 2px solid rgba(255, 0, 127, 0.5);
             box-shadow: 0 0 30px rgba(255, 0, 127, 0.2);
             backdrop-filter: blur(15px);
+            pointer-events: none; /* Desactivado cuando está de espaldas */
+        }
+        
+        /* 🛠️ ARREGLO DE INTERACCIÓN: Intercambio de prioridad de puntero al girar */
+        .flip-card-container:hover .flip-card-front {
+            z-index: 1;
+            pointer-events: none; /* Al girar, la cara frontal se vuelve intangible */
+        }
+        .flip-card-container:hover .flip-card-back {
+            z-index: 3; /* Pasa al frente absoluto */
+            pointer-events: auto; /* Habilita los clics en los enlaces del reverso */
         }
     </style>
 </head>
@@ -216,7 +217,7 @@
         <div class="container">
             <a class="navbar-brand font-heading fs-2 d-flex align-items-center title-fusion" href="#">
                 {% if academia.logo %}
-                    <img src="{{ academia.logo.url }}" alt="Bachatamanía" style="height: 50px;">
+                    <img src="{{ academia.logo.url }}" alt="{{ academia.nombre }}" style="height: 50px;">
                 {% else %}
                     BACHATA<span class="text-white">MANÍA</span>
                 {% endif %}
@@ -227,7 +228,8 @@
             <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
                 <ul class="navbar-nav align-items-center gap-3">
                     <li class="nav-item"><a class="nav-link px-3" href="#cartelera">Cartelera</a></li>
-                    {% if galeria_fotos %} <li class="nav-item"><a class="nav-link px-3" href="#galeria">Memorias</a></li>
+                    {% if galeria_fotos %} 
+                        <li class="nav-item"><a class="nav-link px-3" href="#galeria">Memorias</a></li>
                     {% endif %}
                     <li class="nav-item ms-lg-2 mt-3 mt-lg-0">
                         <a href="#cartelera" class="btn btn-fusion-vip rounded-pill px-4 py-2">Comprar Tickets</a>
@@ -284,13 +286,13 @@
                                     <span class="text-white"><i class="bi bi-geo-alt-fill me-2 text-magenta"></i>{{ evento.ubicacion }}</span>
                                 </div>
                                 <div class="d-flex gap-3 flex-wrap justify-content-center justify-content-md-start">
-                                    {% if evento.estado == 'REGISTRO_ONLINE' %}
-                                        <a href="{% url 'eventos:registro_publico' academia.slug evento.slug %}" class="btn btn-fusion-electric btn-lg px-5 py-3 rounded-pill shadow-lg" style="box-shadow: 0 0 25px var(--glow-cyan);">
-                                            <i class="bi bi-ticket-detailed-fill me-2"></i>OBTENER TICKETS
-                                        </a>
-                                    {% else %}
-                                        <button class="btn btn-outline-light btn-lg px-5 py-3 rounded-pill font-heading" disabled>Solo Taquilla</button>
-                                    {% endif %}
+                                    
+                                    <a href="{% if evento.enlace_externo %}{{ evento.enlace_externo }}{% else %}{% url 'eventos:registro_publico' academia.slug evento.slug %}{% endif %}" 
+                                       target="_blank" 
+                                       class="btn btn-fusion-electric btn-lg px-5 py-3 rounded-pill shadow-lg" style="box-shadow: 0 0 25px var(--glow-cyan);">
+                                        <i class="bi bi-ticket-detailed-fill me-2"></i>OBTENER TICKETS
+                                    </a>
+
                                 </div>
                             </div>
                         </div>
@@ -317,69 +319,69 @@
             <div class="row g-4">
                 {% for evento in eventos %}
                     <div class="col-md-6 col-xl-4">
-    <div class="flip-card-container">
-        <div class="flip-card-inner">
-            
-            <div class="flip-card-front ticket-card-fusion d-flex flex-column p-0">
-                <div class="position-relative w-100 h-100" style="background: #000;">
-                    {% if evento.imagen %}
-                        <img src="{{ evento.imagen.url }}" alt="{{ evento.nombre }}" class="w-100 h-100 object-fit-cover">
-                    {% endif %}
-                    
-                    <div class="position-absolute bottom-0 start-0 w-100 p-4 pt-5" style="background: linear-gradient(0deg, rgba(0,0,0,0.95) 0%, transparent 100%); z-index: 1;"></div>
-                    
-                    <div class="position-absolute top-0 end-0 m-3" style="z-index: 2;">
-                        <span class="badge rounded-pill px-3 py-2 shadow-lg font-heading" style="background: rgba(0,0,0,0.8); border: 2px solid var(--fusion-cyan); color: var(--fusion-cyan); filter: drop-shadow(0 0 5px var(--glow-cyan));">
-                            <i class="bi bi-clock-history me-1"></i> {{ evento.fecha|date:"h:i A" }}
-                        </span>
-                    </div>
+                        <div class="flip-card-container">
+                            <div class="flip-card-inner">
+                                
+                                <div class="flip-card-front ticket-card-fusion d-flex flex-column p-0">
+                                    <div class="position-relative w-100 h-100" style="background: #000;">
+                                        {% if evento.imagen %}
+                                            <img src="{{ evento.imagen.url }}" alt="{{ evento.nombre }}" class="w-100 h-100 object-fit-cover">
+                                        {% endif %}
+                                        
+                                        <div class="position-absolute bottom-0 start-0 w-100 pt-5" style="background: linear-gradient(0deg, rgba(16,0,32,1) 0%, rgba(16,0,32,0.5) 60%, transparent 100%); z-index: 1; height: 50%;"></div>
+                                        
+                                        <div class="position-absolute top-0 end-0 m-3" style="z-index: 2;">
+                                            <span class="badge rounded-pill px-3 py-2 shadow-lg font-heading" style="background: rgba(16, 0, 32, 0.9); border: 2px solid var(--fusion-cyan); color: var(--fusion-cyan); filter: drop-shadow(0 0 5px var(--glow-cyan)); backdrop-filter: blur(5px);">
+                                                <i class="bi bi-clock-history me-1"></i> {{ evento.fecha|date:"h:i A" }}
+                                            </span>
+                                        </div>
 
-                    <div class="position-absolute bottom-0 start-0 w-100 p-4" style="z-index: 2;">
-                        <span class="text-magenta font-heading small mb-1 d-block" style="color: var(--fusion-magenta); text-shadow: 0 0 5px var(--fusion-magenta);">{{ evento.fecha|date:"d M, Y" }}</span>
-                        <h3 class="font-heading text-white mb-2 lh-sm fs-4" style="text-shadow: 0 2px 5px rgba(0,0,0,1);">{{ evento.nombre }}</h3>
-                        <p class="small mb-0 fw-medium" style="color: var(--fusion-cyan); text-shadow: 0 1px 3px rgba(0,0,0,1);"><i class="bi bi-geo-alt-fill me-1"></i>{{ evento.ubicacion }}</p>
-                    </div>
-                </div>
-            </div>
+                                        <div class="position-absolute bottom-0 start-0 w-100 p-3" style="z-index: 2;">
+                                            <div class="p-3 rounded-4 shadow-lg" style="background: rgba(16, 0, 32, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 0, 127, 0.35);">
+                                                <span class="font-heading small mb-1 d-block" style="color: var(--fusion-magenta); text-shadow: 0 0 8px rgba(255,0,127,0.4);">{{ evento.fecha|date:"d M, Y" }}</span>
+                                                <h3 class="font-heading text-white mb-1 lh-sm fs-5" style="text-shadow: 0 2px 4px rgba(0,0,0,0.8);">{{ evento.nombre }}</h3>
+                                                <p class="small mb-0 fw-bold" style="color: var(--fusion-cyan); text-shadow: 0 1px 2px rgba(0,0,0,0.8);"><i class="bi bi-geo-alt-fill me-1"></i>{{ evento.ubicacion }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
 
-            <div class="flip-card-back p-4 d-flex flex-column text-center align-items-center justify-content-center">
-                <h3 class="font-heading title-fusion mb-4 text-uppercase">Accesos VIP</h3>
-                
-                {% if evento.fase_actual %}
-                    <span class="badge mb-4 px-4 py-2 rounded-pill font-heading" style="background: rgba(0,255,255,0.1); color: var(--fusion-cyan); border: 1px solid var(--fusion-cyan); font-size: 0.9rem; box-shadow: 0 0 10px var(--glow-cyan);">
-                        <i class="bi bi-fire me-1"></i> FASE: {{ evento.fase_actual|upper }}
-                    </span>
-                {% endif %}
-                
-                <div class="w-100 mb-4 px-2 overflow-auto" style="max-height: 200px;">
-                    {% for pase in evento.pases_procesados %}
-                        <div class="d-flex justify-content-between align-items-center py-3 border-bottom" style="border-color: rgba(255,255,255,0.1) !important;">
-                            <div class="text-start">
-                                <strong class="text-white d-block font-heading fs-6" style="letter-spacing: 0px;">{{ pase.nombre|upper }}</strong>
-                                <small style="color: var(--fusion-text-muted); font-size: 0.75rem;">{{ pase.accesos }} Días Incluidos</small>
+                                <div class="flip-card-back p-4 d-flex flex-column text-center align-items-center justify-content-center">
+                                    <h3 class="font-heading title-fusion mb-4 text-uppercase">Accesos VIP</h3>
+                                    
+                                    {% if evento.fase_actual %}
+                                        <span class="badge mb-4 px-4 py-2 rounded-pill font-heading" style="background: rgba(0,255,255,0.1); color: var(--fusion-cyan); border: 1px solid var(--fusion-cyan); font-size: 0.9rem; box-shadow: 0 0 10px var(--glow-cyan);">
+                                            <i class="bi bi-fire me-1"></i> FASE: {{ evento.fase_actual|upper }}
+                                        </span>
+                                    {% endif %}
+                                    
+                                    <div class="w-100 mb-4 px-2 overflow-auto" style="max-height: 200px;">
+                                        {% for pase in evento.pases_procesados %}
+                                            <div class="d-flex justify-content-between align-items-center py-3 border-bottom" style="border-color: rgba(255,255,255,0.1) !important;">
+                                                <div class="text-start">
+                                                    <strong class="text-white d-block font-heading fs-6" style="letter-spacing: 0px;">{{ pase.nombre|upper }}</strong>
+                                                    <small style="color: var(--fusion-text-muted); font-size: 0.75rem;">{{ pase.accesos }} Días Incluidos</small>
+                                                </div>
+                                                <strong class="fs-4 font-heading" style="color: var(--brand-yellow); text-shadow: 0 0 10px var(--glow-yellow);">${{ pase.precio|floatformat:0 }}</strong>
+                                            </div>
+                                        {% empty %}
+                                            <div class="text-center text-muted py-3">Precios en el portal.</div>
+                                        {% endfor %}
+                                    </div>
+                                    
+                                    <div class="mt-auto w-100">
+                                        <a href="{% if evento.enlace_externo %}{{ evento.enlace_externo }}{% else %}{% url 'eventos:registro_publico' academia.slug evento.slug %}{% endif %}" 
+                                           target="_blank" 
+                                           class="btn btn-fusion-electric w-100 py-3 rounded-pill d-flex justify-content-between align-items-center px-4" style="font-size: 1.1rem;">
+                                            <span>ASEGURAR TICKET</span>
+                                            <i class="bi bi-arrow-right-circle-fill fs-4"></i>
+                                        </a>
+                                    </div>
+                                </div>
+
                             </div>
-                            <strong class="fs-4 font-heading" style="color: var(--brand-yellow); text-shadow: 0 0 10px var(--glow-yellow);">${{ pase.precio|floatformat:0 }}</strong>
                         </div>
-                    {% empty %}
-                        <div class="text-center text-muted py-3">Precios en el portal.</div>
-                    {% endfor %}
-                </div>
-                
-                <div class="mt-auto w-100">
-                    {% if evento.estado == 'REGISTRO_ONLINE' %}
-                        <a href="{% url 'eventos:registro_publico' academia.slug evento.slug %}" class="btn btn-fusion-electric w-100 py-3 rounded-pill d-flex justify-content-between align-items-center px-4" style="font-size: 1.1rem;">
-                            <span>ASEGURAR TICKET</span>
-                            <i class="bi bi-arrow-right-circle-fill fs-4"></i>
-                        </a>
-                    {% else %}
-                        <button class="btn btn-outline-light w-100 py-3 rounded-pill font-heading" disabled>SOLD OUT / SOLO TAQUILLA</button>
-                    {% endif %}
-                </div>
-            </div>
-
-        </div>
-    </div>
-</div>
+                    </div>
                 {% empty %}
                     <div class="col-12 text-center py-5">
                         <div class="panel-fusion p-5 d-inline-block">
@@ -394,22 +396,22 @@
     </section>
 
     {% if galeria_fotos %}
-    <section id="galeria" class="py-5" style="background: rgba(0,0,0,0.3); border-top: 1px solid rgba(255,255,255,0.05);">
-        <div class="container py-5">
-            <div class="mb-5 text-center">
-                <h2 class="display-5 font-heading title-fusion">MEMORIAS <span class="text-white">ÉPICAS</span></h2>
-                <p class="fs-4 mt-2" style="color: var(--fusion-text-muted);">Revive los mejores momentos de la fiesta más grande.</p>
-            </div>
-            
-            <div class="row g-4 justify-content-center">
-                {% for foto in galeria_fotos|slice:":6" %}
-                <div class="col-6 col-md-4 col-xl-3">
-                    <img src="{{ foto.imagen.url }}" alt="Memoria Bachatamanía" class="img-fluid gallery-img-fusion w-100 object-fit-cover shadow-lg" style="height: 280px;">
+        <section id="galeria" class="py-5" style="background: rgba(0,0,0,0.3); border-top: 1px solid rgba(255,255,255,0.05);">
+            <div class="container py-5">
+                <div class="mb-5 text-center">
+                    <h2 class="display-5 font-heading title-fusion">MEMORIAS <span class="text-white">ÉPICAS</span></h2>
+                    <p class="fs-4 mt-2" style="color: var(--fusion-text-muted);">Revive los mejores momentos de la fiesta más grande.</p>
                 </div>
-                {% endfor %}
+                
+                <div class="row g-4 justify-content-center">
+                    {% for foto in galeria_fotos|slice:":6" %}
+                        <div class="col-6 col-md-4 col-xl-3">
+                            <img src="{{ foto.imagen.url }}" alt="Memoria Bachatamanía" class="img-fluid gallery-img-fusion w-100 object-fit-cover shadow-lg" style="height: 280px;">
+                        </div>
+                    {% endfor %}
+                </div>
             </div>
-        </div>
-    </section>
+        </section>
     {% endif %}
 
     <footer class="pt-5 pb-3" style="background: #08080a; border-top: 2px solid; border-image: linear-gradient(90deg, var(--fusion-magenta), var(--fusion-cyan)) 1;">
