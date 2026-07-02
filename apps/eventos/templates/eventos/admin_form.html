@@ -226,29 +226,43 @@
                     <div class="card border-0 shadow-sm bg-white p-4 rounded-4 h-100">
                         <h5 class="fw-bold text-dark mb-4">Cronograma de Matriz de Precios</h5>
                         <table class="table align-middle">
-                            <thead class="table-light small">
-                                <tr>
-                                    <th>Fase</th>
-                                    <th>Vence</th>
-                                    <th>Matriz de Precios</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for fase in fases_creadas %}
-                                <tr>
-                                    <td class="fw-bold text-dark">{{ fase.nombre_fase }}</td>
-                                    <td><span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle"><i class="bi bi-clock me-1"></i>{{ fase.fecha_limite|date:"d M - H:i" }}</span></td>
-                                    <td class="small">
-                                        <ul class="list-unstyled m-0 extra-small">
-                                            {% for pivote in fase.precios_pases.all %}
-                                                <li class="mb-1"><span class="text-secondary">{{ pivote.pase.nombre }}:</span> <strong class="text-success">${{ pivote.precio|floatformat:0 }}</strong></li>
-                                            {% endfor %}
-                                        </ul>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+    <thead class="table-light small">
+        <tr>
+            <th>Fase</th>
+            <th>Vence</th>
+            <th>Matriz de Precios</th>
+            <th class="text-end">Acciones</th> <!-- 🚀 NUEVO -->
+        </tr>
+    </thead>
+    <tbody>
+        {% for fase in fases_creadas %}
+        <tr>
+            <td class="fw-bold text-dark">{{ fase.nombre_fase }}</td>
+            <td>
+                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle">
+                    <i class="bi bi-clock me-1"></i>{{ fase.fecha_limite|date:"d M - H:i" }}
+                </span>
+            </td>
+            <td class="small">
+                <ul class="list-unstyled m-0 extra-small">
+                    {% for pivote in fase.precios_pases.all %}
+                        <li class="mb-1"><span class="text-secondary">{{ pivote.pase.nombre }}:</span> <strong class="text-success">${{ pivote.precio|floatformat:0 }}</strong></li>
+                    {% endfor %}
+                </ul>
+            </td>
+            <!-- 🚀 NUEVOS BOTONES -->
+            <td class="text-end">
+                <button type="button" class="btn btn-sm btn-light border text-primary me-1" data-bs-toggle="modal" data-bs-target="#modalEditarFase{{ fase.id }}">
+                    <i class="bi bi-pencil-square"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalEliminarFase{{ fase.id }}">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
                     </div>
                 </div>
             </div>
@@ -314,6 +328,72 @@
                     <div class="d-flex gap-2 w-100">
                         <button type="button" class="btn btn-light w-50" data-bs-dismiss="modal">Cancelar</button>
                         <form action="{% url 'eventos:eliminar_pase' request.tenant.slug pase.id %}" method="POST" class="w-50">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger w-100 fw-bold">Eliminar</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endfor %}
+
+
+{% for fase in fases_creadas %}
+    <!-- 🟢 MODAL EDITAR FASE Y PRECIOS -->
+    <div class="modal fade" id="modalEditarFase{{ fase.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <form action="{% url 'eventos:editar_fase' request.tenant.slug fase.id %}" method="POST">
+                    {% csrf_token %}
+                    <div class="modal-header bg-light border-0">
+                        <h5 class="modal-title fw-bold text-dark">Editar Preventa</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label class="small fw-semibold text-secondary">Nombre de Fase</label>
+                            <input type="text" name="nombre_fase" class="form-control" value="{{ fase.nombre_fase }}" required>
+                        </div>
+                        <div class="mb-4">
+                            <!-- 🚀 FIX SENIOR: Formateo estricto para que el input type="datetime-local" reconozca la fecha -->
+                            <label class="small fw-semibold text-secondary">Fecha Límite</label>
+                            <input type="datetime-local" name="fecha_limite" class="form-control" value="{{ fase.fecha_limite|date:'Y-m-d\TH:i' }}" required>
+                        </div>
+                        
+                        <h6 class="fw-bold text-dark small mb-3 border-bottom pb-2">Matriz de Precios Actuales:</h6>
+                        {% for pivote in fase.precios_pases.all %}
+                            <div class="mb-3">
+                                <label class="extra-small fw-semibold text-secondary">{{ pivote.pase.nombre }}</label>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-light">$</span>
+                                    <input type="number" name="precio_pase_{{ pivote.pase.id }}" class="form-control" value="{{ pivote.precio|floatformat:0 }}" required>
+                                </div>
+                            </div>
+                        {% empty %}
+                            <p class="text-muted small">No hay pases configurados en esta matriz.</p>
+                        {% endfor %}
+                    </div>
+                    <div class="modal-footer border-0 bg-light">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-warning fw-bold text-dark">Actualizar Matriz</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🔴 MODAL ELIMINAR FASE -->
+    <div class="modal fade" id="modalEliminarFase{{ fase.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-body text-center p-4">
+                    <i class="bi bi-calendar-x text-danger display-4 mb-3"></i>
+                    <h5 class="fw-bold text-dark mb-2">¿Eliminar Preventa?</h5>
+                    <p class="text-muted small mb-4">Se borrará la <strong>{{ fase.nombre_fase }}</strong> y sus precios. No se borrarán los pases de la pestaña 2.</p>
+                    <div class="d-flex gap-2 w-100">
+                        <button type="button" class="btn btn-light w-50" data-bs-dismiss="modal">Cancelar</button>
+                        <form action="{% url 'eventos:eliminar_fase' request.tenant.slug fase.id %}" method="POST" class="w-50">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-danger w-100 fw-bold">Eliminar</button>
                         </form>

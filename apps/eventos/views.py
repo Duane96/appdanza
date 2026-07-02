@@ -817,3 +817,63 @@ class AnularReciboView(LoginRequiredMixin, View):
         
         messages.success(request, f"El recibo #{recibo.numero_recibo} y sus entradas han sido anulados correctamente.")
         return redirect('eventos:admin_detalle', slug_academia=slug_academia, evento_slug=evento_slug)
+    
+
+    # apps/eventos/views.py
+
+class EditarFasePreventaView(LoginRequiredMixin, View):
+    """
+    Vista Senior: Actualiza la fecha, nombre y todos los precios de la matriz
+    asociados a una Fase de Preventa específica.
+    """
+    def post(self, request, slug_academia, pk):
+        from .models import FasePreventa, PrecioFasePase
+        
+        # 1. Filtro estricto Multi-Tenant
+        fase = get_object_or_404(FasePreventa, id=pk, evento__academia=request.tenant)
+        evento = fase.evento
+
+        # 2. Actualizamos datos principales de la fase
+        fase.nombre_fase = request.POST.get('nombre_fase', fase.nombre_fase)
+        
+        fecha_limite = request.POST.get('fecha_limite')
+        if fecha_limite:
+            fase.fecha_limite = fecha_limite
+            
+        fase.save(update_fields=['nombre_fase', 'fecha_limite'])
+
+        # 3. 🧠 RE-CÁLCULO DE LA MATRIZ DE PRECIOS
+        # Recorremos los pases enviados en el POST y actualizamos la tabla pivote
+        for pivote in fase.precios_pases.all():
+            precio_input = request.POST.get(f'precio_pase_{pivote.pase.id}')
+            if precio_input is not None and precio_input != '':
+                pivote.precio = precio_input
+                pivote.save(update_fields=['precio'])
+
+        messages.success(request, f"Preventa '{fase.nombre_fase}' actualizada correctamente.")
+        
+        return redirect(reverse('eventos:admin_editar', kwargs={
+            'slug_academia': slug_academia, 
+            'evento_slug': evento.slug
+        }) + "#fases")
+
+
+class EliminarFasePreventaView(LoginRequiredMixin, View):
+    """Vista Senior: Elimina una Fase de Preventa en cascada (borra su matriz de precios)."""
+    def post(self, request, slug_academia, pk):
+        from .models import FasePreventa
+        
+        fase = get_object_or_404(FasePreventa, id=pk, evento__academia=request.tenant)
+        evento_slug = fase.evento.slug
+        nombre_fase = fase.nombre_fase
+        
+        # Opcional: Podrías validar si ya se vendieron boletas en esta fase, pero 
+        # como la fase solo dicta el precio, borrarla no afecta recibos viejos.
+        fase.delete()
+        
+        messages.success(request, f"Preventa '{nombre_fase}' eliminada del cronograma.")
+        
+        return redirect(reverse('eventos:admin_editar', kwargs={
+            'slug_academia': slug_academia, 
+            'evento_slug': evento_slug
+        }) + "#fases")

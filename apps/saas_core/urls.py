@@ -38,4 +38,5 @@ urlpatterns = [
 
     path('master/evento/crear/', views.MasterCrearEventoView.as_view(), name='master_crear_evento'),
     path('api/landing/lead/', views.ProcesarLeadLandingView.as_view(), name='procesar_lead_landing'),
+    
 ]

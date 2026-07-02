@@ -38,4 +38,6 @@ urlpatterns = [
     path('<slug:slug_academia>/pases/<int:pk>/eliminar/', views.EliminarTipoPaseView.as_view(), name='eliminar_pase'),
 
     path('<slug:slug_academia>/eventos/<slug:evento_slug>/recibos/<int:recibo_id>/anular/', views.AnularReciboView.as_view(), name='anular_recibo'),
+    path('<slug:slug_academia>/fases/<int:pk>/editar/', views.EditarFasePreventaView.as_view(), name='editar_fase'),
+    path('<slug:slug_academia>/fases/<int:pk>/eliminar/', views.EliminarFasePreventaView.as_view(), name='eliminar_fase'),
 ]

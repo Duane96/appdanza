@@ -1013,3 +1013,6 @@ class MasterCrearEventoView(UserPassesTestMixin, View):
             messages.error(request, f"Error al crear evento: {str(e)}")
 
         return redirect('saas_core:panel_maestro_dashboard')
+
+
+
