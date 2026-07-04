@@ -321,6 +321,7 @@
     </div>
 </div>
 
+<!-- REEMPLAZA EL MODAL DE VENTA PUERTA CON ESTO -->
 <div class="modal fade" id="modalVentaPuerta" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
@@ -339,9 +340,36 @@
                         <label class="form-label small fw-semibold text-secondary">Teléfono de Contacto (Opcional)</label>
                         {{ form_puerta.comprador_telefono }}
                     </div>
+
+                    <!-- 🚀 NUEVO: SELECTOR DINÁMICO DE PASES PARA LA TAQUILLA -->
+                    {% if pases_disponibles_taquilla or evento.es_multidias %}
+                    <div class="mb-3 p-3 bg-light rounded border border-warning-subtle">
+                        <label class="form-label small fw-bold text-dark">Tipo de Entrada / Pase a Vender</label>
+                        <select name="tipo_pase" id="puerta_tipo_pase" class="form-select border-dark shadow-sm">
+                            {% if pases_disponibles_taquilla %}
+                                {% for pase in pases_disponibles_taquilla %}
+                                    <option value="PASE_{{ pase.id }}" data-precio="{{ pase.precio_actual|stringformat:'f' }}">
+                                        {{ pase.nombre }} - ${{ pase.precio_actual|floatformat:0 }}
+                                    </option>
+                                {% endfor %}
+                            {% else %}
+                                <option value="FULL" data-precio="{{ evento.precio_puerta|stringformat:'f' }}">
+                                    Full Pass - ${{ evento.precio_puerta|floatformat:0 }}
+                                </option>
+                                <option value="DIA" data-precio="{{ evento.precio_por_dia|stringformat:'f' }}">
+                                    1 Día (Individual) - ${{ evento.precio_por_dia|floatformat:0 }}
+                                </option>
+                            {% endif %}
+                        </select>
+                    </div>
+                    {% else %}
+                        <input type="hidden" name="tipo_pase" value="FULL">
+                    {% endif %}
+
                     <div class="row g-2 mb-3">
                         <div class="col-6">
-                            <label class="form-label small fw-semibold text-secondary">Precio Unitario Ajustado ($)</label>
+                            <label class="form-label small fw-semibold text-secondary">Precio Unitario Ajustable ($)</label>
+                            <!-- Agregamos ID al input para que JS lo pueda controlar -->
                             {{ form_puerta.precio_unitario_aplicado }}
                         </div>
                         <div class="col-6">
@@ -353,14 +381,14 @@
                         <label class="form-label small fw-semibold text-secondary">Medio de Pago Recibido</label>
                         {{ form_puerta.medio_pago }}
                     </div>
-                    <div class="bg-light rounded p-3 d-flex justify-content-between align-items-center mt-2">
-                        <span class="fw-semibold text-secondary small">TOTAL A COBRAR EN TAQUILLA:</span>
-                        <h4 class="fw-bold text-dark m-0" id="puerta_total_display">$0 COP</h4>
+                    <div class="bg-dark text-white rounded p-3 d-flex justify-content-between align-items-center mt-2 shadow-sm">
+                        <span class="fw-semibold text-white-50 small">TOTAL A COBRAR:</span>
+                        <h4 class="fw-bold text-warning m-0" id="puerta_total_display">$0 COP</h4>
                     </div>
                 </div>
                 <div class="modal-footer border-0">
                     <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-warning fw-bold text-dark px-4">Efectuar Entrada</button>
+                    <button type="submit" class="btn btn-warning fw-bold text-dark px-4 shadow-sm">Efectuar Entrada</button>
                 </div>
             </form>
         </div>
@@ -499,25 +527,41 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", function () {
-        // --- 1. LÓGICA DE CALCULO DE TAQUILLA MANUAL (CORREGIDOS IDS SEGÚN TU DJANGO FORM) ---
-        // Buscamos dinámicamente por selectores de atributos para evitar conflictos con los ID nativos de Django
-        const inputPrecio = document.querySelector("input[name='precio_unitario_aplicado']");
-        const inputCantidad = document.querySelector("input[name='cantidad_entradas']");
-        const displayTotal = document.getElementById("puerta_total_display");
+    // --- 1. LÓGICA DE CALCULO DE TAQUILLA MANUAL (NIVEL SENIOR) ---
+    const selectPasePuerta = document.getElementById("puerta_tipo_pase");
+    const inputPrecio = document.querySelector("input[name='precio_unitario_aplicado']");
+    const inputCantidad = document.querySelector("input[name='cantidad_entradas']");
+    const displayTotal = document.getElementById("puerta_total_display");
 
-        function calcularTotalPuerta() {
-            if(!inputPrecio || !inputCantidad || !displayTotal) return;
-            const precio = parseFloat(inputPrecio.value) || 0;
-            const cantidad = parseInt(inputCantidad.value) || 1;
-            const total = precio * cantidad;
-            displayTotal.innerText = "$ " + total.toLocaleString('es-CO') + " COP";
-        }
+    function calcularTotalPuerta() {
+        if(!inputPrecio || !inputCantidad || !displayTotal) return;
+        const precio = parseFloat(inputPrecio.value) || 0;
+        const cantidad = parseInt(inputCantidad.value) || 1;
+        const total = precio * cantidad;
+        displayTotal.innerText = "$ " + total.toLocaleString('es-CO') + " COP";
+    }
 
-        if(inputPrecio && inputCantidad) {
-            inputPrecio.addEventListener("input", calcularTotalPuerta);
-            inputCantidad.addEventListener("input", calcularTotalPuerta);
+    // Si existe el selector de pases, inyectamos el precio automáticamente
+    if (selectPasePuerta && inputPrecio) {
+        selectPasePuerta.addEventListener("change", function() {
+            const selectedOption = selectPasePuerta.options[selectPasePuerta.selectedIndex];
+            const precioSugerido = parseFloat(selectedOption.getAttribute("data-precio")) || 0;
+            inputPrecio.value = precioSugerido; // Auto-completa el input libre
             calcularTotalPuerta();
+        });
+
+        // Autocompletar la primera vez que se abre el modal si está en cero
+        if (!inputPrecio.value || inputPrecio.value == "0") {
+             const initOption = selectPasePuerta.options[selectPasePuerta.selectedIndex];
+             inputPrecio.value = parseFloat(initOption.getAttribute("data-precio")) || 0;
         }
+    }
+
+    if(inputPrecio && inputCantidad) {
+        inputPrecio.addEventListener("input", calcularTotalPuerta);
+        inputCantidad.addEventListener("input", calcularTotalPuerta);
+        calcularTotalPuerta();
+    }
 
         // --- 2. SISTEMA DE LOGÍSTICA DE ESCÁNER ASÍNCRONO ---
         const modalEscaner = document.getElementById('modalEscanerQR');

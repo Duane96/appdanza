@@ -1,5 +1,6 @@
 # apps/eventos/views.py
 from datetime import timedelta
+from pyexpat.errors import messages
 from django.db import transaction
 
 from django.http import JsonResponse
@@ -264,7 +265,40 @@ class EliminarTipoPaseView(LoginRequiredMixin, View):
     
 
 
+# =========================================================================
+# 🟢 FUNCIÓN PARA CAMBIAR EL ESTADO DEL EVENTO (¡La que se había borrado!)
+# =========================================================================
+def cambiar_estado_evento(request, slug_academia, evento_slug, nuevo_estado):
+    """
+    Controla el flujo de vida del evento. 
+    (Fase Beta: Cambio de estado manual liberado sin bloqueo de pasarela de pago).
+    """
+    if not request.user.is_authenticated:
+        return redirect('login')
+        
+    evento = get_object_or_404(Evento, academia=request.tenant, slug=evento_slug)
+    suscripcion = request.tenant.suscripcion_saas
+    
+    # 🚨 FILTRO PREVIO: Validar que su plan SaaS le permita usar eventos
+    if not suscripcion.modulo_eventos_activo:
+        from django.contrib import messages
+        messages.error(request, "Tu plan actual no incluye el módulo de eventos.")
+        return redirect('academias:dashboard', slug_academia=slug_academia)
 
+    # Validamos por seguridad que el estado que viene en la URL existe en las opciones del modelo
+    estados_validos = [estado[0] for estado in Evento.ESTADOS]
+    
+    if nuevo_estado in estados_validos:
+        evento.estado = nuevo_estado
+        # Usamos update_fields para optimizar la escritura en SQL (muy útil para PythonAnywhere)
+        evento.save(update_fields=['estado'])
+        from django.contrib import messages
+        messages.success(request, f"Estado del evento actualizado a: {evento.get_estado_display()}")
+    else:
+        from django.contrib import messages
+        messages.error(request, "Estado no válido.")
+
+    return redirect('eventos:admin_detalle', slug_academia=slug_academia, evento_slug=evento_slug)
 
 
 
@@ -279,14 +313,13 @@ class EventoDetailAdminView(LoginRequiredMixin, DetailView):
     context_object_name = "evento"
 
     def get_object(self):
-        # Filtro estricto Multi-Tenant usando el request.tenant del Middleware
         return get_object_or_404(Evento, academia=self.request.tenant, slug=self.kwargs['evento_slug'])
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         evento = self.object
 
-        # 🔍 1. BUSCADOR DE RECIBOS POR FILTRO DE TEXTO (Aislado al evento)
+        # 1. BUSCADOR DE RECIBOS POR FILTRO DE TEXTO
         query = self.request.GET.get('q')
         recibos = ReciboEvento.objects.filter(evento=evento).order_by('-id')
         if query:
@@ -298,10 +331,7 @@ class EventoDetailAdminView(LoginRequiredMixin, DetailView):
         context['recibos'] = recibos
         context['q'] = query or ''
 
-        # 💵 2. MÉTRICAS CONTABLES GENERALES EN TIEMPO REAL (Módulo Finanzas)
-        # Usamos Coalesce para que PostgreSQL/SQLite devuelva un Decimal(0.00) nativo si no hay registros.
-        # Esto blinda las operaciones matemáticas y la memoria en PythonAnywhere.
-        
+        # 2. MÉTRICAS CONTABLES GENERALES
         context['total_entradas_vendidas'] = ReciboEvento.objects.filter(evento=evento, anulado=False).aggregate(
             total=Coalesce(Sum('cantidad_entradas'), 0)
         )['total']
@@ -323,19 +353,17 @@ class EventoDetailAdminView(LoginRequiredMixin, DetailView):
         )['total']
         context['dinero_online'] = dinero_online
         
-        # Total global recolectado de forma física en la Taquilla de Puerta
         dinero_en_puerta = ReciboEvento.objects.filter(evento=evento, origen='PUERTA', anulado=False).aggregate(
             total=Coalesce(Sum('monto_total'), 0, output_field=DecimalField())
         )['total']
         context['dinero_en_puerta'] = dinero_en_puerta
         
-        # Ingresos totales brutos del evento (Online + Puerta)
         ingresos_totales = ReciboEvento.objects.filter(evento=evento, anulado=False).aggregate(
             total=Coalesce(Sum('monto_total'), 0, output_field=DecimalField())
         )['total']
         context['ingresos_totales'] = ingresos_totales
 
-        # 🎯 3. DESGLOSE ESPECÍFICO DE DINERO ADQUIRIDO EN TAQUILLA (PUERTA)
+        # 3. DESGLOSE ESPECÍFICO DE TAQUILLA (PUERTA)
         context['puerta_efectivo'] = ReciboEvento.objects.filter(evento=evento, origen='PUERTA', medio_pago='EFECTIVO', anulado=False).aggregate(
             total=Coalesce(Sum('monto_total'), 0, output_field=DecimalField())
         )['total']
@@ -348,37 +376,28 @@ class EventoDetailAdminView(LoginRequiredMixin, DetailView):
             total=Coalesce(Sum('monto_total'), 0, output_field=DecimalField())
         )['total']
 
-        # 🔴 4. REPORTE DE EGRESOS E INVERSIONES DEL EVENTO
+        # 4. EGRESOS
         gastos = GastoEvento.objects.filter(evento=evento).order_by('-id')
         context['gastos'] = gastos
         gastos_totales = gastos.aggregate(total=Coalesce(Sum('monto'), 0, output_field=DecimalField()))['total']
         context['gastos_totales'] = gastos_totales
 
-        # 📈 5. BALANCE NETO DE OPERACIÓN DE LA ACADEMIA
-        # Como todo es un Decimal asegurado, la resta jamás fallará
+        # 5. BALANCE NETO
         context['balance_neto'] = ingresos_totales - gastos_totales
 
-        # 📥 6. CONTADOR DE ASISTENCIA REAL MEDIANTE LOG DE ACCESOS
-        # Sumamos los registros que ya cruzaron la puerta escaneando su QR online
-        # ✅ CORRECCIÓN: Filtramos usando los campos reales de la BD
+        # 6. ASISTENCIA REAL
         total_ingresos_qr = EntradaQR.objects.filter(
-            recibo__evento=evento,
-            recibo__anulado=False, 
-            asistencias_consumidas__gt=0
+            recibo__evento=evento, recibo__anulado=False, asistencias_consumidas__gt=0
         ).count()
         
-        # Sumamos la cantidad de entradas vendidas directo en puerta que ya pasaron al salón
         ingresos_puerta_data = ReciboEvento.objects.filter(
-            evento=evento, 
-            origen='PUERTA', 
-            ingresado_puerta=True
+            evento=evento, origen='PUERTA', ingresado_puerta=True, anulado=False
         ).aggregate(total_personas=Sum('cantidad_entradas'))
         
         total_ingresos_puerta = ingresos_puerta_data['total_personas'] or 0
         context['total_personas_ingresadas'] = total_ingresos_qr + total_ingresos_puerta
 
-        # 👑 7. COMPUTO INTEGRAL DE COMISIONES PARA EL CARD DE TEMPO HUB (FASE BETA)
-        # Consume la función del modelo encargada de evaluar tarifas mínimas o el modo Partner gratis
+        # 7. COMISIONES SAAS
         comisiones_data = evento.calcular_estado_comisiones()
         context['saas_online_personas'] = comisiones_data['total_online']
         context['saas_puerta_personas'] = comisiones_data['total_puerta']
@@ -389,34 +408,44 @@ class EventoDetailAdminView(LoginRequiredMixin, DetailView):
         context['saas_modo_partner'] = comisiones_data.get('modo_partner', False)
         context['saas_total_comision_evento'] = comisiones_data['deuda_online'] + comisiones_data['deuda_puerta']
 
-        # 📥 8. INYECCIÓN DE INSTANCIAS DE FORMULARIOS PARA LOS MODALES FLOTANTES EN BOOTSTRAP
+        # 8. FORMULARIOS BASE
         context['form_gasto'] = GastoEventoForm()
         context['form_codigo'] = CodigoDescuentoForm()
-        context['form_puerta'] = VentaPuertaForm(initial={
-            'precio_unitario_aplicado': evento.precio_puerta,
-            'cantidad_entradas': 1
-        })
-
-        # Agrega esta línea justo adentro del final de get_context_data, antes del 'return context':
+        context['form_puerta'] = VentaPuertaForm(initial={'precio_unitario_aplicado': evento.precio_puerta or 0, 'cantidad_entradas': 1})
         context['form_pase'] = TipoPaseForm()
 
-        # 🚀 9. NUEVO: MÉTRICAS AVANZADAS POR TIPO DE PASE Y FASE
-        from django.db.models import Count
-        
-        # Cuántas entradas y cuánta plata ha generado cada pase a la carta
+        # 9. MÉTRICAS AVANZADAS POR PASE Y FASE
         if evento.tiene_pases_personalizados:
-            pases_metricas = TipoPase.objects.filter(evento=evento).annotate(
-                total_vendidos=Coalesce(Sum('recibos__cantidad_entradas'), 0),
-                total_recaudado=Coalesce(Sum('recibos__monto_total'), 0, output_field=DecimalField())
+            context['metricas_pases'] = TipoPase.objects.filter(evento=evento).annotate(
+                total_vendidos=Coalesce(Sum('recibos__cantidad_entradas', filter=Q(recibos__anulado=False)), 0),
+                total_recaudado=Coalesce(Sum('recibos__monto_total', filter=Q(recibos__anulado=False)), 0, output_field=DecimalField())
             )
-            context['metricas_pases'] = pases_metricas
 
-        # Cuánta plata se movió en cada fase de preventa (Para saber qué fase fue más exitosa)
         if evento.tiene_fases_fechas:
-            fases_metricas = FasePreventa.objects.filter(evento=evento).annotate(
-                total_recaudado=Coalesce(Sum('recibos__monto_total'), 0, output_field=DecimalField())
+            context['metricas_fases'] = FasePreventa.objects.filter(evento=evento).annotate(
+                total_recaudado=Coalesce(Sum('recibos__monto_total', filter=Q(recibos__anulado=False)), 0, output_field=DecimalField())
             )
-            context['metricas_fases'] = fases_metricas
+
+        # 🚀 10. NUEVO: ALIMENTAR MODAL DE TAQUILLA CON PASES Y PRECIOS DINÁMICOS
+        fase_activa = None
+        if evento.fases_preventa.exists():
+            fase_activa = evento.fases_preventa.filter(fecha_limite__gte=timezone.now()).order_by('fecha_limite').first()
+            if not fase_activa:
+                fase_activa = evento.fases_preventa.order_by('-fecha_limite').first()
+
+        pases_taquilla = []
+        if evento.tiene_pases_personalizados:
+            for pase in evento.pases_personalizados.all():
+                precio_final = pase.precio
+                if fase_activa: 
+                    pivote = fase_activa.precios_pases.filter(pase=pase).first()
+                    if pivote and pivote.precio is not None:
+                        precio_final = pivote.precio
+                pases_taquilla.append({
+                    'id': pase.id, 'nombre': pase.nombre, 
+                    'precio_actual': float(precio_final or 0)
+                })
+        context['pases_disponibles_taquilla'] = pases_taquilla
 
         return context
 
@@ -456,8 +485,7 @@ class AgregarCodigoDescuentoView(LoginRequiredMixin, CreateView):
 
 class RegistrarVentaPuertaView(LoginRequiredMixin, View):
     """
-    Vista Senior: Guarda recibos manuales y enruta el dinero y los QRs 
-    dependiendo de la fase de vida del evento.
+    Vista Senior: Guarda recibos manuales enrutando el dinero a la fase y pase correcto.
     """
     def post(self, request, slug_academia, evento_slug):
         evento = get_object_or_404(Evento, academia=request.tenant, slug=evento_slug)
@@ -467,72 +495,57 @@ class RegistrarVentaPuertaView(LoginRequiredMixin, View):
             recibo = form.save(commit=False)
             recibo.evento = evento
             recibo.revisado_por_admin = True
-            # Calculamos el costo total
             recibo.monto_total = recibo.cantidad_entradas * recibo.precio_unitario_aplicado
             
-            # 🧠 LÓGICA SENIOR: Dinamismo según el estado actual del evento
+            # 🚀 1. ASIGNACIÓN INTELIGENTE DE PASE Y FASE PARA TAQUILLA
+            tipo_pase_input = request.POST.get('tipo_pase', 'FULL')
+            pase_personalizado = None
+            dias_a_otorgar = 1
+            
+            fase_activa = None
+            if evento.fases_preventa.exists():
+                fase_activa = evento.fases_preventa.filter(fecha_limite__gte=timezone.now()).order_by('fecha_limite').first()
+                if not fase_activa:
+                    fase_activa = evento.fases_preventa.order_by('-fecha_limite').first()
+
+            if tipo_pase_input.startswith('PASE_'):
+                pase_id = tipo_pase_input.split('_')[1]
+                pase_personalizado = TipoPase.objects.filter(id=pase_id, evento=evento).first()
+                if pase_personalizado:
+                    dias_a_otorgar = pase_personalizado.accesos_permitidos
+            elif evento.es_multidias and tipo_pase_input == 'FULL':
+                dias_a_otorgar = evento.cantidad_dias
+
+            recibo.tipo_pase = pase_personalizado
+            recibo.fase_preventa = fase_activa
+
+            # 🧠 2. DINAMISMO SEGÚN EL ESTADO ACTUAL DEL EVENTO
             if evento.estado == 'REGISTRO_ONLINE':
-                # Es una venta manual anticipada (Ej. Transferencia vía WhatsApp)
+                # Venta manual anticipada
                 recibo.origen = 'ONLINE'
                 recibo.ingresado_puerta = False
-                recibo.save() # Al guardar con origen='ONLINE', el modelo auto-genera los QRs
-                
-                # 🔄 Configurar las asistencias a las boletas recién creadas
-                dias_a_otorgar = evento.cantidad_dias if evento.es_multidias else 1
-                for boleta in recibo.boletas_qr.all():
-                    boleta.asistencias_permitidas = dias_a_otorgar
-                    boleta.save(update_fields=['asistencias_permitidas'])
+                recibo.save() # Esto auto-genera los QRs
             else:
-                # El evento ya empezó, es venta física en la taquilla del lugar
+                # Ya empezó el evento, venta directa física
                 recibo.origen = 'PUERTA'
                 recibo.ingresado_puerta = True
                 recibo.save()
+                
+                # OJO: Si compra en puerta un pase Multidía, forzamos generación de QR para que pueda venir mañana
+                if dias_a_otorgar > 1 and not recibo.boletas_qr.exists():
+                    for _ in range(recibo.cantidad_entradas):
+                        EntradaQR.objects.create(recibo=recibo)
+
+            # 🔄 3. ASIGNAR ASISTENCIAS A LAS BOLETAS CREADAS
+            for boleta in recibo.boletas_qr.all():
+                boleta.asistencias_permitidas = dias_a_otorgar
+                if recibo.ingresado_puerta:
+                    # Si ya ingresó físicamente, le descontamos su acceso de hoy al instante
+                    boleta.asistencias_consumidas = 1
+                    boleta.fecha_ultimo_ingreso = timezone.now()
+                boleta.save(update_fields=['asistencias_permitidas', 'asistencias_consumidas', 'fecha_ultimo_ingreso'])
             
         return redirect('eventos:admin_detalle', slug_academia=slug_academia, evento_slug=evento_slug)
-
-
-from django.contrib import messages # Asegúrate de importar messages si no lo tienes arriba
-
-def cambiar_estado_evento(request, slug_academia, evento_slug, nuevo_estado):
-    """
-    Controla el flujo de vida del evento. 
-    (Fase Beta: Cambio de estado manual liberado sin bloqueo de pasarela de pago).
-    """
-    if not request.user.is_authenticated:
-        return redirect('login')
-        
-    evento = get_object_or_404(Evento, academia=request.tenant, slug=evento_slug)
-    suscripcion = request.tenant.suscripcion_saas
-    
-    # 🚨 FILTRO PREVIO: Validar que su plan SaaS le permita usar eventos
-    if not suscripcion.modulo_eventos_activo:
-        messages.error(request, "Tu plan actual no incluye el módulo de eventos.")
-        return redirect('academias:dashboard', slug_academia=slug_academia)
-
-    # ========================================================================
-    # 🚧 MODO BETA: Lógica de cobro de comisiones comentada temporalmente.
-    # Se activará cuando se integren pasarelas (ePayco/Wompi).
-    # ========================================================================
-    # if not request.tenant.tarjeta_respaldo_configurada:
-    #     messages.warning(request, "Registra tu tarjeta de respaldo para operar.")
-    #     return redirect('eventos:admin_detalle', slug_academia=slug_academia, evento_slug=evento_slug)
-    
-    # metricas_comision = evento.calcular_estado_comisiones()
-    # (Aquí irá la lógica de débito automático a la tarjeta del Tenant en el futuro)
-    # ========================================================================
-
-    # Validamos por seguridad que el estado que viene en la URL existe en las opciones del modelo
-    estados_validos = [estado[0] for estado in Evento.ESTADOS]
-    
-    if nuevo_estado in estados_validos:
-        evento.estado = nuevo_estado
-        # Usamos update_fields para optimizar la escritura en SQL (muy útil para PythonAnywhere)
-        evento.save(update_fields=['estado'])
-        messages.success(request, f"Estado del evento actualizado a: {evento.get_estado_display()}")
-    else:
-        messages.error(request, "Estado no válido.")
-
-    return redirect('eventos:admin_detalle', slug_academia=slug_academia, evento_slug=evento_slug)
 
 
 # apps/eventos/views.py (Continuación)
