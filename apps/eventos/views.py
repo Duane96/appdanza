@@ -1,4 +1,7 @@
 # apps/eventos/views.py
+from datetime import timedelta
+from django.db import transaction
+
 from django.http import JsonResponse
 from django.views.generic import ListView, CreateView, DetailView, View
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -537,15 +540,17 @@ def cambiar_estado_evento(request, slug_academia, evento_slug, nuevo_estado):
 class RegistroEventoPublicoView(FormView):
     """
     Controla el formulario público de registro e inscripción en línea para los alumnos.
-    Lógica Senior: Detecta fases de preventa verificando existencia real en DB (Anti-Errores).
+    Lógica Senior: Detecta fases de preventa y blinda contra dobles envíos concurrentes (Idempotencia).
     """
     template_name = "eventos/public_registro.html"
     form_class = RegistroOnlineEventoForm
 
     def dispatch(self, request, *args, **kwargs):
+        # Aislamiento estricto del Tenant (Academia) y del evento específico
         self.academia_obj = get_object_or_404(Academia, slug=self.kwargs['slug_academia'])
         self.evento_obj = get_object_or_404(Evento, academia=self.academia_obj, slug=self.kwargs['evento_slug'])
         
+        # Validación del ciclo de vida del evento
         if self.evento_obj.estado == 'FINALIZADO':
             return render(request, 'eventos/public_finalizado.html', {'evento': self.evento_obj, 'academia': self.academia_obj})
         elif self.evento_obj.estado == 'REGISTRO_PUERTA':
@@ -558,7 +563,7 @@ class RegistroEventoPublicoView(FormView):
         context['evento'] = self.evento_obj
         context['academia'] = self.academia_obj
         
-        # 🕒 1. BUSCAR LA FASE ACTIVA 
+        # 🕒 1. BUSCAR LA FASE ACTIVA EN EL CRONOGRAMA
         fase_activa = None
         if self.evento_obj.fases_preventa.exists():
             fase_activa = self.evento_obj.fases_preventa.filter(fecha_limite__gte=timezone.now()).order_by('fecha_limite').first()
@@ -568,7 +573,7 @@ class RegistroEventoPublicoView(FormView):
         
         context['fase_activa'] = fase_activa
 
-        # 🎟️ 2. PREPARAR LOS PASES (DICCIONARIO PURO ANTI-FALLOS)
+        # 🎟️ 2. PREPARAR MATRIZ DE PRECIOS DE LOS PASES (ESTRUCTURA PLANA ANTI-FALLOS)
         pases_data = []
         for pase in self.evento_obj.pases_personalizados.all():
             precio_final = pase.precio
@@ -578,7 +583,7 @@ class RegistroEventoPublicoView(FormView):
                 if pivote and pivote.precio is not None:
                     precio_final = pivote.precio
             
-            # Armamos un diccionario plano para que el HTML lo lea sin problemas de ORM
+            # Diccionario plano para que el HTML lo consuma sin hacer consultas adicionales a la BD
             pases_data.append({
                 'id': pase.id,
                 'nombre': pase.nombre,
@@ -587,12 +592,35 @@ class RegistroEventoPublicoView(FormView):
             })
                 
         context['pases_disponibles'] = pases_data
-        
         context['precio_por_dia'] = float(self.evento_obj.precio_por_dia or 0)
         context['precio_full'] = float(self.evento_obj.precio_preventa or 0)
         return context
-
+    
+    @transaction.atomic
     def form_valid(self, form):
+        # 🚀 1. BLINDAJE SENIOR BACKEND (IDEMPOTENCIA ANTI-DOBLE CLIC / LAG DE RED):
+        # Evitamos peticiones concurrentes buscando si la misma persona
+        # ya generó un recibo exitoso para ESTE evento en una ventana de 2 minutos.
+        tiempo_limite = timezone.now() - timedelta(minutes=2)
+        
+        recibo_reciente = ReciboEvento.objects.filter(
+            evento=self.evento_obj,
+            anulado=False,
+            fecha__gte=tiempo_limite
+        ).filter(
+            # Coincidencia por correo O por teléfono para detectar al usuario
+            Q(comprador_correo__iexact=form.cleaned_data.get('comprador_correo')) |
+            Q(comprador_telefono=form.cleaned_data.get('comprador_telefono'))
+        ).first()
+
+        # Si ya existe un registro reciente, asumimos que fue doble clic o reintento automático del navegador.
+        # No gastamos CPU de PythonAnywhere procesando imágenes o QRs, solo lo llevamos al éxito original.
+        if recibo_reciente:
+            return redirect('eventos:registro_exito', slug_academia=self.academia_obj.slug, recibo_id=recibo_reciente.id)
+
+        # =========================================================================
+        # 🟢 A PARTIR DE AQUÍ SIGUE LA LÓGICA ESTÁNDAR DE CREACIÓN (Sin riesgos)
+        # =========================================================================
         medio_seleccionado = self.request.POST.get('medio_pago_seleccionado', 'MANUAL')
         if medio_seleccionado == 'TARJETA_ONLINE':
             from django.contrib import messages
@@ -608,9 +636,9 @@ class RegistroEventoPublicoView(FormView):
         pase_personalizado = None
         tipo_pase_cupon = 'FULL' 
         
-        # 🛡️ Aplicamos el mismo blindaje al guardar la venta
+        # 🛡️ Aplicamos la misma búsqueda de fase al procesar el pago
         fase_activa = None
-        if self.evento_obj.fases_preventa.exists(): # <--- 🚀 AQUÍ ESTÁ EL BLINDAJE
+        if self.evento_obj.fases_preventa.exists():
             fase_activa = self.evento_obj.fases_preventa.filter(fecha_limite__gte=timezone.now()).order_by('fecha_limite').first()
             if not fase_activa:
                 fase_activa = self.evento_obj.fases_preventa.order_by('-fecha_limite').first()
@@ -620,9 +648,9 @@ class RegistroEventoPublicoView(FormView):
             from .models import TipoPase 
             pase_personalizado = TipoPase.objects.filter(id=pase_id, evento=self.evento_obj).first()
 
-        # 🧠 2. ASIGNACIÓN DE PRECIO MATRIZ
+        # 🧠 2. ASIGNACIÓN DE PRECIO DESDE LA MATRIZ PIVOTE
         if pase_personalizado:
-            if fase_activa: # Extrae directo de la matriz si hay fase
+            if fase_activa:
                 pivote = fase_activa.precios_pases.filter(pase=pase_personalizado).first()
                 precio_unidad = pivote.precio if pivote else (pase_personalizado.precio or 0)
             else:
@@ -661,18 +689,17 @@ class RegistroEventoPublicoView(FormView):
 
         recibo.precio_unitario_aplicado = precio_unidad
         recibo.monto_total = recibo.cantidad_entradas * precio_unidad
-        # 🚀 NUEVO: Guardamos el rastro en la base de datos
         recibo.tipo_pase = pase_personalizado
         recibo.fase_preventa = fase_activa
         recibo.save()
         form.save_m2m()
 
-        # 🔄 4. CONFIGURAR BOLETAS CON DÍAS (ASISTENCIAS)
+        # 🔄 4. CONFIGURAR DÍAS DE ASISTENCIA A LAS BOLETAS QR
         for boleta in recibo.boletas_qr.all():
             boleta.asistencias_permitidas = dias_a_otorgar
             boleta.save(update_fields=['asistencias_permitidas'])
 
-        # 📷 5. GENERACIÓN DE QRs
+        # 📷 5. GENERACIÓN DE QRs EN MEMORIA RAM (Sin abusar del disco del servidor)
         boletas_sesion = []
         for i, boleta in enumerate(recibo.boletas_qr.all(), start=1):
             qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_H, box_size=10, border=4)
@@ -692,7 +719,7 @@ class RegistroEventoPublicoView(FormView):
         
         self.request.session['boletas_recien_compradas'] = boletas_sesion
 
-        # 🚀 DISPARADOR DE CORREO
+        # 🚀 6. DISPARADOR DE CORREO TRANSACCIONAL ASÍNCRONO
         if recibo.comprador_correo:
             boletas_correo = []
             for b in boletas_sesion:

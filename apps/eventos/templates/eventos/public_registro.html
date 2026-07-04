@@ -35,7 +35,7 @@
             </div>
 
             <div class="card card-evento shadow-lg bg-white p-4 p-md-5 mb-4">
-                <form method="POST" enctype="multipart/form-data" class="needs-validation">
+                <form method="POST" enctype="multipart/form-data" class="needs-validation" id="formRegistroEvento">
                     {% csrf_token %}
                     
                     <h5 class="fw-bold text-dark mb-3"><i class="bi bi-person-vcard me-2"></i>1. Tus Datos de Contacto</h5>
@@ -147,7 +147,7 @@
                     </div>
 
                     <div class="d-grid">
-                        <button type="submit" class="btn btn-pay btn-lg fw-bold rounded-pill shadow-sm py-2.5">
+                        <button type="submit" id="btnFinalizar" class="btn btn-pay btn-lg fw-bold rounded-pill shadow-sm py-2.5">
                             <i class="bi bi-check-circle-fill me-2"></i> Finalizar Registro
                         </button>
                     </div>
@@ -217,48 +217,97 @@
 
         function liquidarPrecios() {
             let base = getPrecioBase();
-            const cantidad = parseInt(inputCantidad.value) || 1;
+            const cantidad = parseInt(inputCantidad?.value) || 1;
             const total = cantidad * base;
             
-            document.getElementById("display_desglose").innerText = `${cantidad} Entrada(s) × $${base.toLocaleString('es-CO')}`;
-            document.getElementById("display_total_pagar").innerText = `$ ${total.toLocaleString('es-CO')} COP`;
+            if (document.getElementById("display_desglose")) {
+                document.getElementById("display_desglose").innerText = `${cantidad} Entrada(s) × $${base.toLocaleString('es-CO')}`;
+            }
+            if (document.getElementById("display_total_pagar")) {
+                document.getElementById("display_total_pagar").innerText = `$ ${total.toLocaleString('es-CO')} COP`;
+            }
         }
 
-        btnCupon.addEventListener("click", function () {
-            const codigo = inputCupon.value.trim();
-            if (!codigo) return;
+        if (btnCupon) {
+            btnCupon.addEventListener("click", function () {
+                const codigo = inputCupon.value.trim();
+                if (!codigo) return;
 
-            btnCupon.disabled = true;
-            feedbackCupon.innerHTML = `<span class="text-muted"><div class="spinner-border spinner-border-sm me-1" role="status"></div>Validando...</span>`;
+                btnCupon.disabled = true;
+                feedbackCupon.innerHTML = `<span class="text-muted"><div class="spinner-border spinner-border-sm me-1" role="status"></div>Validando...</span>`;
 
-            fetch(`/{% if request.tenant %}{{ request.tenant.slug }}{% else %}{{ academia.slug }}{% endif %}/eventos/{{ evento.slug }}/validar-cupon/?codigo=${codigo}`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data.valido) {
-                        cuponAplicado = true;
-                        precioCuponFull = data.precio_especial_full;
-                        precioCuponDia = data.precio_especial_dia;
-                        
-                        feedbackCupon.className = "text-success extra-small mt-1 fw-semibold";
-                        feedbackCupon.innerHTML = `<i class="bi bi-patch-check-fill"></i> ¡Cupón aplicado exitosamente!`;
-                    } else {
-                        cuponAplicado = false;
-                        feedbackCupon.className = "text-danger extra-small mt-1 fw-semibold";
-                        feedbackCupon.innerHTML = `<i class="bi bi-x-circle-fill"></i> Cupón inválido o expirado.`;
-                    }
-                    liquidarPrecios();
-                })
-                .catch(err => {
-                    feedbackCupon.innerHTML = `<span class="text-danger">Error de conexión.</span>`;
-                })
-                .finally(() => {
-                    btnCupon.disabled = false;
-                });
-        });
+                fetch(`/{% if request.tenant %}{{ request.tenant.slug }}{% else %}{{ academia.slug }}{% endif %}/eventos/{{ evento.slug }}/validar-cupon/?codigo=${codigo}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.valido) {
+                            cuponAplicado = true;
+                            precioCuponFull = data.precio_especial_full;
+                            precioCuponDia = data.precio_especial_dia;
+                            
+                            feedbackCupon.className = "text-success extra-small mt-1 fw-semibold";
+                            feedbackCupon.innerHTML = `<i class="bi bi-patch-check-fill"></i> ¡Cupón aplicado exitosamente!`;
+                        } else {
+                            cuponAplicado = false;
+                            feedbackCupon.className = "text-danger extra-small mt-1 fw-semibold";
+                            feedbackCupon.innerHTML = `<i class="bi bi-x-circle-fill"></i> Cupón inválido o expirado.`;
+                        }
+                        liquidarPrecios();
+                    })
+                    .catch(err => {
+                        feedbackCupon.innerHTML = `<span class="text-danger">Error de conexión.</span>`;
+                    })
+                    .finally(() => {
+                        btnCupon.disabled = false;
+                    });
+            });
+        }
 
         if(inputTipoPase) inputTipoPase.addEventListener("change", liquidarPrecios);
         if(inputCantidad) inputCantidad.addEventListener("input", liquidarPrecios);
         
+        // 🚀 BLINDAJE SENIOR FRONTEND: Prevención de doble envío (Double-Submit Protection)
+        const formRegistro = document.getElementById("formRegistroEvento");
+        const btnSubmit = document.getElementById("btnFinalizar");
+        let formularioEnviado = false;
+
+        if (formRegistro && btnSubmit) {
+            formRegistro.addEventListener("submit", function (e) {
+                // 1. Verificamos la validación nativa de HTML5/Bootstrap (si faltan campos o archivo)
+                if (!formRegistro.checkValidity()) {
+                    return; // Dejamos que el navegador marque los errores y no bloqueamos nada
+                }
+
+                // 2. Si ya se envió una vez, interceptamos el evento y cancelamos el envío de red
+                if (formularioEnviado) {
+                    e.preventDefault();
+                    return false;
+                }
+
+                // 3. Activamos la bandera y cambiamos el estado visual del botón
+                formularioEnviado = true;
+                btnSubmit.disabled = true;
+                btnSubmit.style.pointerEvents = "none";
+                btnSubmit.style.opacity = "0.75";
+                
+                // Spinner de carga de Bootstrap para retroalimentación instantánea
+                btnSubmit.innerHTML = `
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    <span>Procesando inscripción...</span>
+                `;
+
+                // 4. Seguro de red por si al usuario se le cae el internet temporalmente
+                setTimeout(() => {
+                    if (formularioEnviado) {
+                        formularioEnviado = false;
+                        btnSubmit.disabled = false;
+                        btnSubmit.style.pointerEvents = "auto";
+                        btnSubmit.style.opacity = "1";
+                        btnSubmit.innerHTML = `<i class="bi bi-check-circle-fill me-2"></i> Reintentar Registro`;
+                    }
+                }, 15000);
+            });
+        }
+
         liquidarPrecios();
     });
 </script>
