@@ -232,16 +232,22 @@
                                 {% else %}
 <div class="d-flex flex-column gap-2 align-items-center">
     {% for boleta in recibo.boletas_qr.all %}
-    <div class="w-100 p-2 border rounded bg-white shadow-sm">
+    
+    <!-- 🚀 AGREGAMOS id="fila-boleta-..." y data-permitidas -->
+    <div class="w-100 p-2 border rounded bg-white shadow-sm transition-all" id="fila-boleta-{{ boleta.codigo_unico }}" data-permitidas="{{ boleta.asistencias_permitidas }}">
         <div class="d-flex justify-content-between align-items-center mb-1">
             <span class="fw-bold text-dark small">TKT {{ forloop.counter }}</span>
-            <span class="badge {% if boleta.asistencias_consumidas >= boleta.asistencias_permitidas %}bg-danger{% else %}bg-success{% endif %} rounded-pill" style="font-size: 0.65rem;">
+            
+            <!-- 🚀 AGREGAMOS id="badge-boleta-..." -->
+            <span id="badge-boleta-{{ boleta.codigo_unico }}" class="badge {% if boleta.asistencias_consumidas >= boleta.asistencias_permitidas %}bg-danger{% else %}bg-success{% endif %} rounded-pill" style="font-size: 0.65rem;">
                 {{ boleta.asistencias_consumidas }} / {{ boleta.asistencias_permitidas }} Días
             </span>
         </div>
         
         <div class="progress" style="height: 6px;">
-            <div class="progress-bar {% if boleta.asistencias_consumidas >= boleta.asistencias_permitidas %}bg-danger{% else %}bg-success{% endif %}" 
+            <!-- 🚀 AGREGAMOS id="progreso-boleta-..." -->
+            <div id="progreso-boleta-{{ boleta.codigo_unico }}" 
+                 class="progress-bar {% if boleta.asistencias_consumidas >= boleta.asistencias_permitidas %}bg-danger{% else %}bg-success{% endif %} transition-all" 
                  role="progressbar" 
                  style="width: {% widthratio boleta.asistencias_consumidas boleta.asistencias_permitidas 100 %}%">
             </div>
@@ -603,7 +609,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // =========================================================================
-    // 🚀 NUEVO HELPER SENIOR: ACTUALIZA EL AFORO EN VIVO SIN RECARGAR LA WEB
+    // 🚀 HELPER 1: ACTUALIZA EL AFORO GLOBAL EN VIVO
     // =========================================================================
     function actualizarAforoDOM(totalDesdeBackend) {
         const elIngresados = document.getElementById("aforo-ingresados");
@@ -615,13 +621,10 @@ document.addEventListener("DOMContentLoaded", function () {
         let actualIngresados = parseInt(elIngresados.innerText, 10) || 0;
         let totalVendidos = parseInt(elVendidos.innerText, 10) || 1;
 
-        // Truco Senior: Si el backend envió el total, lo usamos. 
-        // Si no (porque no tocamos Python), simplemente sumamos +1 al número actual de la pantalla.
         let nuevoTotal = (totalDesdeBackend !== undefined && totalDesdeBackend !== null) 
                          ? totalDesdeBackend 
                          : (actualIngresados + 1);
 
-        // 1. Efecto visual suave (parpadeo rápido) para indicar que el número cambió
         elIngresados.style.opacity = "0.3";
         setTimeout(() => {
             elIngresados.innerText = nuevoTotal;
@@ -629,17 +632,55 @@ document.addEventListener("DOMContentLoaded", function () {
             elIngresados.style.transition = "opacity 0.3s ease";
         }, 150);
 
-        // 2. Cálculo del nuevo porcentaje para la barra amarilla
         let nuevoPorcentaje = Math.round((nuevoTotal / totalVendidos) * 100);
-        if (nuevoPorcentaje > 100) nuevoPorcentaje = 100; // Tope máximo visual
+        if (nuevoPorcentaje > 100) nuevoPorcentaje = 100;
 
-        // 3. Estiramos la barra de progreso
         elBarra.style.width = nuevoPorcentaje + "%";
         
-        // Si se llenó el aforo, cambiamos la barra a verde éxito
         if (nuevoPorcentaje >= 100) {
             elBarra.classList.remove("bg-warning");
             elBarra.classList.add("bg-success");
+        }
+    }
+
+    // =========================================================================
+    // 🚀 NUEVO HELPER 2: ACTUALIZA LA LISTA INFERIOR DE PARTICIPANTES EN VIVO
+    // =========================================================================
+    function actualizarListaDOM(codigoUUID, asistenciasConsumidas) {
+        if (!codigoUUID || asistenciasConsumidas === undefined) return;
+        
+        const filaBoleta = document.getElementById(`fila-boleta-${codigoUUID}`);
+        const badgeBoleta = document.getElementById(`badge-boleta-${codigoUUID}`);
+        const progresoBoleta = document.getElementById(`progreso-boleta-${codigoUUID}`);
+        
+        if (filaBoleta && badgeBoleta && progresoBoleta) {
+            // Extraemos los días totales permitidos que guardamos en el HTML (data-permitidas)
+            const permitidas = parseInt(filaBoleta.getAttribute("data-permitidas"), 10) || 1;
+            const consumidas = parseInt(asistenciasConsumidas, 10);
+            
+            // Animación suave de destello verde para que el usuario note cuál cambió
+            filaBoleta.style.backgroundColor = "#d1e7dd"; 
+            setTimeout(() => {
+                filaBoleta.style.backgroundColor = ""; 
+                filaBoleta.style.transition = "background-color 0.8s ease";
+            }, 400);
+
+            // Actualizamos los números visuales de la etiqueta
+            badgeBoleta.innerText = `${consumidas} / ${permitidas} Días`;
+            
+            // Calculamos cuánto rellenar la mini barra de progreso
+            let porcentaje = Math.round((consumidas / permitidas) * 100);
+            if (porcentaje > 100) porcentaje = 100;
+            
+            progresoBoleta.style.width = porcentaje + "%";
+            
+            // Si agotó todos sus días, lo ponemos en rojo
+            if (consumidas >= permitidas) {
+                badgeBoleta.classList.remove("bg-success");
+                badgeBoleta.classList.add("bg-danger");
+                progresoBoleta.classList.remove("bg-success");
+                progresoBoleta.classList.add("bg-danger");
+            }
         }
     }
 
@@ -662,8 +703,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (selectPasePuerta && inputPrecio) {
         selectPasePuerta.addEventListener("change", function() {
             const selectedOption = selectPasePuerta.options[selectPasePuerta.selectedIndex];
-            const precioSugerido = parseFloat(selectedOption.getAttribute("data-precio")) || 0;
-            inputPrecio.value = precioSugerido; 
+            inputPrecio.value = parseFloat(selectedOption.getAttribute("data-precio")) || 0; 
             calcularTotalPuerta();
         });
 
@@ -749,8 +789,9 @@ document.addEventListener("DOMContentLoaded", function () {
                     feedback.innerHTML = `<div>${data.message}</div><div class="text-dark small fw-normal mt-1">Cliente: <strong>${data.comprador}</strong> (${data.recibo})</div>`;
                     playBeep(2200, 0.15);
                     
-                    // 🚀 ACTUALIZAMOS LA TARJETA DE AFORO EN VIVO AL ESCANEAR CON CÁMARA
+                    // 🚀 SINCRONIZAMOS AFORO Y LA LISTA DE LA TABLA AL MISMO TIEMPO
                     actualizarAforoDOM(data.nuevo_total_ingresados);
+                    actualizarListaDOM(decodedText, data.asistencias_consumidas);
                     
                 } else if (data.status === 'fraud') {
                     feedback.className = "alert alert-danger text-center mt-3 mb-0 py-2 fs-7 border border-danger border-2 fw-bold";
@@ -772,7 +813,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // =========================================================================
-    // 🔍 3. BUSCADOR EN VIVO Y CHECK-IN MANUAL (TU CÓDIGO INTACTO)
+    // 🔍 3. BUSCADOR EN VIVO Y CHECK-IN MANUAL
     // =========================================================================
     const inputBusqueda = document.getElementById('input-busqueda-manual');
     const contenedorResultados = document.getElementById('contenedor-resultados-manual');
@@ -901,8 +942,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 if (data.status === 'success') {
                     playBeep(2200, 0.15);
                     
-                    // 🚀 AQUÍ ESTÁ EL MAGIA: ACTUALIZAMOS EL AFORO DE FONDO EN VIVO AL DAR CLIC MANUAL
+                    // 🚀 SINCRONIZAMOS AFORO Y TABLA SIMULTÁNEAMENTE 
                     actualizarAforoDOM(data.nuevo_total_ingresados);
+                    actualizarListaDOM(codigoUUID, data.asistencias_consumidas);
                     
                     const card = document.getElementById(`card-boleta-${codigoUUID}`);
                     if (card) {
