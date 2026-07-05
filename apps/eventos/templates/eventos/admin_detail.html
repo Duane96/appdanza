@@ -35,6 +35,9 @@
         <button class="btn btn-dark shadow-sm fw-bold rounded-pill px-3 py-2 btn-sm" data-bs-toggle="modal" data-bs-target="#modalEscanerQR" {% if evento.estado == 'FINALIZADO' %}disabled{% endif %}>
             <i class="bi bi-qr-code-scan me-2 text-warning"></i> ESCANEAR ENTRADAS
         </button>
+        <button class="btn btn-outline-dark shadow-sm fw-bold rounded-pill px-3 py-2 btn-sm bg-white" data-bs-toggle="modal" data-bs-target="#modalCheckinManual" {% if evento.estado == 'FINALIZADO' %}disabled{% endif %}>
+            <i class="bi bi-search me-1 text-primary"></i> CHECK-IN MANUAL
+        </button>
         <div class="btn-group shadow-sm">
             <a href="{% url 'eventos:cambiar_estado' request.tenant.slug evento.slug 'REGISTRO_ONLINE' %}" class="btn btn-sm btn-outline-success {% if evento.estado == 'REGISTRO_ONLINE' %}active{% endif %}">Venta Online</a>
             <a href="{% url 'eventos:cambiar_estado' request.tenant.slug evento.slug 'REGISTRO_PUERTA' %}" class="btn btn-sm btn-outline-warning {% if evento.estado == 'REGISTRO_PUERTA' %}active{% endif %}">Solo Puerta</a>
@@ -57,9 +60,20 @@
     <div class="col-md-6 col-xl-3">
         <div class="card border-0 shadow-sm bg-white p-3 h-100 border-start border-4 border-info">
             <span class="text-secondary small fw-bold d-block font-monospace">ASISTENCIA / AFORO</span>
-            <h2 class="fw-bold text-dark m-0">{{ total_personas_ingresadas }} <span class="fs-6 fw-normal text-muted">/ {{ total_entradas_vendidas }} ing.</span></h2>
+            
+            <!-- 🚀 AGREGAMOS id="aforo-ingresados" e id="aforo-vendidos" -->
+            <h2 class="fw-bold text-dark m-0">
+                <span id="aforo-ingresados">{{ total_personas_ingresadas }}</span> 
+                <span class="fs-6 fw-normal text-muted">/ <span id="aforo-vendidos">{{ total_entradas_vendidas }}</span> ing.</span>
+            </h2>
+            
             <div class="progress mt-2" style="height: 6px;">
-                <div class="progress-bar bg-warning" role="progressbar" style="width: {% if total_entradas_vendidas > 0 %}{{ total_personas_ingresadas|stringformat:"d" }}00{% else %}0{% endif %}%"></div>
+                <!-- 🚀 AGREGAMOS id="aforo-barra" -->
+                <div id="aforo-barra" 
+                     class="progress-bar bg-warning transition-all" 
+                     role="progressbar" 
+                     style="width: {% if total_entradas_vendidas > 0 %}{{ total_personas_ingresadas|stringformat:'d' }}00{% else %}0{% endif %}%">
+                </div>
             </div>
         </div>
     </div>
@@ -517,6 +531,46 @@
     {% endif %}
 {% endfor %}
 
+
+<!-- ================================================================= -->
+<!-- 🚀 MODAL SENIOR: CHECK-IN MANUAL CON BÚSQUEDA EN VIVO -->
+<!-- ================================================================= -->
+<div class="modal fade" id="modalCheckinManual" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header bg-dark text-white p-4">
+                <div>
+                    <h5 class="modal-title fw-bold m-0"><i class="bi bi-person-check-fill text-warning me-2"></i>Check-In Manual en Taquilla</h5>
+                    <small class="text-white-50 extra-small">Escribe el nombre, teléfono o número de recibo del alumno</small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            
+            <div class="modal-body p-4 bg-light">
+                <!-- Buscador con icono -->
+                <div class="position-relative mb-4">
+                    <input type="text" id="input-busqueda-manual" class="form-control form-control-lg ps-5 border-2 shadow-sm rounded-pill font-monospace" placeholder="Ej: Valery, 310..., REC-0005..." autocomplete="off" autofocus>
+                    <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted fs-5"></i>
+                    <div id="spinner-busqueda" class="spinner-border spinner-border-sm text-primary position-absolute top-50 end-0 translate-middle-y me-3 d-none" role="status"></div>
+                </div>
+
+                <!-- Contenedor de Resultados Dinámicos -->
+                <div id="contenedor-resultados-manual" class="d-flex flex-column gap-2" style="max-height: 400px; overflow-y: auto;">
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-keyboard display-6 d-block mb-2 text-secondary"></i>
+                        <span class="small">Empieza a escribir para buscar boletas en este evento...</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer bg-white border-top-0 py-3">
+                <span class="text-muted extra-small me-auto"><i class="bi bi-info-circle me-1"></i> Muestra máximo 10 resultados simultáneos.</span>
+                <button type="button" class="btn btn-light border px-4 fw-semibold rounded-pill" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <style>
     .extra-small { font-size: 0.7rem; }
     .fs-7 { font-size: 0.8rem; }
@@ -526,50 +580,115 @@
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js" type="text/javascript"></script>
 
 <script>
-    document.addEventListener("DOMContentLoaded", function () {
-    // --- 1. LÓGICA DE CALCULO DE TAQUILLA MANUAL (NIVEL SENIOR) ---
+document.addEventListener("DOMContentLoaded", function () {
+    
+    // =========================================================================
+    // 🔊 HELPER COMPARTIDO: GENERADOR DE SONIDO (BEEP) WEB AUDIO API
+    // =========================================================================
+    function playBeep(frequency, duration) {
+        try {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.type = 'sine';
+            oscillator.frequency.value = frequency;
+            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + duration);
+        } catch(e) {
+            console.warn("Web Audio API no soportada.");
+        }
+    }
+
+    // =========================================================================
+    // 🚀 NUEVO HELPER SENIOR: ACTUALIZA EL AFORO EN VIVO SIN RECARGAR LA WEB
+    // =========================================================================
+    function actualizarAforoDOM(totalDesdeBackend) {
+        const elIngresados = document.getElementById("aforo-ingresados");
+        const elVendidos = document.getElementById("aforo-vendidos");
+        const elBarra = document.getElementById("aforo-barra");
+
+        if (!elIngresados || !elVendidos || !elBarra) return;
+
+        let actualIngresados = parseInt(elIngresados.innerText, 10) || 0;
+        let totalVendidos = parseInt(elVendidos.innerText, 10) || 1;
+
+        // Truco Senior: Si el backend envió el total, lo usamos. 
+        // Si no (porque no tocamos Python), simplemente sumamos +1 al número actual de la pantalla.
+        let nuevoTotal = (totalDesdeBackend !== undefined && totalDesdeBackend !== null) 
+                         ? totalDesdeBackend 
+                         : (actualIngresados + 1);
+
+        // 1. Efecto visual suave (parpadeo rápido) para indicar que el número cambió
+        elIngresados.style.opacity = "0.3";
+        setTimeout(() => {
+            elIngresados.innerText = nuevoTotal;
+            elIngresados.style.opacity = "1";
+            elIngresados.style.transition = "opacity 0.3s ease";
+        }, 150);
+
+        // 2. Cálculo del nuevo porcentaje para la barra amarilla
+        let nuevoPorcentaje = Math.round((nuevoTotal / totalVendidos) * 100);
+        if (nuevoPorcentaje > 100) nuevoPorcentaje = 100; // Tope máximo visual
+
+        // 3. Estiramos la barra de progreso
+        elBarra.style.width = nuevoPorcentaje + "%";
+        
+        // Si se llenó el aforo, cambiamos la barra a verde éxito
+        if (nuevoPorcentaje >= 100) {
+            elBarra.classList.remove("bg-warning");
+            elBarra.classList.add("bg-success");
+        }
+    }
+
+    // =========================================================================
+    // 💵 1. LÓGICA DE TAQUILLA MANUAL (VENTA DIRECTA EN PUERTA)
+    // =========================================================================
     const selectPasePuerta = document.getElementById("puerta_tipo_pase");
     const inputPrecio = document.querySelector("input[name='precio_unitario_aplicado']");
     const inputCantidad = document.querySelector("input[name='cantidad_entradas']");
     const displayTotal = document.getElementById("puerta_total_display");
 
     function calcularTotalPuerta() {
-        if(!inputPrecio || !inputCantidad || !displayTotal) return;
+        if (!inputPrecio || !inputCantidad || !displayTotal) return;
         const precio = parseFloat(inputPrecio.value) || 0;
         const cantidad = parseInt(inputCantidad.value) || 1;
         const total = precio * cantidad;
         displayTotal.innerText = "$ " + total.toLocaleString('es-CO') + " COP";
     }
 
-    // Si existe el selector de pases, inyectamos el precio automáticamente
     if (selectPasePuerta && inputPrecio) {
         selectPasePuerta.addEventListener("change", function() {
             const selectedOption = selectPasePuerta.options[selectPasePuerta.selectedIndex];
             const precioSugerido = parseFloat(selectedOption.getAttribute("data-precio")) || 0;
-            inputPrecio.value = precioSugerido; // Auto-completa el input libre
+            inputPrecio.value = precioSugerido; 
             calcularTotalPuerta();
         });
 
-        // Autocompletar la primera vez que se abre el modal si está en cero
-        if (!inputPrecio.value || inputPrecio.value == "0") {
+        if (!inputPrecio.value || inputPrecio.value === "0") {
              const initOption = selectPasePuerta.options[selectPasePuerta.selectedIndex];
              inputPrecio.value = parseFloat(initOption.getAttribute("data-precio")) || 0;
         }
     }
 
-    if(inputPrecio && inputCantidad) {
+    if (inputPrecio && inputCantidad) {
         inputPrecio.addEventListener("input", calcularTotalPuerta);
         inputCantidad.addEventListener("input", calcularTotalPuerta);
         calcularTotalPuerta();
     }
 
-        // --- 2. SISTEMA DE LOGÍSTICA DE ESCÁNER ASÍNCRONO ---
-        const modalEscaner = document.getElementById('modalEscanerQR');
-        const feedback = document.getElementById('feedback-escaner');
-        const btnCerrar = document.getElementById('btnCerrarEscaner');
-        let html5QrcodeScanner = null;
-        let escaneando = false;
+    // =========================================================================
+    // 📷 2. SISTEMA DE ESCÁNER DE CÁMARA (CHECK-IN POR QR)
+    // =========================================================================
+    const modalEscaner = document.getElementById('modalEscanerQR');
+    const feedback = document.getElementById('feedback-escaner');
+    const btnCerrar = document.getElementById('btnCerrarEscaner');
+    let html5QrcodeScanner = null;
+    let escaneando = false;
 
+    if (modalEscaner) {
         modalEscaner.addEventListener('shown.bs.modal', function () {
             escaneando = false;
             feedback.className = "alert alert-secondary text-center fw-bold mt-3 mb-0 py-2 fs-7";
@@ -595,24 +714,24 @@
             if (html5QrcodeScanner && html5QrcodeScanner.isScanning) {
                 html5QrcodeScanner.stop().then(() => {
                     html5QrcodeScanner.clear();
-                }).catch(err => console.log("Error al detener", err));
+                }).catch(err => console.log("Error al detener cámara:", err));
             }
         }
 
         modalEscaner.addEventListener('hidden.bs.modal', function () {
             detenerCamara();
-            if(escaneando) { window.location.reload(); } 
+            if (escaneando) { window.location.reload(); } 
         });
-        if(btnCerrar) btnCerrar.addEventListener('click', detenerCamara);
+        
+        if (btnCerrar) btnCerrar.addEventListener('click', detenerCamara);
 
         function onQrCodeSuccess(decodedText, decodedResult) {
             if (escaneando) return;
             escaneando = true;
 
             feedback.className = "alert alert-warning text-center fw-bold mt-3 mb-0 py-2 fs-7";
-            feedback.innerHTML = '<div class="spinner-border spinner-border-sm me-2"></div> Verificando boleta...';
+            feedback.innerHTML = '<div class="spinner-border spinner-border-sm me-2"></div> Verificando boleta en BD...';
 
-            // 🎯 URL Corregida: Cambiado al nombre de tu path real 'api_validar_ingreso_qr'
             const urlEndpoint = "{% url 'eventos:api_validar_ingreso_qr' request.tenant.slug evento.slug %}";
 
             fetch(urlEndpoint, {
@@ -629,6 +748,10 @@
                     feedback.className = "alert alert-success text-center mt-3 mb-0 py-2 fs-7 shadow-sm";
                     feedback.innerHTML = `<div>${data.message}</div><div class="text-dark small fw-normal mt-1">Cliente: <strong>${data.comprador}</strong> (${data.recibo})</div>`;
                     playBeep(2200, 0.15);
+                    
+                    // 🚀 ACTUALIZAMOS LA TARJETA DE AFORO EN VIVO AL ESCANEAR CON CÁMARA
+                    actualizarAforoDOM(data.nuevo_total_ingresados);
+                    
                 } else if (data.status === 'fraud') {
                     feedback.className = "alert alert-danger text-center mt-3 mb-0 py-2 fs-7 border border-danger border-2 fw-bold";
                     feedback.innerHTML = `<div>${data.message}</div><div class="text-dark small fw-normal mt-1">Titular: <strong>${data.comprador}</strong></div>`;
@@ -646,21 +769,170 @@
                 setTimeout(() => { escaneando = false; }, 2500);
             });
         }
+    }
 
-        function playBeep(frequency, duration) {
-            try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = audioCtx.createOscillator();
-                const gainNode = audioCtx.createGain();
-                oscillator.type = 'sine';
-                oscillator.frequency.value = frequency;
-                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-                oscillator.connect(gainNode);
-                gainNode.connect(audioCtx.destination);
-                oscillator.start();
-                oscillator.stop(audioCtx.currentTime + duration);
-            } catch(e) {}
+    // =========================================================================
+    // 🔍 3. BUSCADOR EN VIVO Y CHECK-IN MANUAL (TU CÓDIGO INTACTO)
+    // =========================================================================
+    const inputBusqueda = document.getElementById('input-busqueda-manual');
+    const contenedorResultados = document.getElementById('contenedor-resultados-manual');
+    const spinnerBusqueda = document.getElementById('spinner-busqueda');
+    let timeoutDebounce = null;
+
+    if (inputBusqueda && contenedorResultados) {
+        
+        inputBusqueda.addEventListener('input', function() {
+            const query = this.value.trim();
+            clearTimeout(timeoutDebounce);
+
+            if (query.length < 2) {
+                contenedorResultados.innerHTML = `
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-keyboard display-6 d-block mb-2 text-secondary"></i>
+                        <span class="small">Empieza a escribir para buscar boletas en este evento...</span>
+                    </div>`;
+                if (spinnerBusqueda) spinnerBusqueda.classList.add('d-none');
+                return;
+            }
+
+            if (spinnerBusqueda) spinnerBusqueda.classList.remove('d-none');
+
+            timeoutDebounce = setTimeout(() => {
+                const urlBuscar = `{% url 'eventos:api_buscar_asistente' request.tenant.slug evento.slug %}?q=${encodeURIComponent(query)}`;
+                
+                fetch(urlBuscar)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (spinnerBusqueda) spinnerBusqueda.classList.add('d-none');
+                        if (data.status === 'success') {
+                            renderizarResultados(data.resultados);
+                        }
+                    })
+                    .catch(err => {
+                        if (spinnerBusqueda) spinnerBusqueda.classList.add('d-none');
+                        contenedorResultados.innerHTML = `<div class="alert alert-danger text-center small my-3">❌ Error de red o tiempo de espera agotado al buscar.</div>`;
+                    });
+            }, 300);
+        });
+
+        function renderizarResultados(lista) {
+            if (lista.length === 0) {
+                contenedorResultados.innerHTML = `
+                    <div class="alert alert-warning text-center small my-3">
+                        <i class="bi bi-exclamation-circle me-1"></i> No se encontraron boletas activas con ese criterio.
+                    </div>`;
+                return;
+            }
+
+            let html = '';
+            lista.forEach(item => {
+                const porcentaje = (item.consumidas / item.permitidas) * 100;
+                const colorBarra = item.agotado ? 'bg-danger' : 'bg-success';
+                
+                let badgeEstado = `<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="bi bi-check-circle me-1"></i> Disponible</span>`;
+                let btnAccion = `<button class="btn btn-warning fw-bold text-dark btn-sm rounded-pill px-3 shadow-sm btn-checkin" data-codigo="${item.codigo_unico}"><i class="bi bi-box-arrow-in-right me-1"></i> Dar Ingreso</button>`;
+
+                if (item.agotado) {
+                    badgeEstado = `<span class="badge bg-danger text-white px-2 py-1"><i class="bi bi-x-circle me-1"></i> Todos los días consumidos</span>`;
+                    btnAccion = `<button class="btn btn-secondary btn-sm rounded-pill px-3" disabled>Cupo Agotado</button>`;
+                } else if (item.ingreso_hoy) {
+                    badgeEstado = `<span class="badge bg-warning text-dark border border-warning px-2 py-1"><i class="bi bi-exclamation-triangle me-1"></i> Ya entró hoy</span>`;
+                    btnAccion = `<button class="btn btn-outline-warning text-dark fw-bold btn-sm rounded-pill px-3 btn-checkin" data-codigo="${item.codigo_unico}" title="Haz clic solo si salió del recinto y va a volver a entrar">Reingresar Hoy</button>`;
+                }
+
+                html += `
+                    <div class="card border-0 shadow-sm rounded-3 bg-white p-3 mb-2 transition-all" id="card-boleta-${item.codigo_unico}">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                            <div>
+                                <strong class="text-dark fs-6 d-block">${item.comprador}</strong>
+                                <span class="badge bg-light text-dark font-monospace extra-small border">${item.recibo}</span>
+                                <span class="text-muted extra-small ms-1"><i class="bi bi-phone me-1"></i>${item.telefono}</span>
+                                <span class="badge bg-primary-subtle text-primary extra-small ms-1">${item.tipo_pase}</span>
+                            </div>
+                            <div>${badgeEstado}</div>
+                        </div>
+
+                        <div class="row align-items-center g-2 mt-1 pt-2 border-top">
+                            <div class="col-md-7">
+                                <div class="d-flex justify-content-between extra-small text-muted mb-1 font-monospace">
+                                    <span>ASISTENCIA AL EVENTO</span>
+                                    <strong class="text-dark">${item.consumidas} de ${item.permitidas} Días Consumidos</strong>
+                                </div>
+                                <div class="progress" style="height: 6px;">
+                                    <div class="progress-bar ${colorBarra}" role="progressbar" style="width: ${porcentaje}%"></div>
+                                </div>
+                                <div class="extra-small text-muted mt-1">
+                                    <i class="bi bi-clock-history me-1"></i>Último ingreso: <strong>${item.ultimo_ingreso}</strong>
+                                </div>
+                            </div>
+                            <div class="col-md-5 text-md-end mt-2 mt-md-0">
+                                ${btnAccion}
+                            </div>
+                        </div>
+                    </div>`;
+            });
+
+            contenedorResultados.innerHTML = html;
+
+            document.querySelectorAll('.btn-checkin').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const codigoUUID = this.getAttribute('data-codigo');
+                    ejecutarCheckinManual(codigoUUID, this);
+                });
+            });
         }
-    });
+
+        function ejecutarCheckinManual(codigoUUID, botonDom) {
+            botonDom.disabled = true;
+            botonDom.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Procesando...';
+
+            const urlEndpointQR = "{% url 'eventos:api_validar_ingreso_qr' request.tenant.slug evento.slug %}";
+
+            fetch(urlEndpointQR, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token }}"
+                },
+                body: JSON.stringify({ codigo_unico: codigoUUID })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    playBeep(2200, 0.15);
+                    
+                    // 🚀 AQUÍ ESTÁ EL MAGIA: ACTUALIZAMOS EL AFORO DE FONDO EN VIVO AL DAR CLIC MANUAL
+                    actualizarAforoDOM(data.nuevo_total_ingresados);
+                    
+                    const card = document.getElementById(`card-boleta-${codigoUUID}`);
+                    if (card) {
+                        card.classList.add('bg-success-subtle', 'border', 'border-success');
+                        card.innerHTML = `
+                            <div class="text-center py-3 text-success">
+                                <i class="bi bi-check-circle-fill display-6 d-block mb-1"></i>
+                                <strong class="fs-6 d-block">¡INGRESO REGISTRADO CON ÉXITO!</strong>
+                                <span class="small">${data.message}</span>
+                            </div>`;
+                    }
+                    
+                    setTimeout(() => {
+                        inputBusqueda.dispatchEvent(new Event('input'));
+                    }, 1500);
+
+                } else {
+                    playBeep(350, 0.5);
+                    alert(`❌ ATENCIÓN: ${data.message}`);
+                    botonDom.disabled = false;
+                    botonDom.innerHTML = '<i class="bi bi-box-arrow-in-right me-1"></i> Reintentar';
+                }
+            })
+            .catch(err => {
+                alert("❌ Error de red al intentar registrar el ingreso.");
+                botonDom.disabled = false;
+                botonDom.innerHTML = '<i class="bi bi-box-arrow-in-right me-1"></i> Dar Ingreso';
+            });
+        }
+    }
+});
 </script>
 {% endblock %}

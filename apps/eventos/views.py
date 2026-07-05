@@ -917,3 +917,67 @@ class EliminarFasePreventaView(LoginRequiredMixin, View):
             'slug_academia': slug_academia, 
             'evento_slug': evento_slug
         }) + "#fases")
+    
+
+class BuscarAsistenteAPIView(LoginRequiredMixin, View):
+    """
+    API Senior: Busca boletas QR en tiempo real para check-in manual.
+    Optimizado con select_related y límite de 10 registros para no saturar la RAM de PythonAnywhere.
+    """
+    def get(self, request, slug_academia, evento_slug):
+        query = request.GET.get('q', '').strip()
+        
+        # Si escriben menos de 2 caracteres, no golpeamos la base de datos
+        if len(query) < 2:
+            return JsonResponse({'status': 'success', 'resultados': []})
+
+        # 🔒 Blindaje Multi-Tenant: Filtramos estrictamente por la academia y el evento actual
+        boletas = EntradaQR.objects.filter(
+            recibo__evento__academia=request.tenant,
+            recibo__evento__slug=evento_slug,
+            recibo__anulado=False  # Excluimos fraudes o devoluciones
+        ).filter(
+            Q(recibo__comprador_nombre__icontains=query) |
+            Q(recibo__comprador_correo__icontains=query) |
+            Q(recibo__comprador_telefono__icontains=query) |
+            Q(recibo__numero_recibo__icontains=query)
+        ).select_related('recibo', 'recibo__tipo_pase')[:10]  # 🚀 Límite de 10 para máxima velocidad
+
+        resultados = []
+        fecha_hoy = timezone.now().date()
+
+        for boleta in boletas:
+            # Calculamos si ya registró un ingreso el día de hoy
+            ingreso_hoy = False
+            ultimo_ingreso_str = "Ninguno"
+            
+            if boleta.fecha_ultimo_ingreso:
+                fecha_local = boleta.fecha_ultimo_ingreso.astimezone(timezone.get_current_timezone())
+                ultimo_ingreso_str = fecha_local.strftime("%d/%m/%Y %I:%M %p")
+                if fecha_local.date() == fecha_hoy:
+                    ingreso_hoy = True
+
+            # Determinamos el estado visual para la puerta
+            agotado = boleta.asistencias_consumidas >= boleta.asistencias_permitidas
+            
+            nombre_pase = "Entrada General"
+            if boleta.recibo.tipo_pase:
+                nombre_pase = boleta.recibo.tipo_pase.nombre
+            elif boleta.recibo.evento.es_multidias:
+                nombre_pase = "Full Pass (Base)"
+
+            resultados.append({
+                'id': boleta.id,
+                'codigo_unico': str(boleta.codigo_unico),
+                'comprador': boleta.recibo.comprador_nombre,
+                'telefono': boleta.recibo.comprador_telefono or "Sin teléfono",
+                'recibo': boleta.recibo.numero_recibo,
+                'tipo_pase': nombre_pase,
+                'consumidas': boleta.asistencias_consumidas,
+                'permitidas': boleta.asistencias_permitidas,
+                'ultimo_ingreso': ultimo_ingreso_str,
+                'ingreso_hoy': ingreso_hoy,
+                'agotado': agotado
+            })
+
+        return JsonResponse({'status': 'success', 'resultados': resultados})

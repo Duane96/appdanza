@@ -40,4 +40,6 @@ urlpatterns = [
     path('<slug:slug_academia>/eventos/<slug:evento_slug>/recibos/<int:recibo_id>/anular/', views.AnularReciboView.as_view(), name='anular_recibo'),
     path('<slug:slug_academia>/fases/<int:pk>/editar/', views.EditarFasePreventaView.as_view(), name='editar_fase'),
     path('<slug:slug_academia>/fases/<int:pk>/eliminar/', views.EliminarFasePreventaView.as_view(), name='eliminar_fase'),
+    # 🔍 API para Búsqueda Manual de Asistentes en Puerta
+    path('<slug:slug_academia>/eventos/<slug:evento_slug>/api-buscar-asistente/', views.BuscarAsistenteAPIView.as_view(), name='api_buscar_asistente'),
 ]
