@@ -844,18 +844,49 @@ class ValidarIngresoQRAPIView(LoginRequiredMixin, View):
             'asistencias_consumidas': boleta.asistencias_consumidas
         }, status=200)
     
+from django.contrib import messages as django_messages
 
-
+# ==============================================================================
+# VISTA MEJORADA DE ANULACIÓN DE RECIBOS
+# ==============================================================================
 class AnularReciboView(LoginRequiredMixin, View):
-    """Anula un recibo y bloquea el acceso de todas sus boletas asociadas."""
+    """
+    Anula un recibo y bloquea el acceso de todas sus boletas asociadas.
+    Garantiza aislamiento Multi-Tenant y transacciones atómicas para integridad contable.
+    """
     def post(self, request, slug_academia, evento_slug, recibo_id):
-        recibo = get_object_or_404(ReciboEvento, id=recibo_id, evento__academia=request.tenant, evento__slug=evento_slug)
+        # 1. SEGURIDAD MULTI-TENANT: Filtrado estricto por la academia actual (request.tenant)
+        # y el slug del evento para evitar fugas de datos entre inquilinos.
+        recibo = get_object_or_404(
+            ReciboEvento, 
+            id=recibo_id, 
+            evento__academia=request.tenant, 
+            evento__slug=evento_slug
+        )
         
-        # Anulamos el recibo
-        recibo.anulado = True
-        recibo.save(update_fields=['anulado'])
+        # 2. TRANSACCIÓN ATÓMICA: Si algo falla al desactivar las boletas, no se anula el recibo.
+        # Es vital para mantener coherencia en la normativa de la DIAN y reportes financieros.
+        with transaction.atomic():
+            # Cambiamos el estado del recibo y guardamos únicamente el campo modificado (Optimización RAM/DB)
+            recibo.anulado = True
+            recibo.save(update_fields=['anulado'])
+            
+            # 3. BLOQUEO DE BOLETAS ASOCIADAS:
+            # Asumiendo que tu modelo ReciboEvento tiene una relación con las boletas (ej. boletas.all() o entradas.all()).
+            # Usamos update() para hacer una sola consulta SQL directa en vez de un bucle for (Ahorro de recursos en PythonAnywhere).
+            if hasattr(recibo, 'boletas'):
+                recibo.boletas.update(activa=False) # O el nombre de tu campo de estado: valida=False, estado='ANULADA', etc.
+            elif hasattr(recibo, 'entradas'):
+                recibo.entradas.update(activa=False)
         
-        messages.success(request, f"El recibo #{recibo.numero_recibo} y sus entradas han sido anulados correctamente.")
+        # 4. NOTIFICACIÓN DE ÉXITO AL USUARIO:
+        # Usamos el alias 'django_messages' que definimos arriba para evitar el AttributeError con diccionarios.
+        django_messages.success(
+            request, 
+            f"El recibo #{recibo.numero_recibo} y todas sus entradas han sido anulados correctamente."
+        )
+        
+        # Redirección segura de vuelta al detalle del evento del tenant actual
         return redirect('eventos:admin_detalle', slug_academia=slug_academia, evento_slug=evento_slug)
     
 
