@@ -42,4 +42,7 @@ urlpatterns = [
     path('<slug:slug_academia>/fases/<int:pk>/eliminar/', views.EliminarFasePreventaView.as_view(), name='eliminar_fase'),
     # 🔍 API para Búsqueda Manual de Asistentes en Puerta
     path('<slug:slug_academia>/eventos/<slug:evento_slug>/api-buscar-asistente/', views.BuscarAsistenteAPIView.as_view(), name='api_buscar_asistente'),
+
+    # 🚀 CORRECCIÓN SENIOR: Respetando la jerarquía Multi-Tenant de AppDanza
+    path('<slug:slug_academia>/eventos/<slug:evento_slug>/cupones/<int:pk>/invalidar/', views.InvalidarCodigoDescuentoView.as_view(), name='invalidar_codigo'),
 ]

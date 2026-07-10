@@ -328,21 +328,40 @@
             </div>
             <div class="list-group list-group-flush small" style="max-height: 180px; overflow-y: auto;">
                 {% for cod in codigos %}
-                <div class="list-group-item d-flex justify-content-between align-items-center px-0 bg-transparent">
-                    <div>
-    <strong class="text-dark">{{ cod.nombre_codigo }}</strong>
-    <small class="text-muted d-block">
-        Full: ${{ cod.precio_especial|floatformat:0 }} 
-        {% if evento.es_multidias and cod.precio_especial_dia %}
-            <span class="text-warning-emphasis">| x Día: ${{ cod.precio_especial_dia|floatformat:0 }}</span>
+<!-- 🚀 Si no está activo o caducó, le bajamos la opacidad (opacity-50) -->
+<div class="list-group-item d-flex justify-content-between align-items-center px-0 bg-transparent {% if not cod.activo or not cod.es_valido %}opacity-50{% endif %}">
+    <div>
+        <!-- 🚀 Si está invalidado, tachamos el texto -->
+        <strong class="{% if not cod.activo %}text-decoration-line-through text-muted{% else %}text-dark{% endif %}">
+            {{ cod.nombre_codigo }}
+        </strong>
+        <small class="text-muted d-block">
+            Full: ${{ cod.precio_especial|floatformat:0 }} 
+            {% if evento.es_multidias and cod.precio_especial_dia %}
+                <span class="text-warning-emphasis">| x Día: ${{ cod.precio_especial_dia|floatformat:0 }}</span>
+            {% endif %}
+        </small>
+    </div>
+    
+    <div class="d-flex align-items-center gap-2">
+        <span class="badge bg-light text-secondary font-monospace">{{ cod.usos_actuales }}/{{ cod.limite_usos }}</span>
+        
+        <!-- 🚀 BOTÓN DE ACCIÓN -->
+        {% if cod.activo %}
+            <form action="{% url 'eventos:invalidar_codigo' request.tenant.slug evento.slug cod.id %}" method="POST" class="d-inline m-0 p-0">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-danger border-0 py-0 px-1" title="Invalidar Cupón" onclick="return confirm('¿Seguro que deseas invalidar este código? Ya nadie podrá usarlo a partir de ahora, pero los que ya compraron conservarán su acceso.');">
+                    <i class="bi bi-x-circle-fill"></i>
+                </button>
+            </form>
+        {% else %}
+            <span class="badge bg-danger extra-small py-1">INVALIDADO</span>
         {% endif %}
-    </small>
+    </div>
 </div>
-                    <span class="badge bg-light text-secondary font-monospace">{{ cod.usos_actuales }}/{{ cod.limite_usos }}</span>
-                </div>
-                {% empty %}
-                <span class="text-muted small d-block py-2">No hay códigos creados.</span>
-                {% endfor %}
+{% empty %}
+<span class="text-muted small d-block py-2">No hay códigos creados.</span>
+{% endfor %}
             </div>
         </div>
     </div>

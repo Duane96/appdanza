@@ -186,8 +186,10 @@ class CodigoDescuento(models.Model):
     limite_usos = models.PositiveIntegerField(default=100)
     usos_actuales = models.PositiveIntegerField(default=0)
     precio_especial = models.DecimalField(max_digits=10, decimal_places=2)
-    # NUEVO: Precio aplicado SOLAMENTE si el evento es multidía y el usuario elige Pase por 1 Día
     precio_especial_dia = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Descuento (Por 1 Día)")
+    
+    # 🚀 NUEVO: Control de borrado lógico (Soft Delete)
+    activo = models.BooleanField(default=True, verbose_name="¿Código Activo?")
 
     class Meta:
         unique_together = ('evento', 'nombre_codigo')
@@ -198,7 +200,8 @@ class CodigoDescuento(models.Model):
     @property
     def es_valido(self):
         from django.utils import timezone
-        return timezone.now() <= self.fecha_caducidad and self.usos_actuales < self.limite_usos
+        # 🛡️ FIX SENIOR: Ahora valida fechas, cupos Y que un admin no lo haya desactivado manualmente
+        return self.activo and timezone.now() <= self.fecha_caducidad and self.usos_actuales < self.limite_usos
 
 
 class TipoPase(models.Model):

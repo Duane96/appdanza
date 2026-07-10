@@ -1015,3 +1015,29 @@ class BuscarAsistenteAPIView(LoginRequiredMixin, View):
             })
 
         return JsonResponse({'status': 'success', 'resultados': resultados})
+    
+
+
+class InvalidarCodigoDescuentoView(LoginRequiredMixin, View):
+    """
+    Vista Senior (Soft Delete): Desactiva un cupón sin borrar su rastro contable.
+    """
+    def post(self, request, slug_academia, evento_slug, pk):
+        # 1. Filtro multi-tenant estricto para evitar accesos indebidos
+        codigo = get_object_or_404(
+            CodigoDescuento, 
+            id=pk, 
+            evento__academia=request.tenant, 
+            evento__slug=evento_slug
+        )
+        
+        # 2. Apagamos el código
+        codigo.activo = False
+        
+        # 3. Guardamos SOLO este campo para ahorrar memoria en PythonAnywhere
+        codigo.save(update_fields=['activo'])
+        
+        from django.contrib import messages
+        messages.success(request, f"El código '{codigo.nombre_codigo}' ha sido invalidado. Las personas que ya lo usaron no se verán afectadas.")
+        
+        return redirect('eventos:admin_detalle', slug_academia=slug_academia, evento_slug=evento_slug)
