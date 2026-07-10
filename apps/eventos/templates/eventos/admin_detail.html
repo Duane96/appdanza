@@ -195,10 +195,17 @@
                         {% for recibo in recibos %}
                         <tr class="border-bottom {% if recibo.anulado %}opacity-50 text-decoration-line-through bg-light{% endif %}">
                             <td>
-                                <strong class="text-dark d-block">{{ recibo.comprador_nombre }}</strong>
-                                <span class="badge bg-light text-dark font-monospace extra-small">{{ recibo.numero_recibo }}</span>
-                                <small class="text-muted ms-1">{{ recibo.comprador_telefono }}</small>
-                            </td>
+    <strong class="text-dark d-block">{{ recibo.comprador_nombre }}</strong>
+    <span class="badge bg-light text-dark font-monospace extra-small">{{ recibo.numero_recibo }}</span>
+    <small class="text-muted ms-1">{{ recibo.comprador_telefono }}</small>
+    
+    <!-- 🚀 CORRECCIÓN SENIOR 3: ETIQUETA VISUAL DE CUPÓN -->
+    {% if recibo.codigo_descuento_usado %}
+        <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle extra-small ms-1 mt-1 d-inline-block shadow-sm" title="Cupón Utilizado">
+            <i class="bi bi-tag-fill me-1"></i>{{ recibo.codigo_descuento_usado.nombre_codigo }}
+        </span>
+    {% endif %}
+</td>
                             <td class="text-center fw-bold text-secondary">{{ recibo.cantidad_entradas }}</td>
                             <td class="fw-bold {% if recibo.anulado %}text-secondary{% else %}text-dark{% endif %}">${{ recibo.monto_total|floatformat:0 }}</td>
                             

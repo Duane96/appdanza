@@ -414,6 +414,9 @@ class EventoDetailAdminView(LoginRequiredMixin, DetailView):
         context['form_puerta'] = VentaPuertaForm(initial={'precio_unitario_aplicado': evento.precio_puerta or 0, 'cantidad_entradas': 1})
         context['form_pase'] = TipoPaseForm()
 
+        # Enviamos los códigos al template para que la tarjeta de cupones funcione
+        context['codigos'] = CodigoDescuento.objects.filter(evento=evento).order_by('-id')
+
         # 9. MÉTRICAS AVANZADAS POR PASE Y FASE
         if evento.tiene_pases_personalizados:
             context['metricas_pases'] = TipoPase.objects.filter(evento=evento).annotate(
