@@ -1,0 +1,239 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master League | {{ academia.nombre }}</title>
+    
+    <!-- Bootstrap 5 y Fuentes -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;600;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            /* PALETA ÉLITE Y PREMIUM - ALTO CONTRASTE */
+            --league-bg-base: #050505; 
+            --gold-light: #FFF8DC;
+            --gold-primary: #FFD700;
+            --gold-dark: #B8860B;
+            --text-light: #FFFFFF; /* 🚀 FIX UX: Blanco puro para máxima legibilidad */
+            --text-muted: #E0E0E0; /* 🚀 FIX UX: Gris muy claro, no oscuro */
+            --glow-gold: rgba(255, 215, 0, 0.4);
+        }
+
+        body {
+            font-family: 'Urbanist', sans-serif;
+            background-color: var(--league-bg-base);
+            color: var(--text-light);
+            overflow-x: hidden;
+            background-image: radial-gradient(circle at 50% 0%, #1a1a1a 0%, var(--league-bg-base) 70%);
+            background-attachment: fixed;
+        }
+
+        /* --- FUEGO DINÁMICO DE FONDO --- */
+        #fire-container {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            pointer-events: none; z-index: 0; overflow: hidden;
+        }
+        .ember {
+            position: absolute; bottom: -20px;
+            background: radial-gradient(circle, #ffcc00 0%, #ff6600 40%, transparent 70%);
+            border-radius: 50%; opacity: 0;
+            animation: floatUp linear forwards; filter: blur(1px);
+        }
+        @keyframes floatUp {
+            0% { transform: translateY(0) scale(1); opacity: 0; }
+            10% { opacity: 0.8; }
+            50% { opacity: 0.5; transform: translateY(-50vh) scale(1.5) translateX(20px); }
+            100% { transform: translateY(-100vh) scale(0.5) translateX(-20px); opacity: 0; }
+        }
+
+        /* --- TIPOGRAFÍA Y PANELES --- */
+        .font-heading { font-family: 'Arial Black', Arial, sans-serif; text-transform: uppercase; letter-spacing: -1px; }
+        
+        .title-gold {
+            background: linear-gradient(to bottom, #BF953F, #FCF6BA, #B38728, #FBF5B7, #AA771C);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; 
+            filter: drop-shadow(0px 4px 10px rgba(0, 0, 0, 0.8));
+        }
+
+        /* Paneles Glassmorphism - Ajustados para que el texto resalte */
+        .panel-glass {
+            background: rgba(18, 18, 18, 0.85); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            border-radius: 12px; border: 1px solid rgba(255, 215, 0, 0.15); 
+            border-bottom: 3px solid var(--gold-dark); box-shadow: 0 15px 35px rgba(0,0,0,0.6);
+            position: relative; z-index: 1; transition: transform 0.3s;
+        }
+        .panel-glass:hover { border-color: var(--gold-primary); transform: translateY(-5px); }
+
+        .panel-alert {
+            background: rgba(220, 53, 69, 0.1); border: 1px solid #dc3545;
+            border-left: 5px solid #dc3545; border-radius: 8px; padding: 20px;
+        }
+
+        .btn-gold {
+            background: linear-gradient(135deg, #BF953F 0%, #FCF6BA 50%, #B38728 100%);
+            color: #000 !important; font-family: 'Arial Black', Arial, sans-serif; 
+            text-transform: uppercase; border: none; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+        .btn-gold:hover { transform: scale(1.02); box-shadow: 0 10px 25px var(--glow-gold); }
+
+        .content-layer { position: relative; z-index: 5; }
+    </style>
+</head>
+<body>
+
+    <!-- SISTEMA DE PARTÍCULAS -->
+    <div id="fire-container"></div>
+
+    <!-- NAVBAR SIMPLE -->
+    <nav class="navbar navbar-dark fixed-top py-3 content-layer" style="background: rgba(5,5,5,0.9); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,215,0,0.2);">
+        <div class="container">
+            <a class="text-decoration-none d-flex align-items-center gap-2 text-white" style="transition: color 0.3s;" href="/{{ academia.slug }}/" onmouseover="this.style.color='var(--gold-primary)'" onmouseout="this.style.color='#fff'">
+                <i class="bi bi-arrow-left fs-4"></i>
+                <span class="font-heading fs-5" style="letter-spacing: 1px;">VOLVER A INICIO</span>
+            </a>
+            
+            <div class="navbar-brand font-heading fs-4 title-gold ms-auto">
+                {% if academia.logo %}
+                    <img src="{{ academia.logo.url }}" alt="Logo {{ academia.nombre }}" style="height: 40px;">
+                {% else %}
+                    BACHATA<span style="color:#fff;-webkit-text-fill-color:#fff;">MANÍA</span>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- HERO MASTER LEAGUE -->
+    <section class="py-5 mt-5 content-layer text-center d-flex align-items-center" style="min-height: 60vh; background: radial-gradient(circle, rgba(184, 134, 11, 0.1) 0%, transparent 60%);">
+        <div class="container py-5">
+            <i class="bi bi-trophy-fill display-1 mb-4" style="color: var(--gold-primary); filter: drop-shadow(0 0 20px rgba(255,215,0,0.5));"></i>
+            <h1 class="display-2 font-heading title-gold mb-3">MASTER LEAGUE</h1>
+            <p class="lead mx-auto fs-4 text-light fw-semibold" style="max-width: 800px; text-shadow: 0px 2px 4px rgba(0,0,0,0.8);">
+                Una celebración de la esencia pura del baile social. Rompemos el individualismo para premiar a quienes dominan el arte de hacer lucir a su pareja.
+            </p>
+            <div class="mt-5 d-flex flex-wrap gap-3 justify-content-center">
+                <a href="#detalles" class="btn btn-outline-light rounded-pill px-4 py-3 font-heading" style="border-color: var(--gold-dark); color: var(--gold-primary);">VER RESUMEN</a>
+                <a href="/{{ academia.slug }}/#cartelera" class="btn btn-gold rounded-pill px-5 py-3 font-heading">INSCRÍBETE A LA CLASIFICATORIA</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- RESUMEN DEL REGLAMENTO (PUNTOS CLAVE) -->
+    <section class="py-5 content-layer" id="detalles" style="background: rgba(0,0,0,0.6); border-top: 1px solid rgba(255,215,0,0.1);">
+        <div class="container py-4">
+            <div class="text-center mb-5">
+                <h2 class="display-5 font-heading title-gold">CÓMO <span style="color:#fff;-webkit-text-fill-color:#fff;">FUNCIONA</span></h2>
+                <div style="width: 50px; height: 3px; background: var(--gold-primary); margin: 15px auto;"></div>
+            </div>
+
+            <div class="row g-4">
+                <!-- EL FORMATO -->
+                <div class="col-md-4">
+                    <div class="panel-glass p-4 h-100 text-center">
+                        <i class="bi bi-shuffle display-4 mb-3" style="color: var(--gold-primary);"></i>
+                        <h3 class="font-heading text-white mb-3 fs-4">FORMATO JACK & JILL</h3>
+                        <p class="text-light mb-4 fw-medium">Se compite con parejas aleatorias y rotativas para evaluar la capacidad real de adaptación, conexión genuina y técnica en la pista.</p>
+                    </div>
+                </div>
+
+                <!-- EL CIRCUITO -->
+                <div class="col-md-4">
+                    <div class="panel-glass p-4 h-100 text-center">
+                        <i class="bi bi-calendar-event display-4 mb-3" style="color: var(--gold-primary);"></i>
+                        <h3 class="font-heading text-white mb-3 fs-4">EL CIRCUITO</h3>
+                        <p class="text-light mb-4 fw-medium">El torneo consta de 3 fechas clasificatorias mensuales independientes. Los ganadores aseguran su pase directo a La Gran Final (Fecha 4).</p>
+                    </div>
+                </div>
+
+                <!-- LA CALIFICACIÓN -->
+                <div class="col-md-4">
+                    <div class="panel-glass p-4 h-100 text-center">
+                        <i class="bi bi-clipboard-check display-4 mb-3" style="color: var(--gold-primary);"></i>
+                        <h3 class="font-heading text-white mb-3 fs-4">CALIFICACIÓN (1 A 3)</h3>
+                        <p class="text-light mb-4 fw-medium">Los jueces evalúan en tiempo real (1=Mal, 2=Promedio, 3=Destacado). Se prioriza la guía segura, tiempo musical, *grounding* y musicalidad activa.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- REGLA DE ORO (TOLERANCIA CERO) -->
+            <div class="row mt-5">
+                <div class="col-12">
+                    <div class="panel-alert shadow-lg">
+                        <div class="d-flex align-items-center gap-3 mb-3">
+                            <i class="bi bi-exclamation-triangle-fill fs-1 text-danger"></i>
+                            <h3 class="font-heading text-white mb-0">REGLA DE ORO: CERO TOLERANCIA A ACROBACIAS</h3>
+                        </div>
+                        <p class="text-light fs-5 fw-medium mb-0">
+                            Queda estrictamente prohibido cualquier movimiento donde un bailarín despegue los dos pies del suelo con apoyo de su pareja. Penalización: <strong>Calificación automática de 1 (Mal) y eliminación.</strong> Buscamos baile social, no shows.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- PREMIOS Y DESCARGA DE PDF -->
+    <section class="py-5 content-layer">
+        <div class="container py-4">
+            <div class="panel-glass p-5" style="border: 2px solid var(--gold-dark); background: linear-gradient(45deg, #050505, #1a1a1a);">
+                <div class="row align-items-center">
+                    <div class="col-lg-7 text-center text-lg-start mb-4 mb-lg-0">
+                        <h2 class="display-5 font-heading title-gold">EL GRAN POZO Y PREMIOS</h2>
+                        <ul class="list-unstyled text-light fs-5 mt-4 text-start">
+                            <li class="mb-3"><i class="bi bi-check-circle-fill me-2" style="color: var(--gold-primary);"></i> <strong>Bolsa de la Noche:</strong> El 50% de las inscripciones se entrega esa misma fecha a los ganadores (Mejor Líder y Follower).</li>
+                            <li class="mb-3"><i class="bi bi-check-circle-fill me-2" style="color: var(--gold-primary);"></i> <strong>Pozo Master League:</strong> El 50% restante se acumula durante 3 meses para los Campeones Absolutos de la Gran Final.</li>
+                            <li><i class="bi bi-check-circle-fill me-2" style="color: var(--gold-primary);"></i> <strong>Competitor Pass:</strong> Pase especial VIP al Festival de Aniversario para los clasificados.</li>
+                        </ul>
+                    </div>
+                    <div class="col-lg-5 text-center">
+                        <div class="p-4 rounded h-100 d-flex flex-column justify-content-center align-items-center" style="background: rgba(0,0,0,0.5); border: 1px dashed var(--gold-primary);">
+                            <i class="bi bi-file-earmark-pdf-fill display-3 mb-3" style="color: #dc3545;"></i>
+                            <h4 class="font-heading text-white mb-2">REGLAMENTO COMPLETO</h4>
+                            <p class="small text-light mb-4">Descarga la matriz de evaluación para jueces, criterios de desempate y normas de registro.</p>
+                            
+                            <!-- 🚀 CTA: ENLACE AL ARCHIVO PDF REAL (Asegúrate de ponerlo en tu carpeta static) -->
+                            <a href="{% static 'docs/REGLAMENTO_BML.pdf' %}" target="_blank" class="btn btn-outline-light rounded-pill px-4 py-2 font-heading w-100" style="border-width: 2px;">
+                                DESCARGAR PDF <i class="bi bi-download ms-1"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER SIMPLE -->
+    <footer class="pt-5 pb-3 content-layer" style="background: #000;">
+        <div class="container text-center">
+            <p class="small mb-0" style="color: #666;">
+                &copy; 2026 {{ academia.nombre }} Master League. Powered by <a href="#" class="text-decoration-none" style="color: var(--gold-dark); font-weight: bold;">AppDanza</a>
+            </p>
+        </div>
+    </footer>
+
+    <!-- SCRIPTS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const container = document.getElementById('fire-container');
+            const particleCount = window.innerWidth < 768 ? 15 : 30; 
+            function createEmber() {
+                const ember = document.createElement('div');
+                ember.classList.add('ember');
+                const size = Math.random() * 5 + 2; 
+                const left = Math.random() * 100; 
+                const duration = Math.random() * 4 + 4; 
+                const delay = Math.random() * 5; 
+                ember.style.width = `${size}px`; ember.style.height = `${size}px`;
+                ember.style.left = `${left}%`; ember.style.animationDuration = `${duration}s`; ember.style.animationDelay = `${delay}s`;
+                container.appendChild(ember);
+                setTimeout(() => { ember.remove(); createEmber(); }, (duration + delay) * 1000);
+            }
+            for(let i = 0; i < particleCount; i++) createEmber();
+        });
+    </script>
+</body>
+</html>

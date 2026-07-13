@@ -45,4 +45,6 @@ urlpatterns = [
 
     # 🚀 CORRECCIÓN SENIOR: Respetando la jerarquía Multi-Tenant de AppDanza
     path('<slug:slug_academia>/eventos/<slug:evento_slug>/cupones/<int:pk>/invalidar/', views.InvalidarCodigoDescuentoView.as_view(), name='invalidar_codigo'),
+
+    path('<slug:slug_academia>/master-league/', views.MasterLeagueInfoView.as_view(), name='master_league'),
 ]

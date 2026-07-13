@@ -33,6 +33,7 @@ from apps.comunicaciones.services import enviar_correo_transaccional
 
 from django.db.models import Sum, DecimalField
 from django.db.models.functions import Coalesce
+from django.contrib import messages
 
 class EventoListView(LoginRequiredMixin, ListView):
     """Lista todos los eventos de la academia (Tenant actual)."""
@@ -1041,3 +1042,18 @@ class InvalidarCodigoDescuentoView(LoginRequiredMixin, View):
         messages.success(request, f"El código '{codigo.nombre_codigo}' ha sido invalidado. Las personas que ya lo usaron no se verán afectadas.")
         
         return redirect('eventos:admin_detalle', slug_academia=slug_academia, evento_slug=evento_slug)
+    
+
+class MasterLeagueInfoView(TemplateView):
+    """
+    Vista estática/informativa para el torneo Master League.
+    Muestra reglamento, formato y premios.
+    """
+    template_name = "eventos/master_league.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Inyectamos el tenant (Academia) para mantener el logo y branding
+        # Asumiendo que tu middleware o mixin ya asigna la academia a self.request.tenant
+        context['academia'] = self.request.tenant
+        return context

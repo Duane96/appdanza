@@ -4,168 +4,196 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bachatamanía Fusion Night | {{ academia.nombre }}</title>
+    <title>Bachatamanía Oficial | {{ academia.nombre }}</title>
     
+    <!-- Bootstrap y Fuentes -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;600;800&display=swap" rel="stylesheet">
 
     <style>
         :root {
-            /* FUSION NIGHT PALETTE - ¡ULTRA VIBRANTE! */
-            --fusion-bg-base: #100020; /* Púrpura profundo y rico */
-            --fusion-magenta: #FF007F; /* Fucsia eléctrico */
-            --fusion-cyan: #00FFFF; /* Cian eléctrico */
-            --brand-yellow: #FFC800; /* Amarillo acento VIP */
+            /* PALETA ÉLITE Y PREMIUM - BACHATAMANÍA */
+            --league-bg-base: #050505; 
+            --league-bg-secondary: #121212; 
+            
+            /* Degradado Dorado Metálico */
+            --gold-light: #FFF8DC;
+            --gold-primary: #FFD700;
+            --gold-dark: #B8860B;
+            --gold-accent: #DAA520;
             
             /* Textos */
-            --fusion-text-light: #FFFFFF;
-            --fusion-text-muted: #CBD5E1;
+            --text-light: #F8F9FA;
+            --text-muted: #ADB5BD;
             
             /* Efectos Glow */
-            --glow-magenta: rgba(255, 0, 127, 0.5);
-            --glow-cyan: rgba(0, 255, 255, 0.4);
-            --glow-yellow: rgba(255, 200, 0, 0.6);
+            --glow-gold: rgba(255, 215, 0, 0.4);
         }
 
         body {
             font-family: 'Urbanist', sans-serif;
-            background-color: var(--fusion-bg-base);
-            /* ATMÓSFERA DE FUSIÓN ABSTRACTA */
-            background-image: 
-                radial-gradient(circle at 15% 15%, var(--glow-magenta) 0%, transparent 40%),
-                radial-gradient(circle at 85% 85%, rgba(16, 0, 32, 0.8) 0%, #000 100%),
-                url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1IiBoZWlnaHQ9IjUiPgo8cmVjdCB3aWR0aD0iNSIgaGVpZHRoPSI1IiBmaWxsPSIjMDAwIiBmaWxsLW9wYWNpdHk9IjAuMDUiPjwvcmVjdD4KPC9zdmc+');
-            background-attachment: fixed;
-            color: var(--fusion-text-light);
+            background-color: var(--league-bg-base);
+            color: var(--text-light);
             overflow-x: hidden;
             scroll-behavior: smooth;
+            /* Fondo sutil tipo carbón oscuro/madera */
+            background-image: 
+                radial-gradient(circle at 50% 0%, #1a1a1a 0%, var(--league-bg-base) 70%),
+                url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMiI+PC9yZWN0Pjwvc3ZnPg==');
+            background-attachment: fixed;
         }
 
-        /* TIPOGRAFÍA DE IMPACTO CON DEGRADADO */
+        /* --- CONTENEDOR DE FUEGO / CHISPAS DINÁMICAS --- */
+        #fire-container {
+            position: fixed;
+            top: 0; 
+            left: 0; 
+            width: 100vw; 
+            height: 100vh;
+            pointer-events: none; /* Crucial para no bloquear clics */
+            z-index: 0; 
+            overflow: hidden;
+        }
+
+        .ember {
+            position: absolute; 
+            bottom: -20px;
+            background: radial-gradient(circle, #ffcc00 0%, #ff6600 40%, transparent 70%);
+            border-radius: 50%; 
+            opacity: 0;
+            animation: floatUp linear forwards; 
+            filter: blur(1px);
+        }
+
+        @keyframes floatUp {
+            0% { transform: translateY(0) scale(1); opacity: 0; }
+            10% { opacity: 0.8; }
+            50% { opacity: 0.5; transform: translateY(-50vh) scale(1.5) translateX(20px); }
+            100% { transform: translateY(-100vh) scale(0.5) translateX(-20px); opacity: 0; }
+        }
+
+        /* --- TIPOGRAFÍA DE IMPACTO --- */
         h1, h2, h3, h4, h5, .font-heading {
             font-family: 'Arial Black', Arial, sans-serif;
-            text-transform: uppercase;
-            letter-spacing: -2px;
-            font-weight: 900;
+            text-transform: uppercase; 
+            letter-spacing: -1px; 
+            font-weight: 900; 
+            position: relative; 
+            z-index: 1;
         }
         
-        .title-fusion {
-            background: linear-gradient(135deg, var(--fusion-cyan) 0%, var(--fusion-magenta) 50%, var(--brand-yellow) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 0 8px rgba(255, 0, 127, 0.6));
+        /* TEXTO DORADO METÁLICO CLAVADO A LA IMAGEN */
+        .title-gold {
+            background: linear-gradient(to bottom, #BF953F, #FCF6BA, #B38728, #FBF5B7, #AA771C);
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent; 
+            filter: drop-shadow(0px 4px 10px rgba(0, 0, 0, 0.8));
         }
 
-        /* --- BOTONES PREMIUM DE FUSIÓN --- */
-        .btn-fusion-electric {
-            background: linear-gradient(90deg, var(--fusion-cyan) 0%, var(--fusion-magenta) 100%);
-            color: #000 !important;
-            font-family: 'Arial Black', Arial, sans-serif;
+        /* --- BOTONES PREMIUM --- */
+        .btn-gold {
+            background: linear-gradient(135deg, #BF953F 0%, #FCF6BA 50%, #B38728 100%);
+            color: #000 !important; 
+            font-family: 'Arial Black', Arial, sans-serif; 
             text-transform: uppercase;
-            border: none;
+            border: none; 
             transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
-            box-shadow: 0 0 20px var(--glow-magenta);
-            position: relative;
-        }
-        
-        .btn-fusion-electric:hover {
-            transform: translateY(-5px) scale(1.05);
-            box-shadow: 0 0 35px rgba(255, 0, 127, 1), 0 0 15px rgba(0, 255, 255, 1);
-        }
-
-        .btn-fusion-vip {
-            background: #000;
-            border: 2px solid var(--brand-yellow);
-            color: var(--brand-yellow) !important;
-            font-family: 'Arial Black', Arial, sans-serif;
-            text-transform: uppercase;
-            transition: all 0.3s ease;
-            box-shadow: 0 0 15px var(--glow-yellow);
-        }
-        
-        .btn-fusion-vip:hover {
-            background-color: var(--brand-yellow);
-            color: #000 !important;
-            box-shadow: 0 0 30px rgba(255, 200, 0, 1);
-        }
-
-        /* --- PANELES CON GLOW DE FUSIÓN (CARDS) --- */
-        .panel-fusion {
-            background: rgba(16, 0, 32, 0.4);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
-            border-radius: 20px;
-            border: 2px solid;
-            border-image: linear-gradient(135deg, var(--fusion-cyan) 0%, var(--fusion-magenta) 100%) 1;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.6);
-            transition: all 0.4s ease;
-        }
-
-        .ticket-card-fusion {
-            background: linear-gradient(135deg, rgba(16, 0, 32, 0.8) 0%, rgba(0,0,0,0.9) 100%);
-            border-radius: 16px;
-            overflow: hidden;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
-            position: relative;
-            border: 2px solid rgba(255, 0, 127, 0.2);
-        }
-        
-        .ticket-card-fusion::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 4px;
-            background: linear-gradient(90deg, var(--fusion-cyan), var(--fusion-magenta));
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5), inset 0 0 10px rgba(255,255,255,0.5); 
+            position: relative; 
             z-index: 2;
-            opacity: 0.8;
         }
         
-        .ticket-card-fusion:hover {
-            transform: translateY(-12px) scale(1.02);
-            border-color: rgba(255, 0, 127, 0.8);
-            box-shadow: 0 30px 60px rgba(0,0,0,0.8), 0 0 20px var(--glow-magenta);
+        .btn-gold:hover {
+            transform: translateY(-3px) scale(1.02); 
+            box-shadow: 0 10px 25px var(--glow-gold), inset 0 0 15px rgba(255,255,255,0.8);
         }
 
-        /* --- NAVBAR DE FUSIÓN --- */
+        .btn-gold-outline {
+            background: rgba(0,0,0,0.6); 
+            border: 2px solid var(--gold-primary); 
+            color: var(--gold-primary) !important;
+            font-family: 'Arial Black', Arial, sans-serif; 
+            text-transform: uppercase; 
+            transition: all 0.3s ease;
+            box-shadow: 0 0 15px rgba(0,0,0,0.8); 
+            position: relative; 
+            z-index: 2;
+        }
+        
+        .btn-gold-outline:hover {
+            background: linear-gradient(135deg, #BF953F 0%, #B38728 100%); 
+            color: #000 !important; 
+            box-shadow: 0 0 20px var(--glow-gold);
+        }
+
+        /* --- PANELES CON TOQUE ELEGANTE --- */
+        .panel-glass {
+            background: rgba(18, 18, 18, 0.85); 
+            backdrop-filter: blur(10px); 
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 8px; 
+            border: 1px solid rgba(255, 215, 0, 0.3); 
+            border-bottom: 3px solid var(--gold-primary);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8); 
+            position: relative; 
+            z-index: 1;
+        }
+
+        /* --- NAVBAR --- */
         .navbar-event {
-            background: rgba(16, 0, 32, 0.6) !important;
-            backdrop-filter: blur(25px);
-            -webkit-backdrop-filter: blur(25px);
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            background: rgba(5, 5, 5, 0.9) !important; 
+            backdrop-filter: blur(15px); 
+            -webkit-backdrop-filter: blur(15px);
+            border-bottom: 1px solid rgba(255, 215, 0, 0.2);
         }
         
         .nav-link {
-            color: var(--fusion-text-light) !important;
-            font-weight: 600;
-            text-transform: uppercase;
+            color: var(--text-light) !important; 
+            font-weight: 600; 
+            text-transform: uppercase; 
             font-size: 0.9rem;
-            transition: all 0.3s;
+            transition: color 0.3s; 
+            letter-spacing: 1px;
         }
         
-        .nav-link:hover {
-            color: var(--fusion-cyan) !important;
-            text-shadow: 0 0 8px var(--glow-cyan);
+        .nav-link:hover { 
+            color: var(--gold-primary) !important; 
         }
 
-        /* Galería Ultra Vibrante */
-        .gallery-img-fusion {
-            border-radius: 20px;
-            transition: all 0.4s ease;
-            cursor: pointer;
-            border: 4px solid rgba(255, 255, 255, 0.05);
+        /* --- BANNER MASTER LEAGUE --- */
+        .master-league-banner {
+            background: linear-gradient(45deg, #000000, #1a1a1a); 
+            border: 2px solid var(--gold-dark); 
+            border-radius: 12px;
+            position: relative; 
+            overflow: hidden; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8), inset 0 0 40px rgba(255, 215, 0, 0.1);
         }
         
-        .gallery-img-fusion:hover {
-            transform: scale(1.08) rotate(2deg);
-            border-image: linear-gradient(135deg, var(--fusion-magenta) 0%, var(--fusion-cyan) 100%) 1;
-            box-shadow: 0 15px 40px rgba(0,0,0,0.7), 0 0 20px var(--glow-magenta);
+        .master-league-banner::after {
+            content: ''; 
+            position: absolute; 
+            top: -50%; 
+            left: -50%; 
+            width: 200%; 
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,215,0,0.1) 0%, transparent 60%);
+            animation: rotateGlow 10s linear infinite; 
+            pointer-events: none;
         }
 
-        /* 🚀 CONFIGURACIÓN 3D FLIP CARDS BLINDADA CONTRA ERRORES DE CLIC */
+        @keyframes rotateGlow {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 🚀 SISTEMA FLIP CARDS 3D */
         .flip-card-container {
             perspective: 1000px;
             height: 100%;
-            min-height: 480px; 
+            min-height: 420px; 
+            z-index: 2;
         }
         .flip-card-inner {
             position: relative;
@@ -178,48 +206,88 @@
             transform: rotateY(180deg);
         }
         .flip-card-front, .flip-card-back {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%;
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
             height: 100%;
-            backface-visibility: hidden;
+            backface-visibility: hidden; 
             -webkit-backface-visibility: hidden;
-            border-radius: 16px;
-        }
-        .flip-card-front {
-            z-index: 2;
-            pointer-events: auto; /* Escucha eventos por defecto */
-        }
-        .flip-card-back {
-            transform: rotateY(180deg);
-            z-index: 1;
-            background: rgba(16, 0, 32, 0.95);
-            border: 2px solid rgba(255, 0, 127, 0.5);
-            box-shadow: 0 0 30px rgba(255, 0, 127, 0.2);
-            backdrop-filter: blur(15px);
-            pointer-events: none; /* Desactivado cuando está de espaldas */
+            border-radius: 10px; 
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
         
-        /* 🛠️ ARREGLO DE INTERACCIÓN: Intercambio de prioridad de puntero al girar */
-        .flip-card-container:hover .flip-card-front {
-            z-index: 1;
-            pointer-events: none; /* Al girar, la cara frontal se vuelve intangible */
+        /* CARA FRONTAL */
+        .flip-card-front {
+            background: linear-gradient(180deg, #1a1a1a 0%, #050505 100%);
+            z-index: 2; 
+            pointer-events: auto; 
+            overflow: hidden;
         }
-        .flip-card-container:hover .flip-card-back {
-            z-index: 3; /* Pasa al frente absoluto */
-            pointer-events: auto; /* Habilita los clics en los enlaces del reverso */
+        .flip-card-front::before {
+            content: ''; 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 3px;
+            background: linear-gradient(90deg, #BF953F, #FCF6BA, #B38728); 
+            z-index: 3;
         }
+
+        /* CARA TRASERA */
+        .flip-card-back {
+            transform: rotateY(180deg);
+            z-index: 1; 
+            background: #0a0a0a; 
+            border: 1px solid var(--gold-dark);
+            box-shadow: inset 0 0 40px rgba(0,0,0,0.9); 
+            pointer-events: none;
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            text-align: center;
+        }
+
+        .flip-card-container:hover .flip-card-front { z-index: 1; pointer-events: none; }
+        .flip-card-container:hover .flip-card-back { z-index: 3; pointer-events: auto; }
+
+        /* Scroll personalizado */
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--gold-dark); border-radius: 10px; }
+
+        .content-layer { position: relative; z-index: 5; }
+
+        /* --- NUEVO: ESTILOS DEL TEMPORIZADOR --- */
+        .time-box {
+            background: rgba(0, 0, 0, 0.75);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 6px;
+            padding: 6px 10px;
+            text-align: center;
+            min-width: 50px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+        .text-gold { color: var(--gold-primary); }
     </style>
 </head>
 <body>
 
+    <!-- SISTEMA DE PARTÍCULAS: Brasas/Fuego de fondo -->
+    <div id="fire-container"></div>
+
+    <!-- NAVBAR -->
     <nav class="navbar navbar-expand-lg navbar-dark navbar-event fixed-top py-3">
-        <div class="container">
-            <a class="navbar-brand font-heading fs-2 d-flex align-items-center title-fusion" href="#">
+        <div class="container content-layer">
+            <a class="navbar-brand font-heading fs-2 d-flex align-items-center title-gold" href="#">
                 {% if academia.logo %}
                     <img src="{{ academia.logo.url }}" alt="{{ academia.nombre }}" style="height: 50px;">
                 {% else %}
-                    BACHATA<span class="text-white">MANÍA</span>
+                    BACHATA<span style="color: #fff; -webkit-text-fill-color: #fff;">MANÍA</span>
                 {% endif %}
             </a>
             <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -227,72 +295,80 @@
             </button>
             <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
                 <ul class="navbar-nav align-items-center gap-3">
-                    <li class="nav-item"><a class="nav-link px-3" href="#cartelera">Cartelera</a></li>
+                    <li class="nav-item"><a class="nav-link px-3" href="#cartelera">Eventos</a></li>
+                    <li class="nav-item"><a class="nav-link px-3" href="#master-league-info" style="color: var(--gold-primary) !important;">Master League</a></li>
                     {% if galeria_fotos %} 
                         <li class="nav-item"><a class="nav-link px-3" href="#galeria">Memorias</a></li>
                     {% endif %}
                     <li class="nav-item ms-lg-2 mt-3 mt-lg-0">
-                        <a href="#cartelera" class="btn btn-fusion-vip rounded-pill px-4 py-2">Comprar Tickets</a>
+                        <a href="#cartelera" class="btn btn-gold-outline rounded-pill px-4 py-2">Comprar Tickets</a>
                     </li>
                 </ul>
             </div>
         </div>
     </nav>
 
-    <header id="heroBachatamania" class="carousel slide carousel-fade" data-bs-ride="carousel" style="height: 98vh; position: relative; overflow: hidden;">
+    <!-- HERO CAROUSEL -->
+    <header id="heroBachatamania" class="carousel slide carousel-fade" data-bs-ride="carousel" style="height: 100vh; position: relative; overflow: hidden;">
         <div class="carousel-inner h-100">
+            
+            <!-- SLIDE PRINCIPAL DE LA ACADEMIA -->
             <div class="carousel-item active h-100" style="position: relative;">
                 {% if academia.hero_imagen_1 %}
-                    <img src="{{ academia.hero_imagen_1.url }}" alt="Bachatamanía Oficial" class="d-block w-100 h-100 object-fit-cover">
+                    <img src="{{ academia.hero_imagen_1.url }}" alt="Bachatamanía" class="d-block w-100 h-100 object-fit-cover" style="opacity: 0.6;">
                 {% else %}
-                    <div class="position-absolute w-100 h-100" style="background: var(--fusion-bg-base);"></div>
+                    <div class="position-absolute w-100 h-100" style="background: var(--league-bg-base);"></div>
                 {% endif %}
                 
-                <div class="position-absolute bottom-0 start-0 right-0" style="height: 250px; background: linear-gradient(to top, var(--fusion-bg-base), transparent); z-index: 1;"></div>
+                <div class="position-absolute bottom-0 start-0 right-0 w-100" style="height: 400px; background: linear-gradient(to top, var(--league-bg-base) 10%, transparent); z-index: 1;"></div>
 
-                <div class="carousel-caption d-flex flex-column justify-content-center h-100 text-center text-md-start px-3 px-md-5" style="bottom: 0; z-index: 2; left: 0; right: 0;">
+                <div class="carousel-caption d-flex flex-column justify-content-center h-100 text-center text-md-start px-3 px-md-5 content-layer" style="bottom: 0; left: 0; right: 0;">
                     <div class="container mt-auto mb-auto">
-                        <div class="panel-fusion p-5 mx-0 mx-lg-3" style="max-width: 850px;">
-                            <span class="badge px-4 py-2 rounded-pill mb-4" style="background: var(--fusion-magenta); color: #000; font-family: 'Urbanist', sans-serif; font-weight: 800;">
-                                <i class="bi bi-star-fill me-1"></i> EXPERIENCIA ULTRA VIP
+                        <div class="panel-glass p-4 p-md-5 mx-0 mx-lg-3" style="max-width: 850px;">
+                            <span class="badge px-4 py-2 mb-4" style="background: transparent; border: 1px solid var(--gold-primary); color: var(--gold-primary); font-family: 'Arial Black', sans-serif; letter-spacing: 2px;">
+                                <i class="bi bi-star-fill me-2"></i> EXPERIENCIA DE ALTO NIVEL
                             </span>
-                            <h1 class="display-3 font-heading mb-3 title-fusion">{{ academia.hero_titulo|default:"Siente la Pasión de Bailar" }}</h1>
-                            <p class="fs-4 mb-5" style="color: var(--fusion-text-muted);">{{ academia.hero_eslogan|default:"Prepárate para la fusión más grande de ritmo, energía y noche urbana." }}</p>
-                            <a href="#cartelera" class="btn btn-fusion-electric btn-lg px-5 py-3 rounded-pill">Ver Próximos Eventos</a>
+                            <h1 class="display-3 font-heading mb-3 title-gold">{{ academia.hero_titulo|default:"LA ÉLITE DEL BAILE" }}</h1>
+                            <p class="fs-4 mb-5" style="color: var(--text-light); text-shadow: 0 2px 5px rgba(0,0,0,0.9);">
+                                {{ academia.hero_eslogan|default:"Sociales, talleres y competencias. Descubre la agenda de eventos de Bachatamanía." }}
+                            </p>
+                            <div class="d-flex flex-wrap gap-3 justify-content-center justify-content-md-start">
+                                <a href="#cartelera" class="btn btn-gold btn-lg px-5 py-3 shadow-lg">Ver Cartelera</a>
+                                <a href="#master-league-info" class="btn btn-gold-outline btn-lg px-4 py-3">Conoce la Master League</a>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
+            <!-- SLIDES DINÁMICOS DE EVENTOS -->
             {% for evento in eventos %}
                 <div class="carousel-item h-100" style="position: relative;">
                     {% if evento.imagen %}
-                        <img src="{{ evento.imagen.url }}" alt="{{ evento.nombre }}" class="d-block w-100 h-100 object-fit-cover">
+                        <img src="{{ evento.imagen.url }}" alt="{{ evento.nombre }}" class="d-block w-100 h-100 object-fit-cover" style="opacity: 0.5;">
                     {% else %}
-                        <div class="position-absolute w-100 h-100" style="background: #111;"></div>
+                        <div class="position-absolute w-100 h-100" style="background: #000;"></div>
                     {% endif %}
                     
-                    <div class="position-absolute bottom-0 start-0 right-0" style="height: 250px; background: linear-gradient(to top, var(--fusion-bg-base), transparent); z-index: 1;"></div>
+                    <div class="position-absolute bottom-0 start-0 right-0 w-100" style="height: 400px; background: linear-gradient(to top, var(--league-bg-base) 10%, transparent); z-index: 1;"></div>
 
-                    <div class="carousel-caption d-flex flex-column justify-content-center h-100 text-center text-md-start px-3 px-md-5" style="bottom: 0; z-index: 2; left: 0; right: 0;">
+                    <div class="carousel-caption d-flex flex-column justify-content-center h-100 text-center text-md-start px-3 px-md-5 content-layer" style="bottom: 0; left: 0; right: 0;">
                         <div class="container mt-auto mb-auto">
-                            <div class="panel-fusion p-5 mx-0 mx-lg-3" style="max-width: 850px;">
-                                <span class="badge px-4 py-2 rounded-pill mb-4" style="background: var(--fusion-cyan); color: #000; font-family: 'Urbanist', sans-serif; font-weight: 800;">
-                                    <i class="bi bi-fire me-1"></i> FIESTA EN CAMINO
+                            <div class="panel-glass p-4 p-md-5 mx-0 mx-lg-3" style="max-width: 850px;">
+                                <span class="badge px-4 py-2 mb-4" style="background: rgba(184, 134, 11, 0.3); border: 1px solid var(--gold-light); color: var(--gold-light); font-family: 'Arial Black', sans-serif;">
+                                    <i class="bi bi-calendar2-check-fill me-2"></i> PRÓXIMO EVENTO
                                 </span>
-                                <h1 class="display-3 font-heading mb-3 title-fusion">{{ evento.nombre }}</h1>
-                                <div class="d-flex flex-wrap gap-4 align-items-center mb-5 fs-4 justify-content-center justify-content-md-start">
-                                    <span class="text-white"><i class="bi bi-calendar-event me-2 text-cyan"></i>{{ evento.fecha|date:"d M, Y" }}</span>
-                                    <span class="text-white"><i class="bi bi-geo-alt-fill me-2 text-magenta"></i>{{ evento.ubicacion }}</span>
+                                <h1 class="display-3 font-heading mb-3 title-gold">{{ evento.nombre }}</h1>
+                                <div class="d-flex flex-wrap gap-4 align-items-center mb-5 fs-4 justify-content-center justify-content-md-start" style="text-shadow: 0 2px 4px #000;">
+                                    <span class="text-white"><i class="bi bi-calendar-event me-2" style="color: var(--gold-primary);"></i>{{ evento.fecha|date:"d M, Y" }}</span>
+                                    <span class="text-white"><i class="bi bi-geo-alt-fill me-2" style="color: var(--gold-primary);"></i>{{ evento.ubicacion }}</span>
                                 </div>
                                 <div class="d-flex gap-3 flex-wrap justify-content-center justify-content-md-start">
-                                    
                                     <a href="{% if evento.enlace_externo %}{{ evento.enlace_externo }}{% else %}{% url 'eventos:registro_publico' academia.slug evento.slug %}{% endif %}" 
                                        target="_blank" 
-                                       class="btn btn-fusion-electric btn-lg px-5 py-3 rounded-pill shadow-lg" style="box-shadow: 0 0 25px var(--glow-cyan);">
+                                       class="btn btn-gold btn-lg px-5 py-3 shadow-lg">
                                         <i class="bi bi-ticket-detailed-fill me-2"></i>OBTENER TICKETS
                                     </a>
-
                                 </div>
                             </div>
                         </div>
@@ -301,19 +377,39 @@
             {% endfor %}
         </div>
         
-        <button class="carousel-control-prev" type="button" data-bs-target="#heroBachatamania" data-bs-slide="prev" style="width: 7%; z-index: 5;">
+        <button class="carousel-control-prev content-layer" type="button" data-bs-target="#heroBachatamania" data-bs-slide="prev" style="width: 7%;">
             <span class="carousel-control-prev-icon" aria-hidden="true"></span>
         </button>
-        <button class="carousel-control-next" type="button" data-bs-target="#heroBachatamania" data-bs-slide="next" style="width: 7%; z-index: 5;">
+        <button class="carousel-control-next content-layer" type="button" data-bs-target="#heroBachatamania" data-bs-slide="next" style="width: 7%;">
             <span class="carousel-control-next-icon" aria-hidden="true"></span>
         </button>
     </header>
 
-    <section id="cartelera" class="py-5 position-relative">
-        <div class="container py-5">
+    <!-- SECCIÓN PUENTE: PROMOCIÓN DEL MASTER LEAGUE -->
+    <section id="master-league-info" class="py-5 content-layer" style="background: rgba(0,0,0,0.4); border-bottom: 1px solid rgba(255,215,0,0.1);">
+        <div class="container py-4">
+            <div class="master-league-banner p-4 p-md-5 d-flex flex-column flex-lg-row align-items-center justify-content-between gap-4">
+                <div class="text-center text-lg-start z-1">
+                    <span class="badge mb-3 px-3 py-2 text-dark font-heading" style="background: var(--gold-primary);">COMPETENCIA PILOTO 2026</span>
+                    <h2 class="display-5 font-heading title-gold mb-2">BACHATAMANÍA MASTER LEAGUE</h2>
+                    <p class="fs-5 text-light mb-0" style="max-width: 600px;">El torneo que definirá a los mejores. Conoce el reglamento, el formato de enfrentamientos y cómo participar.</p>
+                </div>
+                <div class="text-center z-1">
+                    <a href="{% url 'eventos:master_league' academia.slug %}" class="btn btn-gold-outline btn-lg px-4 py-3">
+    Conoce la Master League
+</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CARTELERA GENERAL DE EVENTOS (CON FLIP CARDS Y TEMPORIZADORES) -->
+    <section id="cartelera" class="py-5 position-relative content-layer">
+        <div class="container py-4">
             <div class="mb-5 text-center">
-                <h2 class="display-5 font-heading title-fusion">CARTELERA <span class="text-white">ACTIVA</span></h2>
-                <p class="fs-4 mt-2" style="color: var(--fusion-text-muted);">Reserva tu lugar antes del Sold Out. ¡No te quedes por fuera!</p>
+                <h2 class="display-5 font-heading title-gold">CARTELERA <span style="color: #fff; -webkit-text-fill-color: #fff;">ACTIVA</span></h2>
+                <div style="width: 60px; height: 3px; background: var(--gold-primary); margin: 15px auto;"></div>
+                <p class="fs-4 mt-2" style="color: var(--text-muted);">Sociales, talleres y competencias. Reserva tu lugar.</p>
             </div>
 
             <div class="row g-4">
@@ -322,61 +418,98 @@
                         <div class="flip-card-container">
                             <div class="flip-card-inner">
                                 
-                                <div class="flip-card-front ticket-card-fusion d-flex flex-column p-0">
+                                <!-- CARA FRONTAL -->
+                                <div class="flip-card-front d-flex flex-column p-0">
                                     <div class="position-relative w-100 h-100" style="background: #000;">
                                         {% if evento.imagen %}
-                                            <img src="{{ evento.imagen.url }}" alt="{{ evento.nombre }}" class="w-100 h-100 object-fit-cover">
+                                            <img src="{{ evento.imagen.url }}" alt="{{ evento.nombre }}" class="w-100 h-100 object-fit-cover" style="opacity: 0.85;">
                                         {% endif %}
                                         
-                                        <div class="position-absolute bottom-0 start-0 w-100 pt-5" style="background: linear-gradient(0deg, rgba(16,0,32,1) 0%, rgba(16,0,32,0.5) 60%, transparent 100%); z-index: 1; height: 50%;"></div>
+                                        <!-- Gradiente inferior más alto para que el texto y el contador destaquen -->
+                                        <div class="position-absolute bottom-0 start-0 w-100" style="background: linear-gradient(0deg, rgba(0,0,0,1) 0%, rgba(0,0,0,0.8) 50%, transparent 100%); z-index: 1; height: 80%;"></div>
                                         
+                                        <!-- Hora superior derecha -->
                                         <div class="position-absolute top-0 end-0 m-3" style="z-index: 2;">
-                                            <span class="badge rounded-pill px-3 py-2 shadow-lg font-heading" style="background: rgba(16, 0, 32, 0.9); border: 2px solid var(--fusion-cyan); color: var(--fusion-cyan); filter: drop-shadow(0 0 5px var(--glow-cyan)); backdrop-filter: blur(5px);">
+                                            <span class="badge px-3 py-2 shadow-lg font-heading" style="background: rgba(0, 0, 0, 0.8); border: 1px solid var(--gold-primary); color: var(--gold-primary);">
                                                 <i class="bi bi-clock-history me-1"></i> {{ evento.fecha|date:"h:i A" }}
                                             </span>
                                         </div>
 
-                                        <div class="position-absolute bottom-0 start-0 w-100 p-3" style="z-index: 2;">
-                                            <div class="p-3 rounded-4 shadow-lg" style="background: rgba(16, 0, 32, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 0, 127, 0.35);">
-                                                <span class="font-heading small mb-1 d-block" style="color: var(--fusion-magenta); text-shadow: 0 0 8px rgba(255,0,127,0.4);">{{ evento.fecha|date:"d M, Y" }}</span>
-                                                <h3 class="font-heading text-white mb-1 lh-sm fs-5" style="text-shadow: 0 2px 4px rgba(0,0,0,0.8);">{{ evento.nombre }}</h3>
-                                                <p class="small mb-0 fw-bold" style="color: var(--fusion-cyan); text-shadow: 0 1px 2px rgba(0,0,0,0.8);"><i class="bi bi-geo-alt-fill me-1"></i>{{ evento.ubicacion }}</p>
+                                        <!-- Información y Temporizador -->
+                                        <div class="position-absolute bottom-0 start-0 w-100 p-4" style="z-index: 2;">
+                                            
+                                            <!-- TEMPORIZADOR INYECTADO AQUÍ -->
+                                            <!-- El date:'c' de Django genera ISO 8601 que JS entiende nativamente -->
+                                            <div class="countdown-timer d-flex gap-2 mb-3" data-date="{{ evento.fecha|date:'c' }}">
+                                                <div class="time-box">
+                                                    <span class="d-block days font-heading text-white fs-4 lh-1">00</span>
+                                                    <span class="small text-gold fw-bold" style="font-size: 0.6rem;">DÍAS</span>
+                                                </div>
+                                                <div class="time-box">
+                                                    <span class="d-block hours font-heading text-white fs-4 lh-1">00</span>
+                                                    <span class="small text-gold fw-bold" style="font-size: 0.6rem;">HRS</span>
+                                                </div>
+                                                <div class="time-box">
+                                                    <span class="d-block minutes font-heading text-white fs-4 lh-1">00</span>
+                                                    <span class="small text-gold fw-bold" style="font-size: 0.6rem;">MIN</span>
+                                                </div>
+                                                <div class="time-box">
+                                                    <span class="d-block seconds font-heading text-white fs-4 lh-1">00</span>
+                                                    <span class="small text-gold fw-bold" style="font-size: 0.6rem;">SEG</span>
+                                                </div>
                                             </div>
+
+                                            <span class="font-heading small mb-2 d-block" style="color: var(--gold-primary); letter-spacing: 1px;">{{ evento.fecha|date:"d M, Y" }}</span>
+                                            <h3 class="font-heading text-white mb-2 lh-sm fs-4">{{ evento.nombre }}</h3>
+                                            <p class="small mb-0 text-white-50"><i class="bi bi-geo-alt-fill me-1" style="color: var(--gold-dark);"></i>{{ evento.ubicacion }}</p>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="flip-card-back p-4 d-flex flex-column text-center align-items-center justify-content-center">
-                                    <h3 class="font-heading title-fusion mb-4 text-uppercase">Accesos VIP</h3>
-                                    
-                                    {% if evento.fase_actual %}
-                                        <span class="badge mb-4 px-4 py-2 rounded-pill font-heading" style="background: rgba(0,255,255,0.1); color: var(--fusion-cyan); border: 1px solid var(--fusion-cyan); font-size: 0.9rem; box-shadow: 0 0 10px var(--glow-cyan);">
-                                            <i class="bi bi-fire me-1"></i> FASE: {{ evento.fase_actual|upper }}
-                                        </span>
-                                    {% endif %}
-                                    
-                                    <div class="w-100 mb-4 px-2 overflow-auto" style="max-height: 200px;">
-                                        {% for pase in evento.pases_procesados %}
-                                            <div class="d-flex justify-content-between align-items-center py-3 border-bottom" style="border-color: rgba(255,255,255,0.1) !important;">
-                                                <div class="text-start">
-                                                    <strong class="text-white d-block font-heading fs-6" style="letter-spacing: 0px;">{{ pase.nombre|upper }}</strong>
-                                                    <small style="color: var(--fusion-text-muted); font-size: 0.75rem;">{{ pase.accesos }} Días Incluidos</small>
+                                <!-- CARA TRASERA -->
+                                <div class="flip-card-back p-4">
+                                    {% if evento.enlace_externo %}
+                                        <i class="bi bi-globe display-4 mb-3 mt-3" style="color: var(--gold-primary);"></i>
+                                        <h3 class="font-heading title-gold mb-3 text-uppercase fs-4">EVENTO ASOCIADO</h3>
+                                        <p class="small mb-4 px-2" style="color: var(--text-muted); line-height: 1.6;">Este es un evento externo o en alianza. La información de pases y gestión de tickets se realiza en la plataforma del organizador.</p>
+                                        
+                                        <div class="mt-auto w-100">
+                                            <a href="{{ evento.enlace_externo }}" target="_blank" class="btn btn-gold w-100 py-3 d-flex justify-content-between align-items-center px-4" style="font-size: 0.95rem;">
+                                                <span>IR AL SITIO WEB</span>
+                                                <i class="bi bi-box-arrow-up-right fs-5"></i>
+                                            </a>
+                                        </div>
+
+                                    {% else %}
+                                        <i class="bi bi-ticket-detailed-fill display-4 mb-2 mt-2" style="color: var(--gold-primary);"></i>
+                                        <h3 class="font-heading title-gold mb-3 text-uppercase fs-4">TICKETS OFICIALES</h3>
+                                        
+                                        {% if evento.fase_actual %}
+                                            <span class="badge mb-3 px-3 py-1 font-heading" style="background: rgba(255,215,0,0.1); color: var(--gold-primary); border: 1px solid var(--gold-primary); font-size: 0.75rem;">
+                                                FASE: {{ evento.fase_actual|upper }}
+                                            </span>
+                                        {% endif %}
+                                        
+                                        <div class="w-100 mb-4 px-2 overflow-auto custom-scrollbar text-start" style="max-height: 160px;">
+                                            {% for pase in evento.pases_procesados %}
+                                                <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color: rgba(255,255,255,0.05) !important;">
+                                                    <div class="pe-2">
+                                                        <strong class="text-white d-block font-heading" style="font-size: 0.85rem;">{{ pase.nombre|upper }}</strong>
+                                                    </div>
+                                                    <strong class="font-heading title-gold fs-5">${{ pase.precio|floatformat:0 }}</strong>
                                                 </div>
-                                                <strong class="fs-4 font-heading" style="color: var(--brand-yellow); text-shadow: 0 0 10px var(--glow-yellow);">${{ pase.precio|floatformat:0 }}</strong>
-                                            </div>
-                                        {% empty %}
-                                            <div class="text-center text-muted py-3">Precios en el portal.</div>
-                                        {% endfor %}
-                                    </div>
-                                    
-                                    <div class="mt-auto w-100">
-                                        <a href="{% if evento.enlace_externo %}{{ evento.enlace_externo }}{% else %}{% url 'eventos:registro_publico' academia.slug evento.slug %}{% endif %}" 
-                                           target="_blank" 
-                                           class="btn btn-fusion-electric w-100 py-3 rounded-pill d-flex justify-content-between align-items-center px-4" style="font-size: 1.1rem;">
-                                            <span>ASEGURAR TICKET</span>
-                                            <i class="bi bi-arrow-right-circle-fill fs-4"></i>
-                                        </a>
-                                    </div>
+                                            {% empty %}
+                                                <div class="text-center text-muted py-3 small">Consulta disponibilidad en el portal.</div>
+                                            {% endfor %}
+                                        </div>
+                                        
+                                        <div class="mt-auto w-100">
+                                            <a href="{% url 'eventos:registro_publico' academia.slug evento.slug %}" class="btn btn-gold w-100 py-3 d-flex justify-content-between align-items-center px-4" style="font-size: 0.95rem;">
+                                                <span>COMPRAR AHORA</span>
+                                                <i class="bi bi-arrow-right-short fs-4"></i>
+                                            </a>
+                                        </div>
+                                    {% endif %}
                                 </div>
 
                             </div>
@@ -384,10 +517,10 @@
                     </div>
                 {% empty %}
                     <div class="col-12 text-center py-5">
-                        <div class="panel-fusion p-5 d-inline-block">
-                            <i class="bi bi-calendar-x-fill display-1 mb-3 title-fusion d-block"></i>
-                            <h3 class="font-heading">ESTAMOS PREPARANDO LA FIESTA</h3>
-                            <p style="color: var(--fusion-text-muted);">Mantente atento a nuestras redes sociales.</p>
+                        <div class="panel-glass p-5 d-inline-block border-0">
+                            <i class="bi bi-calendar-x-fill display-1 mb-3 title-gold d-block"></i>
+                            <h3 class="font-heading">ESTAMOS PREPARANDO LA AGENDA</h3>
+                            <p style="color: var(--text-muted);">Pronto anunciaremos los próximos eventos sociales y competencias.</p>
                         </div>
                     </div>
                 {% endfor %}
@@ -395,18 +528,22 @@
         </div>
     </section>
 
+    <!-- GALERÍA / MEMORIAS -->
     {% if galeria_fotos %}
-        <section id="galeria" class="py-5" style="background: rgba(0,0,0,0.3); border-top: 1px solid rgba(255,255,255,0.05);">
+        <section id="galeria" class="py-5 content-layer" style="background: rgba(0,0,0,0.6); border-top: 1px solid rgba(255,215,0,0.1); border-bottom: 1px solid rgba(255,215,0,0.1);">
             <div class="container py-5">
                 <div class="mb-5 text-center">
-                    <h2 class="display-5 font-heading title-fusion">MEMORIAS <span class="text-white">ÉPICAS</span></h2>
-                    <p class="fs-4 mt-2" style="color: var(--fusion-text-muted);">Revive los mejores momentos de la fiesta más grande.</p>
+                    <h2 class="display-5 font-heading title-gold">MEMORIAS <span style="color: #fff; -webkit-text-fill-color: #fff;">ÉPICAS</span></h2>
+                    <div style="width: 60px; height: 3px; background: var(--gold-primary); margin: 15px auto;"></div>
+                    <p class="fs-4 mt-2" style="color: var(--text-muted);">Momentos inolvidables de nuestra comunidad.</p>
                 </div>
                 
                 <div class="row g-4 justify-content-center">
-                    {% for foto in galeria_fotos|slice:":6" %}
+                    {% for foto in galeria_fotos|slice:":8" %}
                         <div class="col-6 col-md-4 col-xl-3">
-                            <img src="{{ foto.imagen.url }}" alt="Memoria Bachatamanía" class="img-fluid gallery-img-fusion w-100 object-fit-cover shadow-lg" style="height: 280px;">
+                            <div class="position-relative overflow-hidden" style="border-radius: 8px;">
+                                <img src="{{ foto.imagen.url }}" alt="Memoria Bachatamanía" class="img-fluid w-100 object-fit-cover shadow-lg" style="height: 250px; border: 1px solid rgba(255,215,0,0.2); transition: all 0.3s ease;" onmouseover="this.style.transform='scale(1.05)'; this.style.borderColor='#FFD700';" onmouseout="this.style.transform='scale(1)'; this.style.borderColor='rgba(255,215,0,0.2)';">
+                            </div>
                         </div>
                     {% endfor %}
                 </div>
@@ -414,36 +551,98 @@
         </section>
     {% endif %}
 
-    <footer class="pt-5 pb-3" style="background: #08080a; border-top: 2px solid; border-image: linear-gradient(90deg, var(--fusion-magenta), var(--fusion-cyan)) 1;">
+    <!-- FOOTER -->
+    <footer class="pt-5 pb-3 content-layer" style="background: #030303;">
         <div class="container">
             <div class="row g-4 mb-4 justify-content-between align-items-center">
                 <div class="col-lg-4 text-center text-lg-start">
-                    <h3 class="font-heading mb-2 title-fusion fs-2">
+                    <h3 class="font-heading mb-2 title-gold fs-2">
                         {% if academia.logo %}
                             <img src="{{ academia.logo.url }}" alt="Logo" style="height: 45px;" class="me-2">
                         {% else %}
-                            BACHATA<span class="text-white">MANÍA</span>
+                            BACHATA<span style="color: #fff; -webkit-text-fill-color: #fff;">MANÍA</span>
                         {% endif %}
                     </h3>
-                    <p class="small" style="color: var(--fusion-text-muted);">Producción de eventos de bachata de alto nivel. La energía no miente.</p>
+                    <p class="small text-uppercase" style="color: var(--text-muted); letter-spacing: 1px;">Eventos Oficiales & Master League.</p>
                 </div>
                 
                 <div class="col-lg-4 text-center text-lg-end">
-                    <div class="d-flex justify-content-center justify-content-lg-end gap-3 mb-3 fs-3">
-                        {% if academia.instagram_url %}<a href="{{ academia.instagram_url }}" target="_blank" class="text-white hover-magenta"><i class="bi bi-instagram"></i></a>{% endif %}
-                        {% if academia.facebook_url %}<a href="{{ academia.facebook_url }}" target="_blank" class="text-white hover-cyan"><i class="bi bi-facebook"></i></a>{% endif %}
-                        {% if academia.whatsapp_url %}<a href="{{ academia.whatsapp_url }}" target="_blank" class="text-white hover-magenta"><i class="bi bi-whatsapp"></i></a>{% endif %}
+                    <div class="d-flex justify-content-center justify-content-lg-end gap-4 mb-3 fs-4">
+                        {% if academia.instagram_url %}<a href="{{ academia.instagram_url }}" target="_blank" style="color: var(--gold-primary); transition: opacity 0.3s;" onmouseover="this.style.opacity='0.7';" onmouseout="this.style.opacity='1';"><i class="bi bi-instagram"></i></a>{% endif %}
+                        {% if academia.facebook_url %}<a href="{{ academia.facebook_url }}" target="_blank" style="color: var(--gold-primary); transition: opacity 0.3s;" onmouseover="this.style.opacity='0.7';" onmouseout="this.style.opacity='1';"><i class="bi bi-facebook"></i></a>{% endif %}
+                        {% if academia.whatsapp_url %}<a href="{{ academia.whatsapp_url }}" target="_blank" style="color: var(--gold-primary); transition: opacity 0.3s;" onmouseover="this.style.opacity='0.7';" onmouseout="this.style.opacity='1';"><i class="bi bi-whatsapp"></i></a>{% endif %}
                     </div>
                 </div>
             </div>
-            <div class="text-center pt-4 mt-4" style="border-top: 1px solid rgba(255,255,255,0.03);">
-                <p class="small mb-0" style="color: var(--fusion-text-muted);">
-                    &copy; 2026 Bachatamanía. Powered by <a href="#" class="text-yellow font-heading text-decoration-none">AppDanza</a>
+            <div class="text-center pt-4 mt-4" style="border-top: 1px solid rgba(255,255,255,0.05);">
+                <p class="small mb-0" style="color: #666;">
+                    &copy; 2026 Bachatamanía. Powered by <a href="#" class="text-decoration-none" style="color: var(--gold-dark); font-weight: bold;">AppDanza</a>
                 </p>
             </div>
         </div>
     </footer>
 
+    <!-- SCRIPTS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            // --- SCRIPT DE BRASAS / FUEGO DINÁMICO LIGERO ---
+            const container = document.getElementById('fire-container');
+            const particleCount = window.innerWidth < 768 ? 15 : 35; 
+            
+            function createEmber() {
+                const ember = document.createElement('div');
+                ember.classList.add('ember');
+                
+                const size = Math.random() * 6 + 2; 
+                const left = Math.random() * 100; 
+                const duration = Math.random() * 4 + 4; 
+                const delay = Math.random() * 5; 
+                
+                ember.style.width = `${size}px`;
+                ember.style.height = `${size}px`;
+                ember.style.left = `${left}%`;
+                ember.style.animationDuration = `${duration}s`;
+                ember.style.animationDelay = `${delay}s`;
+                
+                container.appendChild(ember);
+                
+                setTimeout(() => {
+                    ember.remove();
+                    createEmber();
+                }, (duration + delay) * 1000);
+            }
+            
+            for(let i = 0; i < particleCount; i++) {
+                createEmber();
+            }
+
+            // --- SCRIPT DEL TEMPORIZADOR DE EVENTOS ---
+            const timers = document.querySelectorAll('.countdown-timer');
+
+            function updateTimers() {
+                const now = new Date().getTime();
+
+                timers.forEach(timer => {
+                    // Obtiene la fecha en formato ISO desde el data-attribute
+                    const targetDateStr = timer.getAttribute('data-date');
+                    if (!targetDateStr) return;
+
+                    const targetDate = new Date(targetDateStr).getTime();
+                    const distance = targetDate - now;
+
+                    // Si el evento ya llegó o pasó
+                    if (distance < 0) {
+                        timer.innerHTML = '<span class="badge w-100 py-2 font-heading fs-6" style="background: rgba(220, 53, 69, 0.8); border: 1px solid #dc3545;">¡EVENTO EN CURSO / FINALIZADO!</span>';
+                        return;
+                    }
+
+                    // Cálculos de tiempo
+                    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                    
