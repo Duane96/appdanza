@@ -644,5 +644,22 @@
                     const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                     const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
                     const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                    
+                    // Formateo: Añadimos un '0' a la izquierda si el número es menor a 10 (ej. '09' en vez de '9')
+                    timer.querySelector('.days').innerText = days < 10 ? '0' + days : days;
+                    timer.querySelector('.hours').innerText = hours < 10 ? '0' + hours : hours;
+                    timer.querySelector('.minutes').innerText = minutes < 10 ? '0' + minutes : minutes;
+                    timer.querySelector('.seconds').innerText = seconds < 10 ? '0' + seconds : seconds;
+                });
+            }
 
+            // Ejecutamos la función inmediatamente una vez para evitar el salto de 1 segundo al cargar
+            updateTimers();
+
+            // Configuramos el bucle: Ejecutar cada 1000 milisegundos (1 segundo)
+            setInterval(updateTimers, 1000);
+        });
+    </script>
+</body>
+</html>
                     
