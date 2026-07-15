@@ -1,0 +1,67 @@
+<!-- templates/academias/errores/acceso_denegado.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso Denegado | AppDanza</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Iconos de Bootstrap -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .error-card {
+            max-width: 500px;
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        }
+        .icon-lock {
+            font-size: 4rem;
+            color: #dc3545; /* Rojo de peligro */
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container px-4">
+        <div class="card error-card text-center p-5 mx-auto">
+            <div class="card-body">
+                <i class="bi bi-shield-lock-fill icon-lock mb-3"></i>
+                <h2 class="fw-bold mb-3">Acceso Restringido</h2>
+                
+                <!-- Mensaje dinámico (útil si fue bloqueado por ser Estudiante intentando entrar al admin) -->
+                <p class="text-muted mb-4">
+                    {% if mensaje %}
+                        {{ mensaje }}
+                    {% else %}
+                        Parece que has intentado ingresar al panel de una academia a la cual no perteneces. Por seguridad, hemos bloqueado esta acción.
+                    {% endif %}
+                </p>
+
+                <div class="d-grid gap-3">
+                    <!-- Botón 1: Inteligente (Lo lleva al login o dashboard de SU propia academia) -->
+                    {% if request.user.is_authenticated and request.user.perfil.academia %}
+                        <a href="{% url 'academias:index' slug_academia=request.user.perfil.academia.slug %}" class="btn btn-primary btn-lg rounded-pill">
+                            <i class="bi bi-house-door me-2"></i> Ir a mi Academia
+                        </a>
+                    {% endif %}
+                    
+                    <!-- Botón 2: El que pediste (Lo lleva al index principal del SaaS /appdanza.com/) -->
+                    <a href="/" class="btn btn-outline-secondary rounded-pill">
+                        <i class="bi bi-globe me-2"></i> Volver a AppDanza
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

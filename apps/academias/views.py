@@ -27,6 +27,8 @@ from django.contrib import messages
 from django.urls import reverse_lazy
 from apps.saas_core.models import ConfigPagoGlobalSaaS
 
+from .mixins import *
+
 # apps/academias/views.py
 
 class LandingAcademiaView(TemplateView):
@@ -144,7 +146,7 @@ class LoginAcademiaView(LoginView):
 
 
 
-class DashboardAdminView(LoginRequiredMixin, TemplateView):
+class DashboardAdminView(TenantAdminRequiredMixin, TemplateView):
     """Renderiza el panel de control administrativo de la academia específica."""
     template_name = "academias/dashboard.html"
 
@@ -280,7 +282,7 @@ class DashboardAdminView(LoginRequiredMixin, TemplateView):
 
 # apps/academias/views.py
 
-class BrandingConfigView(LoginRequiredMixin, UpdateView):
+class BrandingConfigView(TenantAdminRequiredMixin, UpdateView):
     model = Academia
     form_class = ConfigMascaraForm
     template_name = "academias/configuracion.html"
@@ -331,7 +333,7 @@ class LogoutAcademiaView(LogoutView):
         return reverse('academias:index', kwargs={'slug_academia': slug})
     
 
-class CambioPasswordView(LoginRequiredMixin, PasswordChangeView):
+class CambioPasswordView(TenantAccessMixin, PasswordChangeView):
     """Vista segura para que el usuario cambie su contraseña."""
     template_name = "academias/cambio_password.html"
 
