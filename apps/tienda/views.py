@@ -30,19 +30,26 @@ class PuntoVentaPOSView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        # 🕒 1. CONTROL ESTRICTO DE ZONA HORARIA (Colombia)
+        # 🕒 1. CONTROL DE TIEMPO: EL DÍA CONTABLE NOCTURNO
         tz_col = zoneinfo.ZoneInfo('America/Bogota')
         now_col = timezone.now().astimezone(tz_col)
 
-        # Calculamos el inicio y fin exacto del día actual en Colombia
-        start_of_day = now_col.replace(hour=0, minute=0, second=0, microsecond=0)
+        # Si son antes de las 6:00 AM (ej. 3:00 AM del domingo)
+        # Contablemente seguimos en el turno del "sábado"
+        if now_col.hour < 6:
+            start_of_day = now_col.replace(hour=6, minute=0, second=0, microsecond=0) - timedelta(days=1)
+        else:
+            # Si son las 6:00 PM, el turno empezó hoy a las 6:00 AM
+            start_of_day = now_col.replace(hour=6, minute=0, second=0, microsecond=0)
+            
+        # El límite superior es exactamente 24 horas después del inicio contable
         end_of_day = start_of_day + timedelta(days=1)
 
-        # 2. Filtramos ventas dentro del rango de hoy en Colombia y excluímos recibos anulados/inexistentes
+        # 2. Filtramos ventas dentro del turno lógico
         ventas_hoy = VentaTienda.objects.filter(
             academia=self.request.tenant,
-            fecha__gte=start_of_day,  # Mayor o igual a las 00:00:00 de hoy
-            fecha__lt=end_of_day      # Estrictamente menor a las 00:00:00 de mañana
+            fecha__gte=start_of_day,
+            fecha__lt=end_of_day
         ).exclude(
             Q(recibo_caja__isnull=True) | Q(recibo_caja__estado='ANULADO')
         )
