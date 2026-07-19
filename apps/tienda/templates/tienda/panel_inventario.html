@@ -1,26 +1,24 @@
 {% extends "base_tenant.html" %}
 
 {% block content %}
-
 <style>
-
     .modal-header-primary { background-color: var(--bg-academia-primary) !important; color: white; }
-    .modal-header-secondary { background-color: var(--bg-academia-secondary) !important; color: white; }
     .btn-tenant-primary { background-color: var(--bg-academia-primary) !important; color: white; }
 </style>
+<!-- CSS DataTables Seguro -->
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
 
 <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center mb-4 gap-2">
     <div>
         <h2 class="fw-bold text-dark m-0"><i class="bi bi-box-seam me-2 text-tenant-primary"></i>Gestión de Inventario</h2>
-        <p class="text-muted m-0 small">Control de existencias, costos y catálogo de productos.</p>
+        <p class="text-muted m-0 small">Control de existencias, costos y valoración de bodega.</p>
     </div>
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 flex-wrap">
         <button class="btn btn-success fw-bold btn-sm" data-bs-toggle="modal" data-bs-target="#modalCrearProducto">
             <i class="bi bi-plus-circle me-1"></i> Crear Producto
         </button>
         <a href="{% url 'tienda:registrar_entrada' request.tenant.slug %}" class="btn btn-dark fw-bold btn-sm">
-            <i class="bi bi-truck me-1"></i> Ingresar Lote / Stock
+            <i class="bi bi-truck me-1"></i> Ingresar Lote
         </a>
         <a href="{% url 'tienda:pos' request.tenant.slug %}" class="btn btn-primary fw-bold btn-sm">
             <i class="bi bi-shop me-1"></i> Volver al POS
@@ -36,29 +34,39 @@
     {% endfor %}
 {% endif %}
 
-<div class="row g-3 mb-4">
-    <div class="col-md-4">
+<!-- Tarjetas de Métricas (4 columnas incluyendo Capital) -->
+<div class="row g-2 mb-4 align-items-stretch">
+    <div class="col-6 col-lg-3">
         <div class="card border-0 shadow-sm bg-white h-100 border-start border-primary border-4">
-            <div class="card-body">
+            <div class="card-body p-3">
                 <p class="text-muted small fw-bold text-uppercase mb-1">Catálogo Total</p>
-                <h3 class="fw-bold text-dark m-0">{{ total_productos }} <span class="fs-6 text-muted fw-normal">Items</span></h3>
+                <h4 class="fw-bold text-dark m-0">{{ total_productos }} <span class="fs-6 text-muted fw-normal">Items</span></h4>
             </div>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-6 col-lg-3">
         <div class="card border-0 shadow-sm bg-white h-100 border-start border-danger border-4">
-            <div class="card-body">
+            <div class="card-body p-3">
                 <p class="text-muted small fw-bold text-uppercase mb-1">Alertas (Agotados)</p>
-                <h3 class="fw-bold text-danger m-0">{{ productos_agotados }} <span class="fs-6 text-muted fw-normal">Items a reponer</span></h3>
+                <h4 class="fw-bold text-danger m-0">{{ productos_agotados }} <span class="fs-6 text-muted fw-normal">Vacíos</span></h4>
             </div>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-6 col-lg-3">
         <div class="card border-0 shadow-sm bg-white h-100 border-start border-success border-4">
-            <div class="card-body">
-                <p class="text-muted small fw-bold text-uppercase mb-1">Compras del Día</p>
-                <h3 class="fw-bold text-success m-0">${{ inversion_hoy|floatformat:0 }}</h3>
-                <small class="text-muted" style="font-size: 0.7rem;">Dinero invertido hoy en stock</small>
+            <div class="card-body p-3">
+                <p class="text-muted small fw-bold text-uppercase mb-1">Compras Hoy</p>
+                <h4 class="fw-bold text-success m-0">${{ inversion_hoy|floatformat:0 }}</h4>
+                <small class="text-muted" style="font-size: 0.7rem;">Inversión del día</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm bg-dark h-100 border-start border-warning border-4">
+            <div class="card-body p-3">
+                <p class="text-light small fw-bold text-uppercase mb-1 opacity-75">Capital en Bodega</p>
+                <h4 class="fw-bold text-warning m-0">${{ capital_inventario|floatformat:0 }}</h4>
+                <small class="text-light opacity-50" style="font-size: 0.7rem;">Totalizado al costo de compra</small>
             </div>
         </div>
     </div>
@@ -71,9 +79,10 @@
                 <tr>
                     <th>Producto</th>
                     <th>Categoría</th>
-                    <th>Costo Compra</th>
-                    <th>Venta Alumno</th>
+                    <th>Costo Unit.</th>
+                    <th>Venta Unit.</th>
                     <th class="text-center">Stock Actual</th>
+                    <th class="text-end">Capital Invertido</th>
                     <th class="text-center">Estado</th>
                     <th class="text-end">Acciones</th>
                 </tr>
@@ -99,9 +108,17 @@
                         {% endif %}
                     </td>
                     
+                    <td class="text-end fw-bold font-monospace text-primary">
+                        {% if prod.stock > 0 %}
+                            ${{ prod.valor_inventario|floatformat:0 }}
+                        {% else %}
+                            $0
+                        {% endif %}
+                    </td>
+                    
                     <td class="text-center">
-                        {% if prod.estado %}<span class="text-success small fw-bold"><i class="bi bi-check-circle-fill"></i> Activo</span>
-                        {% else %}<span class="text-danger small fw-bold"><i class="bi bi-dash-circle-fill"></i> Oculto</span>{% endif %}
+                        {% if prod.estado %}<span class="text-success small fw-bold"><i class="bi bi-check-circle-fill"></i></span>
+                        {% else %}<span class="text-danger small fw-bold"><i class="bi bi-dash-circle-fill"></i></span>{% endif %}
                     </td>
                     
                     <td class="text-end">
@@ -125,6 +142,8 @@
         </table>
     </div>
 </div>
+
+<!-- ================= MODALES COMPLETOS ================= -->
 
 <div class="modal fade" id="modalCrearProducto" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -217,49 +236,15 @@
     </div>
 </div>
 
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<!-- SCRIPTS ESTÁNDAR Y SEGUROS (SIN REPETIR JQUERY) -->
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js" defer></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js" defer></script>
+
 <script>
-    // Función para inyectar scripts en el orden correcto sin chocar con base_tenant.html
-    function cargarScript(src, callback) {
-        let s = document.createElement('script');
-        s.src = src;
-        s.onload = callback;
-        document.body.appendChild(s);
-    }
-
-    // Esperamos a que la página cargue por completo (incluyendo tu jQuery base)
-    window.addEventListener('load', function() {
-        if (window.jQuery) {
-            // Cargamos DataTables Core
-            cargarScript("https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js", function() {
-                // Cargamos DataTables para Bootstrap 5
-                cargarScript("https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js", function() {
-                    // Inicializamos la tabla
-                    $('#tabla-inventario').DataTable({
-                        "pageLength": 15,
-                        "ordering": true,
-                        "language": {
-                            "search": "Buscar producto:",
-                            "paginate": { "next": "Sig", "previous": "Ant" },
-                            "info": "Mostrando _START_ a _END_ de _TOTAL_",
-                            "infoEmpty": "",
-                            "zeroRecords": "No hay productos registrados."
-                        }
-                    });
-                });
-            });
-        } else {
-            console.error("No se encontró jQuery en la plantilla base.");
-        }
-    });
-
-    // Función que carga los datos del producto al modal de Editar
     function abrirModalEditar(id, nombre, cat_id, p_compra, p_venta, barras, s_minimo, estado) {
-        // 1. Configurar acción
         const form = document.getElementById('formEditarProducto');
         form.action = `/${"{{ request.tenant.slug }}"}/tienda/producto/${id}/editar/`;
         
-        // 2. Valores básicos
         document.getElementById('edit_nombre').value = nombre;
         document.getElementById('edit_precio_compra').value = p_compra;
         document.getElementById('edit_precio_venta').value = p_venta;
@@ -267,18 +252,39 @@
         document.getElementById('edit_stock_minimo').value = s_minimo;
         document.getElementById('edit_estado').checked = (estado === 'True');
 
-        // 3. SELECCIÓN DE CATEGORÍA BLINDADA
         const catSelect = document.getElementById('edit_categoria');
-        catSelect.value = cat_id; // Esto debe funcionar si cat_id coincide con el value de la option
-
-        // Si por alguna razón el cat_id viene vacío o no coincide, forzamos la primera opción
-        if (!catSelect.value && catSelect.options.length > 0) {
-            catSelect.selectedIndex = 0;
-        }
+        catSelect.value = cat_id; 
+        if (!catSelect.value && catSelect.options.length > 0) catSelect.selectedIndex = 0;
         
-        // 4. Disparo del modal (usando el ID nativo)
         const myModal = new bootstrap.Modal(document.getElementById('modalEditarProducto'));
         myModal.show();
     }
+
+    var iteraciones = 0;
+    var esperaDataTables = setInterval(function() {
+        if (window.jQuery && $.fn.DataTable) {
+            clearInterval(esperaDataTables);
+            
+            $('#tabla-inventario').DataTable({
+                "pageLength": 25,
+                "ordering": true,
+                "order": [[4, "asc"]],
+                "language": {
+                    "search": "Buscar producto:",
+                    "lengthMenu": "Mostrar _MENU_ items",
+                    "paginate": { "next": "Sig", "previous": "Ant" },
+                    "info": "Mostrando _START_ a _END_ de _TOTAL_",
+                    "infoEmpty": "Mostrando 0 items",
+                    "zeroRecords": "No hay productos registrados."
+                }
+            });
+        }
+        
+        iteraciones++;
+        if (iteraciones > 50) { 
+            clearInterval(esperaDataTables);
+            console.error("DataTables tardó demasiado. Asegúrate de tener conexión a internet.");
+        }
+    }, 100);
 </script>
 {% endblock %}

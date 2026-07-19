@@ -14,7 +14,7 @@
 
     /* Contenedor con scroll interno para el listado de los reportes por periodo */
     .scroll-reporte-contable {
-        max-height: 280px; 
+        max-height: 280px;
         overflow-y: auto;
         border: 1px solid #dee2e6;
         border-radius: 0.375rem;
@@ -160,12 +160,12 @@
                                     <button type="button" class="btn btn-sm btn-light rounded-pill px-3 shadow-sm text-primary fw-bold" onclick="abrirVisorRecibo('ingreso', {{ ing.id }})">
                                         <i class="bi bi-eye"></i> Ver
                                     </button>
-                                    
+
                                     {% if ing.estado == 'ACTIVO' %}
                                         <button type="button" class="btn btn-sm btn-light bg-opacity-10 text-danger border-0 rounded-pill px-3 fw-bold" data-bs-toggle="modal" data-bs-target="#modalAnularIngreso{{ ing.id }}">
                                             <i class="bi bi-x-circle"></i> Anular
                                         </button>
-                                        
+
                                         <div class="modal fade" id="modalAnularIngreso{{ ing.id }}" tabindex="-1" aria-hidden="true">
                                             <div class="modal-dialog modal-dialog-centered">
                                                 <form method="post" action="{% url 'finanzas:anular_transaccion' request.tenant.slug 'ingreso' ing.id %}">
@@ -254,12 +254,12 @@
                                     <button type="button" class="btn btn-sm btn-light rounded-pill px-3 shadow-sm text-primary fw-bold" onclick="abrirVisorRecibo('gasto', {{ gas.id }})">
                                         <i class="bi bi-eye"></i> Ver
                                     </button>
-                                    
+
                                     {% if gas.estado == 'ACTIVO' %}
                                         <button type="button" class="btn btn-sm btn-light bg-opacity-10 text-danger border-0 rounded-pill px-3 fw-bold" data-bs-toggle="modal" data-bs-target="#modalAnularGasto{{ gas.id }}">
                                             <i class="bi bi-x-circle"></i> Anular
                                         </button>
-                                        
+
                                         <div class="modal fade" id="modalAnularGasto{{ gas.id }}" tabindex="-1" aria-hidden="true">
                                             <div class="modal-dialog modal-dialog-centered">
                                                 <form method="post" action="{% url 'finanzas:anular_transaccion' request.tenant.slug 'gasto' gas.id %}">
@@ -371,11 +371,11 @@
             </div>
             <div class="modal-footer border-0 bg-light justify-content-between no-print">
                 <button type="button" class="btn btn-sm btn-secondary font-monospace" data-bs-dismiss="modal">Cerrar</button>
-    
+
                 <a id="btn-descargar-pdf" href="#" class="btn btn-sm btn-primary fw-bold">
                     <i class="bi bi-file-earmark-pdf me-1"></i> Descargar PDF
                 </a>
-    
+
                 <button type="button" class="btn btn-sm btn-dark font-monospace fw-bold" onclick="window.print();">
                     <i class="bi bi-printer-fill me-1"></i> Imprimir Voucher
                 </button>
@@ -397,7 +397,7 @@
                     <input type="date" id="fecha_diario" class="form-control" value="{{ today|date:'Y-m-d' }}">
                     <button type="button" class="btn btn-primary fw-bold px-4" onclick="cargarPrevisualizacion('diario')">Ver</button>
                 </div>
-                
+
                 <div id="resumen_diario_box" class="d-none mt-3">
                     <div class="bg-light p-3 rounded border text-center mb-3 shadow-sm">
                         <div class="row">
@@ -406,7 +406,7 @@
                             <div class="col-4 border-start"><small class="d-block text-muted small text-uppercase font-monospace">Balance</small><strong class="text-dark fs-5" id="bal_diario">$0</strong></div>
                         </div>
                     </div>
-                    
+
                     <div class="scroll-reporte-contable">
                         <table class="table table-sm table-hover mb-0 text-start align-middle table-sticky-header">
                             <thead class="table-light">
@@ -461,7 +461,7 @@
                             <div class="col-4 border-start"><small class="d-block text-muted small text-uppercase font-monospace">Utilidad</small><strong class="text-dark fs-5" id="bal_mensual">$0</strong></div>
                         </div>
                     </div>
-                    
+
                     <div class="scroll-reporte-contable">
                         <table class="table table-sm table-hover mb-0 text-start align-middle table-sticky-header">
                             <thead class="table-light">
@@ -482,7 +482,7 @@
                         <input type="hidden" name="fecha_fin" id="export_fecha_fin_mensual">
                         <button type="submit" class="btn btn-dark w-100 fw-bold py-2"><i class="bi bi-filetype-csv me-2 text-warning"></i> Descargar Consolidado CSV</button>
                     </form>
-                    
+
                     <a href="#" id="btn-descargar-zip" class="btn btn-success w-100 fw-bold py-2 mt-2">
                         <i class="bi bi-file-earmark-zip me-2"></i> Descargar Soportes Contables (ZIP)
                     </a>
@@ -500,7 +500,7 @@
 
     function abrirVisorRecibo(tipo, id) {
         const slugTenant = "{{ request.tenant.slug }}";
-        const url = `/${slugTenant}/finanzas/transaccion/ajax/${tipo}/${id}/`; 
+        const url = `/${slugTenant}/finanzas/transaccion/ajax/${tipo}/${id}/`;
 
         fetch(url)
             .then(res => {
@@ -520,11 +520,11 @@
                 const badge = document.getElementById('recibo-estado-badge');
                 badge.innerText = data.estado;
                 badge.className = data.estado === 'ACTIVO' ? "badge bg-success-subtle text-success text-uppercase" : "badge bg-danger-subtle text-danger text-uppercase";
-                
+
                 // MAGIA: Construcción dinámica de la URL de descarga del PDF individual
                 const btnDescarga = document.getElementById('btn-descargar-pdf');
-                btnDescarga.href = `/${slugTenant}/finanzas/descargar-pdf/${tipo}/${id}/`; 
-    
+                btnDescarga.href = `/${slugTenant}/finanzas/descargar-pdf/${tipo}/${id}/`;
+
                 new bootstrap.Modal(document.getElementById('modalVisorRecibo')).show();
             })
             .catch(e => {
@@ -565,10 +565,10 @@
                 document.getElementById(`resumen_${tipo}_box`).classList.remove('d-none');
                 document.getElementById(`tot_ing_${tipo}`).innerText = formatoCOP.format(data.ingresos);
                 document.getElementById(`tot_gas_${tipo}`).innerText = formatoCOP.format(data.gastos);
-                
+
                 const bal = document.getElementById(`bal_${tipo}`);
                 bal.innerText = formatoCOP.format(data.balance);
-                
+
                 if(data.balance < 0) {
                     bal.classList.remove('text-dark', 'text-success');
                     bal.classList.add('text-danger');
@@ -578,7 +578,7 @@
                 }
 
                 const tbody = document.getElementById(`lista_tx_${tipo}`);
-                tbody.innerHTML = ''; 
+                tbody.innerHTML = '';
 
                 if(data.transacciones.length === 0) {
                     tbody.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-muted small"><i class="bi bi-inbox fs-4 d-block mb-1"></i>No existen movimientos en estas fechas.</td></tr>`;
@@ -622,15 +622,15 @@
     var esperaJquery = setInterval(function() {
         if (window.jQuery) {
             clearInterval(esperaJquery); // jQuery está listo
-            
+
             cargarScriptDinamicamente("https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js", function() {
                 cargarScriptDinamicamente("https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js", function() {
-                    
+
                     const dtConfig = {
                         "dom": '<"top">rt<"d-flex justify-content-between align-items-center mt-3"ip><"clear">',
                         "pageLength": 15,
                         "lengthChange": false,
-                        "ordering": true,
+                        "order": [[0, "desc"]],
                         "language": {
                             "zeroRecords": "<div class='text-center py-4'><i class='bi bi-search fs-1 text-muted d-block mb-2'></i>No se encontraron transacciones.</div>",
                             "info": "<span class='text-muted small fw-semibold'>Mostrando _START_ a _END_ de _TOTAL_ registros</span>",
@@ -654,7 +654,7 @@
                     });
 
                     $('.modal').on('hidden.bs.modal', function () {
-                        $(this).find('.btn-close').blur(); 
+                        $(this).find('.btn-close').blur();
                     });
                 });
             });
