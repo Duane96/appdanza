@@ -106,20 +106,28 @@
         </div>
     </nav>
 
-    <!-- HERO MASTER LEAGUE -->
-    <section class="py-5 mt-5 content-layer text-center d-flex align-items-center" style="min-height: 60vh; background: radial-gradient(circle, rgba(184, 134, 11, 0.1) 0%, transparent 60%);">
-        <div class="container py-5">
-            <i class="bi bi-trophy-fill display-1 mb-4" style="color: var(--gold-primary); filter: drop-shadow(0 0 20px rgba(255,215,0,0.5));"></i>
-            <h1 class="display-2 font-heading title-gold mb-3">MASTER LEAGUE</h1>
-            <p class="lead mx-auto fs-4 text-light fw-semibold" style="max-width: 800px; text-shadow: 0px 2px 4px rgba(0,0,0,0.8);">
-                Una celebración de la esencia pura del baile social. Rompemos el individualismo para premiar a quienes dominan el arte de hacer lucir a su pareja.
-            </p>
-            <div class="mt-5 d-flex flex-wrap gap-3 justify-content-center">
-                <a href="#detalles" class="btn btn-outline-light rounded-pill px-4 py-3 font-heading" style="border-color: var(--gold-dark); color: var(--gold-primary);">VER RESUMEN</a>
-                <a href="/{{ academia.slug }}/#cartelera" class="btn btn-gold rounded-pill px-5 py-3 font-heading">INSCRÍBETE A LA CLASIFICATORIA</a>
-            </div>
+    <!-- HERO MASTER LEAGUE - OPTIMIZADO -->
+<section class="py-5 mt-5 content-layer text-center d-flex align-items-center" style="min-height: 60vh; background: radial-gradient(circle, rgba(184, 134, 11, 0.1) 0%, transparent 60%);">
+    <div class="container py-5">
+        
+        <!-- 🚀 FIX: Contenedor con altura mínima para evitar saltos de layout mientras carga -->
+        <div style="min-height: 150px; display: flex; align-items: center; justify-content: center;">
+            <img src="{% static 'img/bml-logo.png' %}" 
+                 alt="Logo Master League" 
+                 class="img-fluid" 
+                 style="max-width: 90%; max-height: 250px; filter: drop-shadow(0 0 20px rgba(255,215,0,0.5)); transition: opacity 0.5s;">
         </div>
-    </section>
+        
+        <p class="lead mx-auto fs-4 text-light fw-semibold mt-3" style="max-width: 800px; text-shadow: 0px 2px 4px rgba(0,0,0,0.8);">
+            Una celebración de la esencia pura del baile social. Rompemos el individualismo para premiar a quienes dominan el arte del baile social.
+        </p>
+        
+        <div class="mt-5 d-flex flex-wrap gap-3 justify-content-center">
+            <a href="#detalles" class="btn btn-outline-light rounded-pill px-4 py-3 font-heading" style="border-color: var(--gold-dark); color: var(--gold-primary);">VER RESUMEN</a>
+            <a href="/{{ academia.slug }}/#cartelera" class="btn btn-gold rounded-pill px-5 py-3 font-heading">INSCRÍBETE A LA CLASIFICATORIA</a>
+        </div>
+    </div>
+</section>
 
     <!-- RESUMEN DEL REGLAMENTO (PUNTOS CLAVE) -->
     <section class="py-5 content-layer" id="detalles" style="background: rgba(0,0,0,0.6); border-top: 1px solid rgba(255,215,0,0.1);">
@@ -153,25 +161,12 @@
                     <div class="panel-glass p-4 h-100 text-center">
                         <i class="bi bi-clipboard-check display-4 mb-3" style="color: var(--gold-primary);"></i>
                         <h3 class="font-heading text-white mb-3 fs-4">CALIFICACIÓN (1 A 3)</h3>
-                        <p class="text-light mb-4 fw-medium">Los jueces evalúan en tiempo real (1=Mal, 2=Promedio, 3=Destacado). Se prioriza la guía segura, tiempo musical, *grounding* y musicalidad activa.</p>
+                        <p class="text-light mb-4 fw-medium">Los jueces evalúan en tiempo real (1=Mal, 2=Promedio, 3=Destacado). Se priorizan cuatro items que se desgloan detalladamente en nuestro reglamento.</p>
                     </div>
                 </div>
             </div>
 
-            <!-- REGLA DE ORO (TOLERANCIA CERO) -->
-            <div class="row mt-5">
-                <div class="col-12">
-                    <div class="panel-alert shadow-lg">
-                        <div class="d-flex align-items-center gap-3 mb-3">
-                            <i class="bi bi-exclamation-triangle-fill fs-1 text-danger"></i>
-                            <h3 class="font-heading text-white mb-0">REGLA DE ORO: CERO TOLERANCIA A ACROBACIAS</h3>
-                        </div>
-                        <p class="text-light fs-5 fw-medium mb-0">
-                            Queda estrictamente prohibido cualquier movimiento donde un bailarín despegue los dos pies del suelo con apoyo de su pareja. Penalización: <strong>Calificación automática de 1 (Mal) y eliminación.</strong> Buscamos baile social, no shows.
-                        </p>
-                    </div>
-                </div>
-            </div>
+            
         </div>
     </section>
 
@@ -196,11 +191,11 @@
                             
                             <!-- 🚀 CTA: ENLACE AL ARCHIVO PDF REAL (Asegúrate de ponerlo en tu carpeta static) -->
                             <a href="{% static 'docs/REGLAMENTO_BML.pdf' %}" 
-   download="REGLAMENTO_BML.pdf" 
-   class="btn btn-outline-light rounded-pill px-4 py-2 font-heading w-100" 
-   style="border-width: 2px;">
-    DESCARGAR PDF <i class="bi bi-download ms-1"></i>
-</a>
+       download="REGLAMENTO_BML.pdf" 
+       class="btn btn-outline-light rounded-pill px-4 py-2 font-heading w-100" 
+       style="border-width: 2px;">
+        DESCARGAR PDF <i class="bi bi-download ms-1"></i>
+    </a>
                         </div>
                     </div>
                 </div>
