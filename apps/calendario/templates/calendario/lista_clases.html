@@ -1,0 +1,58 @@
+{% extends "base_tenant.html" %}
+
+{% block content %}
+<div class="row mb-4 align-items-center">
+    <div class="col-md-8">
+        <h3 class="fw-bold text-dark m-0">
+            <i class="bi bi-tags text-primary me-2"></i>Mis Clases Base
+        </h3>
+        <p class="text-muted small mb-0 mt-1">Aquí están los formatos de clase que has creado. Edítalos para actualizar tarifas, profesores o capacidad.</p>
+    </div>
+    <div class="col-md-4 text-md-end mt-3 mt-md-0 d-flex justify-content-md-end gap-2">
+        <a href="{% url 'calendario:admin_calendario' request.tenant.slug %}" class="btn btn-light border rounded-pill shadow-sm hover-lift">
+            <i class="bi bi-arrow-left me-1"></i> Volver a Agenda
+        </a>
+        <a href="{% url 'calendario:crear_clase' request.tenant.slug %}" class="btn btn-primary rounded-pill fw-bold shadow-sm hover-lift">
+            <i class="bi bi-plus-circle me-1"></i> Nueva Clase
+        </a>
+    </div>
+</div>
+
+<div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+    {% for clase in clases %}
+    <div class="col">
+        <div class="card h-100 border-0 shadow-sm rounded-4 hover-lift">
+            <!-- Tira de color representativo -->
+            <div style="height: 8px; background-color: {{ clase.color_calendario }};" class="rounded-top-4"></div>
+            <div class="card-body p-4">
+                <h5 class="fw-bold text-dark mb-1">{{ clase.nombre }}</h5>
+                <p class="small text-muted mb-3 text-truncate">{{ clase.descripcion|default:"Sin descripción" }}</p>
+                
+                <ul class="list-unstyled small mb-4">
+                    <li class="mb-2"><i class="bi bi-people text-success me-2"></i> <strong>Capacidad General:</strong> {{ clase.limite_cupos }} alumnos</li>
+                    <li><i class="bi bi-currency-dollar text-warning me-2"></i> <strong>Tarifa Específica:</strong> 
+                        {% if clase.tarifa_especifica %}
+                            ${{ clase.tarifa_especifica|floatformat:0 }}
+                        {% else %}
+                            Dinámico (Según Profesor)
+                        {% endif %}
+                    </li>
+                </ul>
+                
+                <div class="d-grid">
+                    <a href="{% url 'calendario:editar_clase' request.tenant.slug clase.id %}" class="btn btn-outline-dark rounded-pill btn-sm">
+                        <i class="bi bi-pencil-square me-1"></i> Editar Configuración
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12 text-center py-5">
+        <i class="bi bi-folder-x display-1 text-muted opacity-25 mb-3"></i>
+        <h5 class="text-muted fw-bold">No tienes clases configuradas</h5>
+        <p class="text-muted small">Haz clic en "Nueva Clase" para crear tu primera oferta académica (ej. Salsa Casino).</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

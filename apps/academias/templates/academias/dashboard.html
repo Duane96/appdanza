@@ -168,6 +168,35 @@
                 </div>
             </div>
 
+            <!-- 🚀 NUEVA TARJETA: CUENTAS POR PAGAR (NOMINA) -->
+            <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold text-dark m-0"><i class="bi bi-receipt-cutoff text-warning me-2"></i>Nómina Pendiente</h6>
+                    <span class="badge bg-warning text-dark rounded-pill">{{ total_cuentas_pendientes }}</span>
+                </div>
+                
+                <!-- Contenedor con Scroll -->
+                <div class="pe-2" style="max-height: 250px; overflow-y: auto;">
+                    {% for cuenta in cuentas_por_pagar %}
+                        <div class="d-flex justify-content-between align-items-center p-3 bg-light rounded-3 mb-2 cursor-pointer hover-bg border border-warning border-opacity-25" 
+                             onclick="abrirModalPagoAdmin({{ cuenta.id }}, '{{ cuenta.profesor.usuario.get_full_name|escapejs }}', '{{ cuenta.monto_total|floatformat:0 }}', '{{ cuenta.cantidad_clases }}', '{{ cuenta.mes_periodo|date:'F Y' }}')">
+                            <div>
+                                <h6 class="m-0 fw-semibold text-dark">{{ cuenta.profesor.usuario.first_name }} {{ cuenta.profesor.usuario.last_name }}</h6>
+                                <small class="text-muted"><i class="bi bi-calendar-check me-1"></i>{{ cuenta.mes_periodo|date:"F Y"|title }}</small>
+                            </div>
+                            <span class="badge bg-white text-dark border border-warning rounded-pill fs-6 shadow-sm">
+                                ${{ cuenta.monto_total|floatformat:0 }}
+                            </span>
+                        </div>
+                    {% empty %}
+                        <div class="text-center py-4 text-muted">
+                            <i class="bi bi-check-circle text-success fs-3 d-block mb-2"></i>
+                            <small>No hay cuentas de cobro pendientes.</small>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
             <div class="card border-0 shadow-sm rounded-4 p-4">
                 <h6 class="fw-bold text-dark mb-3"><i class="bi bi-bank text-info me-2"></i>Flujo de Caja (Mes)</h6>
                 
@@ -394,6 +423,107 @@
         </div>
     </div>
 </div>
+
+
+<!-- ========================================== -->
+<!-- 📝 MODAL: PAGAR CUENTA DE COBRO (ADMIN) -->
+<!-- ========================================== -->
+<div class="modal fade" id="modalPagarCuenta" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white border-0 rounded-top-4 p-4">
+                <h5 class="modal-title fw-bold"><i class="bi bi-wallet2 me-2 text-warning"></i>Liquidar Nómina</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-light">
+                
+                <div class="text-center mb-4">
+                    <span class="small text-muted fw-bold text-uppercase d-block mb-1">A Pagar al Instructor</span>
+                    <h2 class="display-5 fw-black text-dark mb-0" id="montoPagoModal">$0</h2>
+                </div>
+
+                <div class="bg-white p-4 rounded-4 shadow-sm border mb-4">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted small">Profesor:</span>
+                        <strong class="text-dark" id="profePagoModal"></strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted small">Periodo:</span>
+                        <strong class="text-dark text-capitalize" id="periodoPagoModal"></strong>
+                    </div>
+                    <hr class="opacity-25 my-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted small">Clases verificadas:</span>
+                        <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2">
+                            <i class="bi bi-shield-check me-1"></i> <span id="clasesPagoModal"></span> Clases Dictadas
+                        </span>
+                    </div>
+                </div>
+
+                <div class="alert alert-info border-0 rounded-3 small m-0">
+                    <i class="bi bi-info-circle-fill me-2"></i> Al confirmar, se creará automáticamente un registro de "Egreso" en el módulo de Finanzas.
+                </div>
+
+            </div>
+            <div class="modal-footer bg-white border-0 rounded-bottom-4 p-3 d-flex justify-content-between">
+                <button type="button" class="btn btn-light rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success rounded-pill px-4 shadow-sm fw-bold hover-lift" onclick="procesarPagoAdmin()">
+                    <i class="bi bi-check2-circle me-1"></i> Registrar Pago
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 🚀 IMPORTACIÓN DE SWEETALERT2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    let cuentaIdSeleccionada = null;
+
+    function abrirModalPagoAdmin(id, profe, monto, clases, periodo) {
+        cuentaIdSeleccionada = id;
+        document.getElementById('montoPagoModal').innerText = `$${monto}`;
+        document.getElementById('profePagoModal').innerText = profe;
+        document.getElementById('clasesPagoModal').innerText = clases;
+        document.getElementById('periodoPagoModal').innerText = periodo;
+        
+        new bootstrap.Modal(document.getElementById('modalPagarCuenta')).show();
+    }
+
+    function procesarPagoAdmin() {
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        const urlPago = "{% url 'profesores:ajax_pagar_cuenta' request.tenant.slug %}";
+        
+        // Cerramos el modal actual
+        bootstrap.Modal.getInstance(document.getElementById('modalPagarCuenta')).hide();
+
+        Swal.fire({
+            title: 'Procesando pago...',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); }
+        });
+
+        fetch(urlPago, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            body: JSON.stringify({ orden_id: cuentaIdSeleccionada })
+        })
+        .then(async r => {
+            const data = await r.json().catch(() => null);
+            if (!r.ok) throw new Error(data ? data.message : "Error del servidor");
+            return data;
+        })
+        .then(data => {
+            if(data.status === 'success') {
+                Swal.fire('¡Pago Registrado!', data.message, 'success').then(() => location.reload());
+            } else {
+                Swal.fire('Error', data.message, 'error');
+            }
+        })
+        .catch(err => Swal.fire('Error', err.message, 'error'));
+    }
+</script>
 
 <style>
     .fw-black { font-weight: 900; }

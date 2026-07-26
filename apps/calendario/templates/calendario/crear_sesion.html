@@ -1,0 +1,87 @@
+{% extends "base_tenant.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm rounded-4 hover-lift">
+            <div class="card-header bg-primary text-white border-0 pt-4 pb-3 px-4 rounded-top-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4 class="fw-bold m-0">
+                        <i class="bi bi-calendar-plus me-2"></i>Programar Sesión
+                    </h4>
+                    <a href="{% url 'calendario:admin_calendario' request.tenant.slug %}" class="btn btn-sm btn-light bg-opacity-25 text-white border-0 rounded-pill">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                </div>
+            </div>
+            
+            <div class="card-body p-4 bg-white rounded-bottom-4">
+                <form method="POST" novalidate>
+                    {% csrf_token %}
+                    
+                    <!-- Errores generales del formulario (Ej: Fecha final es anterior a la inicial) -->
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger rounded-3 shadow-sm border-0 mb-4">
+                            {% for error in form.non_field_errors %}
+                                <i class="bi bi-exclamation-octagon-fill me-2"></i>{{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <div class="row g-4">
+                        {% for field in form %}
+                            <div class="col-12">
+                                <label for="{{ field.id_for_label }}" class="form-label fw-bold text-dark mb-1">
+                                    {{ field.label }}
+                                    {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+                                </label>
+                                
+                                {{ field }}
+                                
+                                {% if field.errors %}
+                                    <div class="text-danger small fw-bold mt-1">
+                                        {% for error in field.errors %}
+                                            <i class="bi bi-x-circle-fill me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="d-grid mt-5">
+                        <button type="submit" class="btn btn-success btn-lg rounded-pill fw-bold shadow-sm hover-lift">
+                            <i class="bi bi-calendar-check-fill me-2"></i>Agendar en Calendario
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lógica UX: Autocompletar la hora de fin -->
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const inputInicio = document.getElementById("id_fecha_hora_inicio");
+    const inputFin = document.getElementById("id_fecha_hora_fin");
+
+    if(inputInicio && inputFin) {
+        inputInicio.addEventListener("change", function() {
+            if(this.value && !inputFin.value) {
+                // Toma la fecha de inicio y le suma 1 hora automáticamente por defecto
+                let fechaInicio = new Date(this.value);
+                fechaInicio.setHours(fechaInicio.getHours() + 1);
+                
+                // Formateamos de vuelta a YYYY-MM-DDTHH:MM para el input datetime-local
+                // Restamos el timezone offset para que coincida con la hora local exacta
+                let tzOffset = (new Date()).getTimezoneOffset() * 60000;
+                let localISOTime = (new Date(fechaInicio - tzOffset)).toISOString().slice(0, 16);
+                
+                inputFin.value = localISOTime;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

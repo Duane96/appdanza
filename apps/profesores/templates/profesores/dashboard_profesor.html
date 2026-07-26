@@ -1,0 +1,288 @@
+<!-- templates/profesores/dashboard_profesor.html -->
+{% extends "base_tenant.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="fw-bold text-dark">Hola, {{ request.user.first_name }} 👋</h2>
+        <p class="text-muted">Aquí tienes el resumen de tu impacto y rendimiento en {{ request.tenant.nombre }}.</p>
+    </div>
+</div>
+
+<div class="row g-4 mb-5">
+    
+    <!-- 1. TARJETA: PRÓXIMA CLASE -->
+    <div class="col-md-6 col-xl-4">
+        <div class="card border-0 shadow-sm rounded-4 h-100 bg-primary bg-gradient text-white position-relative overflow-hidden">
+            <i class="bi bi-calendar-event position-absolute" style="font-size: 12rem; right: -20px; top: -10px; opacity: 0.1; transform: rotate(-15deg);"></i>
+            <div class="card-body p-4 position-relative z-1 d-flex flex-column justify-content-between">
+                <div>
+                    <h6 class="text-uppercase fw-bold text-white-50 mb-3"><i class="bi bi-lightning-charge-fill text-warning me-1"></i> Tu Próxima Clase</h6>
+                    {% if proxima_clase %}
+                        <h3 class="fw-bold mb-1">{{ proxima_clase.clase.nombre }}</h3>
+                        <p class="mb-2 fs-5"><i class="bi bi-clock me-2"></i>{{ proxima_clase.fecha_hora_inicio|date:"l d M, h:i A" }}</p>
+                        <span class="badge bg-white text-primary rounded-pill px-3 py-2 shadow-sm">
+                            <i class="bi bi-cash me-1"></i> Ganarás: ${{ tarifa_proxima|floatformat:0 }}
+                        </span>
+                    {% else %}
+                        <h4 class="fw-bold mb-1">Sin agenda futura</h4>
+                        <p class="mb-0">No tienes clases programadas próximamente.</p>
+                    {% endif %}
+                </div>
+                <div class="mt-4">
+                    <a href="{% url 'calendario:profesor_calendario' request.tenant.slug %}" class="btn btn-light rounded-pill fw-bold text-primary px-4 shadow-sm w-100">
+                        Ver mi agenda y alumnos
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. TARJETA: CLASES ESTA SEMANA -->
+    <div class="col-md-6 col-xl-4">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h6 class="text-muted text-uppercase fw-bold m-0">Semana Actual</h6>
+                    <div class="bg-info bg-opacity-10 text-info rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
+                        <i class="bi bi-person-video3 fs-5"></i>
+                    </div>
+                </div>
+                <h2 class="display-5 fw-bold text-dark mb-1">{{ clases_semana }}</h2>
+                <p class="text-muted small mb-0">Clases dictadas esta semana.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. TARJETA: PROMEDIO ALUMNOS -->
+    <div class="col-md-6 col-xl-4">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h6 class="text-muted text-uppercase fw-bold m-0">Impacto</h6>
+                    <div class="bg-success bg-opacity-10 text-success rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
+                        <i class="bi bi-people-fill fs-5"></i>
+                    </div>
+                </div>
+                <h2 class="display-5 fw-bold text-dark mb-1">{{ promedio_alumnos|floatformat:1 }}</h2>
+                <p class="text-muted small mb-0">Alumnos por clase (Promedio hist.).</p>
+            </div>
+        </div>
+    </div>
+
+<!-- 4. TARJETA: FINANZAS (CONSOLIDADA) -->
+    <div class="col-md-12">
+        <div class="card border-0 shadow-sm rounded-4 h-100 border-start border-4 border-success">
+            <div class="card-body p-4">
+                <h6 class="text-muted text-uppercase fw-bold mb-4">Resumen de Cobro</h6>
+                <div class="row align-items-center">
+                    
+                    <!-- Dinero Pendiente / Estado de Cuenta -->
+                    <div class="col-md-4 mb-3 mb-md-0 border-end">
+                        <span class="d-block small text-muted fw-semibold mb-1">Deuda Total Acumulada</span>
+                        
+                        {% if profesor.tipo_pago == 'MENSUAL' and orden_actual %}
+                            <!-- 🚀 UI CLARA: Un solo botón interactivo que cambia de color según el estado -->
+                            <a href="#" data-bs-toggle="modal" data-bs-target="#modalCuentaCobro" class="text-decoration-none hover-lift d-inline-block p-3 rounded-3 {% if orden_actual.estado == 'GENERADA' %}bg-warning bg-opacity-10 border border-warning{% elif orden_actual.estado == 'REVISAR' %}bg-danger bg-opacity-10 border border-danger{% else %}bg-success bg-opacity-10 border border-success{% endif %} transition-all w-100">
+                                <h2 class="fw-bold {% if orden_actual.estado == 'GENERADA' %}text-warning{% elif orden_actual.estado == 'REVISAR' %}text-danger{% else %}text-success{% endif %} mb-0">
+                                    ${{ dinero_pendiente|floatformat:0 }}
+                                    <i class="bi bi-box-arrow-up-right fs-6 ms-1 text-muted"></i>
+                                </h2>
+                                
+                                {% if orden_actual.estado == 'GENERADA' %}
+                                    <span class="small text-dark fw-bold"><i class="bi bi-send-fill text-warning me-1"></i> Clases nuevas (Sin Enviar)</span>
+                                {% elif orden_actual.estado == 'REVISAR' %}
+                                    <span class="small text-danger fw-bold"><i class="bi bi-exclamation-triangle me-1"></i> Reclamo en revisión</span>
+                                {% else %}
+                                    <span class="small text-success fw-bold"><i class="bi bi-check-all me-1"></i> Cuenta enviada al Admin</span>
+                                {% endif %}
+                            </a>
+                        {% else %}
+                            <h2 class="fw-bold text-muted mb-0">$0</h2>
+                            <span class="small text-muted"><i class="bi bi-check-circle-fill text-success me-1"></i> Todo al día</span>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Dinero Pagado -->
+                    <div class="col-md-4 mb-3 mb-md-0 border-end ps-md-4">
+                        <span class="d-block small text-muted fw-semibold mb-1">Dinero ya Pagado (Este mes)</span>
+                        <h2 class="fw-bold text-success mb-0">${{ dinero_pagado|floatformat:0 }}</h2>
+                    </div>
+
+                    <!-- Modalidad -->
+                    <div class="col-md-4 ps-md-4">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-shield-check text-success fs-5 me-2"></i>
+                            <div>
+                                <span class="d-block small text-muted lh-1">Modalidad de cobro</span>
+                                <strong class="text-dark small">{% if profesor.tipo_pago == 'MENSUAL' %}Mensual (Consolidada){% else %}Por Clase Dictada{% endif %}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- 📝 MODAL: CUENTA DE COBRO (SIMULA DOCUMENTO) -->
+<!-- ========================================== -->
+{% if profesor.tipo_pago == 'MENSUAL' and orden_actual %}
+<div class="modal fade" id="modalCuentaCobro" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            
+            <div class="modal-body p-5 bg-white position-relative overflow-hidden">
+    <!-- Sello de Agua Corregido -->
+    <i class="bi bi-receipt position-absolute text-secondary" style="font-size: 18rem; right: -20px; top: 20px; z-index: 0; opacity: 0.04; transform: rotate(-15deg);"></i>
+                
+                <div class="position-relative z-1">
+                    <!-- Cabecera del Documento -->
+                    <div class="text-center mb-4 pb-3 border-bottom border-2 border-dark">
+                        <h3 class="fw-black text-dark text-uppercase mb-1">Documento Equivalente</h3>
+                        <h5 class="text-muted">Cuenta de Cobro No. {{ orden_actual.id|stringformat:"04d" }}</h5>
+                        <p class="small text-muted mb-0">Fecha de emisión: {{ ahora|date:"d \d\e F \d\e Y" }}</p>
+                    </div>
+
+                    <!-- Datos Cruzados -->
+                    <div class="row mb-4">
+                        <div class="col-6">
+                            <span class="small text-muted fw-bold text-uppercase d-block mb-1">Deudor (Academia)</span>
+                            <strong class="text-dark d-block">{{ request.tenant.nombre }}</strong>
+                            <!-- Si configuras un NIT en el tenant, puedes ponerlo aquí -->
+                            <span class="small text-muted d-block">NIT: Pendiente</span>
+                        </div>
+                        <div class="col-6 text-end">
+                            <span class="small text-muted fw-bold text-uppercase d-block mb-1">Beneficiario (Instructor)</span>
+                            <strong class="text-dark d-block">{{ request.user.get_full_name }}</strong>
+                            <span class="small text-muted d-block">CC / NIT: {{ profesor.documento_identidad }}</span>
+                        </div>
+                    </div>
+
+                    <div class="text-center mb-4">
+                        <h6 class="text-muted mb-1">La suma de:</h6>
+                        <h3 class="fw-bold text-dark mb-0">${{ orden_actual.monto_total|floatformat:0 }} COP</h3>
+                    </div>
+
+                    <!-- Tabla de Concepto -->
+                    <div class="table-responsive mb-4">
+                        <table class="table table-bordered border-dark m-0">
+                            <thead class="table-light border-dark">
+                                <tr>
+                                    <th class="text-uppercase small">Concepto de Servicio</th>
+                                    <th class="text-center text-uppercase small" style="width: 100px;">Cantidad</th>
+                                    <th class="text-end text-uppercase small" style="width: 150px;">Valor Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="py-3">Servicios prestados como instructor de baile correspondiente al periodo de {{ orden_actual.mes_periodo|date:"F Y" }}.</td>
+                                    <td class="text-center align-middle fw-bold">{{ orden_actual.cantidad_clases }} clases</td>
+                                    <td class="text-end align-middle fw-bold">${{ orden_actual.monto_total|floatformat:0 }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer bg-light border-0 rounded-bottom-4 justify-content-between p-4">
+                
+                {% if orden_actual.estado == 'GENERADA' %}
+                    <div class="w-100 d-flex gap-2">
+                        <button type="button" class="btn btn-outline-danger fw-bold rounded-pill w-50" onclick="enviarObservacion({{ orden_actual.id }})">
+                            <i class="bi bi-exclamation-circle me-1"></i> Hay un error
+                        </button>
+                        <button type="button" class="btn btn-success fw-bold rounded-pill shadow-sm w-50" onclick="aprobarCuenta({{ orden_actual.id }})">
+                            <i class="bi bi-send-check me-1"></i> Aprobar y Enviar a Pago
+                        </button>
+                    </div>
+                {% elif orden_actual.estado == 'REVISAR' %}
+                    <div class="alert alert-warning w-100 text-center m-0 border-0 rounded-3">
+                        <i class="bi bi-clock-history me-1"></i> Cuenta en revisión por el administrador.
+                    </div>
+                {% elif orden_actual.estado == 'APROBADA_PROFE' %}
+                    <div class="alert alert-success w-100 text-center m-0 border-0 rounded-3">
+                        <i class="bi bi-check-all me-1"></i> Aprobada. Pendiente de desembolso en Finanzas.
+                    </div>
+                {% endif %}
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 🛡️ INYECCIÓN CSRF -->
+<div style="display: none;">{% csrf_token %}</div>
+
+<!-- 🚀 IMPORTACIÓN DE SWEETALERT2: Necesario para los modales interactivos del profesor -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    const urlCuentaCobro = "{% url 'profesores:ajax_cuenta_cobro' request.tenant.slug %}";
+
+    function procesarCuenta(id, accion, observacion = '') {
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        Swal.fire({
+            title: 'Procesando...',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); }
+        });
+
+        fetch(urlCuentaCobro, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            body: JSON.stringify({ orden_id: id, accion: accion, observacion: observacion })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if(data.status === 'success') {
+                Swal.fire('¡Enviado!', data.message, 'success').then(() => location.reload());
+            } else {
+                Swal.fire('Error', data.message, 'error');
+            }
+        })
+        .catch(err => {
+            Swal.fire('Error de Conexión', 'No pudimos conectar con el servidor.', 'error');
+        });
+    }
+
+    // Acción 1: Aprobar directo
+    function aprobarCuenta(id) {
+        Swal.fire({
+            title: '¿Confirmar Cuenta de Cobro?',
+            text: "Al enviar, confirmas que las clases y el monto son correctos para proceder con el pago.",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#198754',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Sí, enviar a Finanzas'
+        }).then((result) => {
+            if (result.isConfirmed) { procesarCuenta(id, 'APROBAR'); }
+        });
+    }
+
+    // Acción 2: Observación (Usa SweetAlert Input)
+    function enviarObservacion(id) {
+        Swal.fire({
+            title: 'Reportar Diferencia',
+            text: "Escribe por qué no estás de acuerdo con el monto o las clases (Ej: Falta contar la clase del viernes).",
+            input: 'textarea',
+            inputPlaceholder: 'Escribe tu observación aquí...',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Enviar Reclamo',
+            preConfirm: (texto) => {
+                if (!texto) { Swal.showValidationMessage('Debes escribir una observación'); }
+                return texto;
+            }
+        }).then((result) => {
+            if (result.isConfirmed) { procesarCuenta(id, 'REVISAR', result.value); }
+        });
+    }
+</script>
+{% endif %}
+{% endblock %}

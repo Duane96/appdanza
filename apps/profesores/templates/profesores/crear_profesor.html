@@ -1,0 +1,65 @@
+{% extends "base_tenant.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-header bg-white border-0 pt-4 pb-0 px-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4 class="fw-bold text-dark m-0"><i class="bi bi-person-plus-fill text-primary me-2"></i>Registrar Nuevo Profesor</h4>
+                    <a href="{% url 'profesores:lista' request.tenant.slug %}" class="btn btn-sm btn-light rounded-pill text-muted">
+                        <i class="bi bi-arrow-left"></i> Volver
+                    </a>
+                </div>
+                <hr class="opacity-25 mt-3 mb-0">
+            </div>
+            
+            <div class="card-body p-4">
+                <!-- Formulario Seguro con protección CSRF -->
+                <form method="POST" novalidate>
+                    {% csrf_token %}
+                    
+                    <div class="row g-3">
+                        <!-- Iteramos de forma elegante sobre el formulario -->
+                        {% for field in form %}
+                        <div class="col-md-6">
+                            <label for="{{ field.id_for_label }}" class="form-label fw-semibold text-secondary small text-uppercase">
+                                {{ field.label }}
+                                {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+                            </label>
+                            
+                            {{ field }} <!-- Aquí Django inyecta el input con la clase 'form-control mb-3' que le dimos en forms.py -->
+                            
+                            {% if field.help_text %}
+                                <div class="form-text small text-muted mt-0 mb-2">
+                                    <i class="bi bi-info-circle me-1"></i>{{ field.help_text }}
+                                </div>
+                            {% endif %}
+                            
+                            <!-- Manejo de Errores de Validación -->
+                            {% if field.errors %}
+                                <div class="text-danger small fw-bold mt-1">
+                                    {% for error in field.errors %}
+                                        <i class="bi bi-x-circle-fill me-1"></i>{{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="alert bg-primary bg-opacity-10 text-primary border-0 rounded-3 mt-4 small">
+                        <i class="bi bi-lightbulb-fill me-2"></i><strong>Nota para el administrador:</strong> El número de documento se usará como contraseña inicial para que el profesor pueda acceder al sistema. Su nombre de usuario será generado automáticamente (ej: juanperez).
+                    </div>
+                    
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg rounded-pill fw-bold shadow-sm hover-lift">
+                            <i class="bi bi-check-circle-fill me-2"></i>Guardar Profesor
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

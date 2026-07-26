@@ -98,38 +98,45 @@
                         <span class="d-block small fw-semibold text-dark"><i class="bi bi-telephone text-primary me-1"></i>{{ est.telefono|default:"Sin registro" }}</span>
                     </td>
                     <td class="text-center">
-                        {% if est.qr_code %}
-                            <button type="button" class="btn btn-sm btn-light rounded-pill px-3 text-primary fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalQR{{ est.id }}">
-                                <i class="bi bi-qr-code me-1"></i> Ver QR
-                            </button>
-
-                            <!-- TU MODAL QR SE MANTIENE IGUAL AQUÍ -->
-                            <div class="modal fade" id="modalQR{{ est.id }}" tabindex="-1" aria-hidden="true">
-                                <div class="modal-dialog modal-dialog-centered modal-sm">
-                                    <div class="modal-content rounded-4 border-0 shadow-lg">
-                                        <div class="modal-header border-0 pb-0">
-                                            <button type="button" class="btn-close" data-bs-toggle="modal" data-bs-target="#modalQR{{ est.id }}"></button>
-                                        </div>
-                                        <div class="modal-body text-center pt-0">
-                                            <h5 class="fw-bold mb-3">{{ est.nombres }}</h5>
-                                            <img src="{{ est.qr_code.url }}" alt="QR" class="img-fluid rounded border p-2 mb-2 bg-white" style="max-width: 180px;">
-                                            <a href="{{ est.qr_code.url }}" download="QR_{{ est.identificacion }}.png" class="btn btn-tenant-primary mt-3 w-100 rounded-pill fw-bold">
-                                                <i class="bi bi-download me-1"></i> Descargar
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        {% else %}
-                            <span class="text-muted small italic">Pendiente</span>
-                        {% endif %}
-                    </td>
+            {% if est.qr_code %}
+                <!-- 🚀 SOLO EL BOTÓN QUEDA DENTRO DE LA TABLA -->
+                <button type="button" class="btn btn-sm btn-light rounded-pill px-3 text-primary fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalQR{{ est.id }}">
+                    <i class="bi bi-qr-code me-1"></i> Ver QR
+                </button>
+            {% else %}
+                <span class="text-muted small italic">Pendiente</span>
+            {% endif %}
+        </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
+
+<!-- ========================================== -->
+<!-- 🚀 MODALES RENDERIZADOS FUERA DE LA TABLA  -->
+<!-- ========================================== -->
+{% for est in estudiantes %}
+    {% if est.qr_code %}
+    <div class="modal fade" id="modalQR{{ est.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content rounded-4 border-0 shadow-lg">
+                <div class="modal-header border-0 pb-0">
+                    <button type="button" class="btn-close" data-bs-toggle="modal" data-bs-target="#modalQR{{ est.id }}"></button>
+                </div>
+                <div class="modal-body text-center pt-0">
+                    <h5 class="fw-bold mb-3">{{ est.nombres }}</h5>
+                    <img src="{{ est.qr_code.url }}" alt="QR" class="img-fluid rounded border p-2 mb-2 bg-white" style="max-width: 180px;">
+                    <a href="{{ est.qr_code.url }}" download="QR_{{ est.identificacion }}.png" class="btn btn-tenant-primary mt-3 w-100 rounded-pill fw-bold">
+                        <i class="bi bi-download me-1"></i> Descargar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+{% endfor %}
 
 <!-- Modal Único de Detalle -->
 <div class="modal fade" id="modalDetalleEstudiante" tabindex="-1">

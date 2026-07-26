@@ -1,9 +1,15 @@
 # apps/academias/forms.py
 from django import forms
+from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth import authenticate
+from django.contrib.auth.models import User
+from django.core.exceptions import ObjectDoesNotExist
+import unicodedata
 from .models import Academia
 
-# apps/academias/forms.py
-
+# -----------------------------------------------------------------------------
+# 1. FORMULARIO DE CONFIGURACIÓN (Tuyo, intacto y perfecto)
+# -----------------------------------------------------------------------------
 class ConfigMascaraForm(forms.ModelForm):
     class Meta:
         model = Academia
@@ -70,3 +76,125 @@ class ConfigMascaraForm(forms.ModelForm):
         # deje campos como "Sede" u "Horario" vacíos.
         for field in self.fields.values():
             field.required = False
+
+
+# -----------------------------------------------------------------------------
+# 2. 🚀 FORMULARIO DE LOGIN INTELIGENTE (MULTI-TENANT + OMNICANAL)
+# -----------------------------------------------------------------------------
+class TenantLoginForm(AuthenticationForm):
+    """
+    Formulario de autenticación Multi-Tenant con resolución inteligente de usuarios.
+    """
+    username = forms.CharField(
+        label="Usuario, Correo o Documento",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control form-control-lg rounded-pill', 
+            'placeholder': 'Tu correo, documento o usuario',
+            'autocomplete': 'off'
+        })
+    )
+    password = forms.CharField(
+        label="Contraseña",
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control form-control-lg rounded-pill', 
+            'placeholder': 'Tu contraseña',
+        })
+    )
+
+    def clean(self):
+        username = self.cleaned_data.get('username')
+        password = self.cleaned_data.get('password')
+
+        if username is not None and password:
+            real_username = username
+            estudiante_detectado = None
+
+            print("\n" + "="*50)
+            print(f"🚀 INICIANDO DEBUG DE LOGIN (TENANT: {getattr(self.request, 'tenant', 'SIN TENANT')})")
+            print(f"📥 Input recibido en formulario: '{username}'")
+            print("="*50)
+
+            # 1. 📧 ¿Ingresó un Email?
+            if '@' in username:
+                print("📧 Detectado intento por correo electrónico.")
+                user_obj = User.objects.filter(email__iexact=username).first()
+                if user_obj:
+                    real_username = user_obj.username
+                    print(f"✅ Correo encontrado. Username global asociado: '{real_username}'")
+                else:
+                    print("❌ Correo no encontrado en la base de datos global.")
+            else:
+                # 2. 🪪 ¿Ingresó su Documento de Identidad?
+                if hasattr(self.request, 'tenant'):
+                    from apps.planes_estudiantes.models import Estudiante 
+                    from apps.academias.models import PerfilUsuario 
+                    
+                    print("🪪 Buscando si el input coincide con un documento en esta academia...")
+                    estudiante_detectado = Estudiante.objects.filter(
+                        identificacion=username, 
+                        academia=self.request.tenant
+                    ).first()
+                    
+                    if estudiante_detectado:
+                        print(f"✅ ¡Estudiante encontrado localmente! -> {estudiante_detectado.nombres} {estudiante_detectado.apellidos} (ID: {estudiante_detectado.id})")
+                        
+                        perfiles_academia = PerfilUsuario.objects.filter(
+                            academia=self.request.tenant, 
+                            rol='ESTUDIANTE'
+                        ).select_related('user')
+                        
+                        print(f"👥 Total de perfiles de estudiantes en esta academia: {perfiles_academia.count()}")
+
+                        perfil_encontrado = None
+
+                        if estudiante_detectado.email:
+                            print(f"🔍 Buscando PerfilUsuario usando su email: {estudiante_detectado.email}")
+                            perfil_encontrado = perfiles_academia.filter(user__email__iexact=estudiante_detectado.email).first()
+                        
+                        if not perfil_encontrado:
+                            print("⚠️ No se encontró por email. Intentando reconstruir username...")
+                            nombre_limpio = "".join(estudiante_detectado.nombres.split()).lower()
+                            apellido_limpio = "".join(estudiante_detectado.apellidos.split()).lower()
+                            base_username = f"{nombre_limpio}{apellido_limpio}"
+                            base_username = "".join(c for c in unicodedata.normalize('NFD', base_username) if unicodedata.category(c) != 'Mn')
+                            
+                            print(f"🔍 Buscando PerfilUsuario cuyo username global comience con: '{base_username}'")
+                            perfil_encontrado = perfiles_academia.filter(user__username__startswith=base_username).first()
+                        
+                        if perfil_encontrado:
+                            real_username = perfil_encontrado.user.username
+                            print(f"🎯 ¡BINGO! PerfilUsuario encontrado. Username real de Django es: '{real_username}'")
+                        else:
+                            print("🚨 ERROR CRÍTICO: Existe el modelo Estudiante, pero NO tiene un PerfilUsuario asociado en esta academia.")
+                    else:
+                        print("❌ No se encontró ningún estudiante con ese documento en ESTA academia.")
+
+            # 3. 🔐 Intentamos autenticar
+            print(f"🔐 Ejecutando authenticate() de Django con username='{real_username}'...")
+            self.user_cache = authenticate(self.request, username=real_username, password=password)
+            
+            if self.user_cache is None:
+                print("❌ authenticate() falló. Contraseña incorrecta o el usuario no existe/está inactivo.")
+                if estudiante_detectado:
+                    raise forms.ValidationError(
+                        f"¡Hola {estudiante_detectado.nombres}! Encontramos tu perfil, pero la contraseña no coincide. "
+                        f"(Tu verdadero nombre de usuario en esta academia es: '{real_username}')"
+                    )
+                raise self.get_invalid_login_error()
+            else:
+                print("✅ authenticate() EXITOSO. Validando autorización de Tenant...")
+                self.confirm_login_allowed(self.user_cache)
+                
+                # 4. 🚀 BARRERA MULTI-TENANT
+                if hasattr(self.request, 'tenant') and not self.user_cache.is_superuser:
+                    try:
+                        if self.user_cache.perfil.academia != self.request.tenant:
+                            print(f"🚨 BLOQUEO MULTI-TENANT: El usuario pertenece a {self.user_cache.perfil.academia.nombre}, intentó entrar a {self.request.tenant.nombre}")
+                            raise forms.ValidationError("No tienes acceso a esta academia. Verifica el enlace que te compartieron.")
+                    except ObjectDoesNotExist:
+                        print("🚨 BLOQUEO: El usuario no tiene perfil SaaS (ObjectDoesNotExist).")
+                        raise forms.ValidationError("Este usuario no tiene un perfil SaaS asociado.")
+                
+                print("🎉 LOGIN COMPLETAMENTE APROBADO.")
+
+        return self.cleaned_data

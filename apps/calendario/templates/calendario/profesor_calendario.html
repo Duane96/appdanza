@@ -1,0 +1,284 @@
+<!-- templates/calendario/profesor_calendario.html -->
+{% extends "base_tenant.html" %}
+{% load calendario_extras %}
+
+{% block content %}
+<style>
+    /* ---------------------------------------------------
+       ✨ ESTILO TABLERO ADHESIVO (MIRO / TRELLO VIBES)
+       --------------------------------------------------- */
+    .board-container {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 1.25rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+        overflow: hidden;
+    }
+
+    .board-header-day {
+        background-color: #f1f5f9;
+        font-weight: 800;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 1px;
+        color: #475569;
+        padding: 12px 0;
+        border-bottom: 2px solid #e2e8f0;
+    }
+
+    .board-cell {
+        min-height: 130px;
+        background-color: #ffffff;
+        border-right: 1px solid #f1f5f9;
+        border-bottom: 1px solid #f1f5f9;
+        transition: background-color 0.2s ease;
+        position: relative;
+        vertical-align: top;
+        padding: 8px !important;
+    }
+
+    .board-cell:hover { background-color: #fafcfd; }
+    .board-cell.other-month { background-color: #fcfcfc; opacity: 0.5; }
+    .board-cell.is-today { background-color: rgba(var(--bs-primary-rgb, 111, 66, 193), 0.02); }
+
+    .day-number {
+        font-weight: 700;
+        font-size: 0.85rem;
+        color: #64748b;
+        width: 26px; height: 26px;
+        display: inline-flex;
+        align-items: center; justify-content: center;
+        border-radius: 50%;
+        margin-bottom: 6px;
+    }
+
+    .board-cell.is-today .day-number {
+        background-color: var(--bg-academia-primary, #6f42c1);
+        color: #ffffff;
+        box-shadow: 0 2px 6px rgba(111, 66, 193, 0.4);
+    }
+
+    /* ---------------- NOTAS ADHESIVAS (POST-ITS) MEJORADAS ---------------- */
+    .postit-card {
+        border-radius: 8px; 
+        padding: 8px 10px; 
+        color: #ffffff; 
+        margin-bottom: 6px;
+        text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.85); /* 🚀 SOMBRA AGRESIVA para contraste perfecto */
+        box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+        cursor: pointer; 
+        transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, opacity 0.2s;
+        position: relative; 
+        border: none; 
+        text-align: left; 
+        width: 100%;
+    }
+
+    .postit-card:hover {
+        transform: translateY(-3px) scale(1.02);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        z-index: 10;
+    }
+
+    /* 🚀 Opacidad para las clases del pasado */
+    .postit-faded { 
+        opacity: 0.65; 
+        border: 1px dashed rgba(255,255,255,0.5); 
+    }
+    .postit-faded:hover { opacity: 1; }
+
+    .postit-title {
+        font-weight: 800;
+        font-size: 0.8rem;
+        letter-spacing: -0.2px;
+        margin-bottom: 4px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .postit-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.7rem;
+        opacity: 0.95;
+        font-weight: 700;
+    }
+</style>
+
+<!-- ENCABEZADO Y NAVEGACIÓN DE MESES -->
+<div class="row mb-4 align-items-center">
+    <div class="col-md-7">
+        <h3 class="fw-bold text-dark m-0">
+            <i class="bi bi-calendar3 text-primary me-2"></i>Mi Agenda de Clases
+        </h3>
+        <p class="text-muted small mb-0 mt-1">Consulta tus horarios y la lista de estudiantes inscritos.</p>
+    </div>
+    
+    <div class="col-md-5 text-md-end mt-3 mt-md-0 d-flex flex-wrap justify-content-md-end align-items-center gap-3">
+        <!-- Controles de Mes (Estilo Píldora) -->
+        <div class="btn-group shadow-sm rounded-pill overflow-hidden border bg-white">
+            <a href="?mes={{ mes_anterior }}&anio={{ anio_anterior }}" class="btn btn-white text-dark border-0 px-3 py-2">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+            <span class="btn btn-white text-dark border-0 fw-bold px-3 py-2 d-flex align-items-center bg-light">
+                {{ nombre_mes }} {{ anio_actual }}
+            </span>
+            <a href="?mes={{ mes_siguiente }}&anio={{ anio_siguiente }}" class="btn btn-white text-dark border-0 px-3 py-2">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- TABLERO TIPO CALENDARIO GRID -->
+<div class="board-container mb-5">
+    <div class="table-responsive m-0">
+        <table class="table table-bordered m-0 align-middle">
+            <thead>
+                <tr>
+                    <th class="board-header-day text-center" style="width: 14.28%;">Lunes</th>
+                    <th class="board-header-day text-center" style="width: 14.28%;">Martes</th>
+                    <th class="board-header-day text-center" style="width: 14.28%;">Miércoles</th>
+                    <th class="board-header-day text-center" style="width: 14.28%;">Jueves</th>
+                    <th class="board-header-day text-center" style="width: 14.28%;">Viernes</th>
+                    <th class="board-header-day text-center" style="width: 14.28%;">Sábado</th>
+                    <th class="board-header-day text-center" style="width: 14.28%;">Domingo</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for semana in dias_mes %}
+                <tr>
+                    {% for dia in semana %}
+                        {% with dia_iso=dia.isoformat %}
+                        <td class="board-cell 
+                            {% if dia.month != mes_actual %}other-month{% endif %} 
+                            {% if dia == hoy %}is-today{% endif %}">
+                            
+                            <div class="day-number">{{ dia.day }}</div>
+
+                            <!-- CONTENEDOR DE POST-ITS PARA ESTE DÍA -->
+                            <div class="d-flex flex-column gap-1">
+                                {% for sesion in sesiones_por_fecha|get_item:dia_iso %}
+                                    <button type="button" 
+                                            class="postit-card {% if sesion.estado != 'PROGRAMADA' %}postit-faded{% endif %}" 
+                                            style="background-color: {% if sesion.estado == 'CANCELADA' %}#dc3545{% elif sesion.estado == 'DICTADA' %}#198754{% else %}{{ sesion.clase.color_calendario }}{% endif %};"
+                                            onclick='abrirModalSoloLectura({
+                                                nombre: "{{ sesion.clase.nombre|escapejs }}",
+                                                horario: "{{ sesion.fecha_hora_inicio|time:"h:i A" }} - {{ sesion.fecha_hora_fin|time:"h:i A" }}",
+                                                cupos: "{{ sesion.total_reservas }} / {{ sesion.clase.limite_cupos }}",
+                                                estado: "{{ sesion.estado }}",
+                                                /* 🚀 ARRAY DE ESTUDIANTES INSCRITOS */
+                                                alumnos: [
+                                                    {% for r in sesion.reservas.all %}
+                                                        "{{ r.estudiante.first_name|escapejs }} {{ r.estudiante.last_name|escapejs }}"{% if not forloop.last %},{% endif %}
+                                                    {% endfor %}
+                                                ]
+                                            })'>
+                                        
+                                        <div class="postit-title">{{ sesion.clase.nombre }}</div>
+                                        <div class="postit-footer">
+                                            <span><i class="bi bi-clock me-1"></i>{{ sesion.fecha_hora_inicio|time:"h:i A" }}</span>
+                                            <span class="badge bg-dark bg-opacity-50 text-white shadow-sm px-1 py-0">{{ sesion.total_reservas }}/{{ sesion.clase.limite_cupos }}</span>
+                                        </div>
+                                    </button>
+                                {% endfor %}
+                            </div>
+                        </td>
+                        {% endwith %}
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- MODAL DE SOLO LECTURA (PARA EL PROFESOR) -->
+<div class="modal fade" id="modalLecturaSesion" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
+            <div class="modal-header border-0 p-4" id="modalHeaderColor">
+                <h4 class="modal-title fw-black text-white m-0" id="modalClaseNombre" style="text-shadow: 0 2px 4px rgba(0,0,0,0.2);"></h4>
+                <button type="button" class="btn-close btn-close-white z-3" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-light">
+                
+                <div class="bg-white p-3 rounded-4 shadow-sm mb-4">
+                    <div class="row text-center g-2">
+                        <div class="col-6">
+                            <div class="p-3 bg-light rounded-3 border h-100">
+                                <i class="bi bi-clock-history text-warning d-block mb-1 fs-3"></i>
+                                <span class="small text-muted d-block text-uppercase fw-bold mb-1">Horario</span>
+                                <span class="fw-bold text-dark d-block" id="modalHorario"></span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-3 bg-light rounded-3 border h-100">
+                                <i class="bi bi-people-fill text-success d-block mb-1 fs-3"></i>
+                                <span class="small text-muted d-block text-uppercase fw-bold mb-1">Inscritos</span>
+                                <span class="fw-bold text-dark d-block fs-5" id="modalCupos"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 🚀 NUEVA CAJA DE ALUMNOS INSCRITOS -->
+                <div class="mb-4 text-start">
+                    <span class="small text-muted fw-bold text-uppercase d-block mb-2"><i class="bi bi-card-checklist me-1"></i> Lista de Asistencia</span>
+                    <div class="bg-white border rounded-3 overflow-hidden shadow-sm" id="modalListaAlumnos">
+                        <!-- Javascript inyectará los alumnos aquí -->
+                    </div>
+                </div>
+
+                <div class="text-center mb-3">
+                    <span class="small text-muted fw-bold text-uppercase d-block mb-2">Estado Actual</span>
+                    <div id="modalEstado"></div>
+                </div>
+                
+                <hr class="opacity-25">
+                <div class="text-center text-muted small">
+                    <i class="bi bi-info-circle me-1"></i> Solo el administrador puede modificar el estado de la clase.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function abrirModalSoloLectura(data) {
+        var modalElement = document.getElementById('modalLecturaSesion');
+        var modalActivo = new bootstrap.Modal(modalElement);
+
+        let headerColor = data.estado === 'CANCELADA' ? '#dc3545' : (data.estado === 'DICTADA' ? '#198754' : '#6f42c1');
+        document.getElementById('modalHeaderColor').style.backgroundColor = headerColor;
+        document.getElementById('modalClaseNombre').innerText = data.nombre;
+        document.getElementById('modalHorario').innerText = data.horario;
+        document.getElementById('modalCupos').innerText = data.cupos;
+        
+        // 🚀 INYECTAR LISTA DE ALUMNOS (CHISMÓGRAFO)
+        let listaHTML = '';
+        if (data.alumnos.length > 0) {
+            listaHTML = '<ul class="list-group list-group-flush text-start small mb-0 style-scroll" style="max-height: 160px; overflow-y: auto;">';
+            data.alumnos.forEach(alumno => {
+                listaHTML += `<li class="list-group-item py-2 px-3 border-bottom"><i class="bi bi-person-check text-success me-2"></i><strong>${alumno}</strong></li>`;
+            });
+            listaHTML += '</ul>';
+        } else {
+            listaHTML = '<div class="text-muted small py-3 px-3 fst-italic text-center">Nadie se ha registrado en esta clase aún.</div>';
+        }
+        document.getElementById('modalListaAlumnos').innerHTML = listaHTML;
+
+        // 🚀 BADGES DE ESTADO
+        let badgeEstado = '';
+        if(data.estado === 'PROGRAMADA') badgeEstado = '<span class="badge bg-primary fs-5 rounded-pill px-4 py-2 shadow-sm">PROGRAMADA</span>';
+        if(data.estado === 'DICTADA') badgeEstado = '<span class="badge bg-success fs-5 rounded-pill px-4 py-2 shadow-sm">DICTADA (Completada)</span>';
+        if(data.estado === 'CANCELADA') badgeEstado = '<span class="badge bg-danger fs-5 rounded-pill px-4 py-2 shadow-sm">CANCELADA</span>';
+        document.getElementById('modalEstado').innerHTML = badgeEstado;
+
+        modalActivo.show();
+    }
+</script>
+{% endblock %}

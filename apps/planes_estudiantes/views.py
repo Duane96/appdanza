@@ -31,54 +31,55 @@ class CrearEstudianteView(LoginRequiredMixin, CreateView):
         apellidos = form.cleaned_data['apellidos']
         academia_actual = self.request.tenant
 
-        # Limpiar nombres para generar el username 'pedroperez'
+        # 🚀 CONTROL SENIOR 1: Verificamos duplicados estrictamente en ESTA academia
+        if Estudiante.objects.filter(academia=academia_actual, identificacion=identificacion).exists():
+            messages.error(self.request, f"El documento {identificacion} ya está registrado en tu academia.")
+            form.add_error('identificacion', 'Esta identificación ya está en uso.')
+            return self.form_invalid(form)
+
+        # Limpiar nombres para generar la base del username (ej: pedroperez)
         nombre_limpio = "".join(nombres.split()).lower()
         apellido_limpio = "".join(apellidos.split()).lower()
-        username_generado = f"{nombre_limpio}{apellido_limpio}"
+        base_username = f"{nombre_limpio}{apellido_limpio}"
         
-        username_generado = "".join(
-            c for c in unicodedata.normalize('NFD', username_generado)
+        base_username = "".join(
+            c for c in unicodedata.normalize('NFD', base_username)
             if unicodedata.category(c) != 'Mn'
         )
 
         with transaction.atomic():
-            # 1. Crear el Usuario de Django
-            user, created = User.objects.get_or_create(
-                username=username_generado,
-                defaults={
-                    'email': email or '',
-                    'first_name': nombres,
-                    'last_name': apellidos,
-                }
-            )
+            # 🚀 CONTROL SENIOR 2: Generador de Usuario 100% Único Globalmente
+            username_final = base_username
+            contador = 1
             
-            if not created:
-                user, created = User.objects.get_or_create(
-                    username=f"{username_generado}{identificacion[-4:]}",
-                    defaults={
-                        'email': email or '',
-                        'first_name': nombres,
-                        'last_name': apellidos,
-                    }
-                )
+            # Bucle antibloqueos: Si el username global ya existe, iteramos hasta encontrar un hueco
+            while User.objects.filter(username=username_final).exists():
+                username_final = f"{base_username}{identificacion[-4:]}{contador}"
+                contador += 1
+                
+            # 🚀 EL FIX DE LA CONTRASEÑA ESTÁ AQUÍ
+            # create_user() se encarga de aplicar el Hash (encriptación) automáticamente
+            # y de manera perfecta desde el instante en que nace el usuario.
+            user = User.objects.create_user(
+                username=username_final,
+                email=email or '',
+                password=identificacion,  # <-- Django encripta el documento automáticamente
+                first_name=nombres,
+                last_name=apellidos
+            )
 
-            user.set_password(identificacion)
-            user.save()
-
-            # 2. Crear el PerfilUsuario del SaaS
-            PerfilUsuario.objects.get_or_create(
+            # Crear el PerfilUsuario de forma directa y limpia
+            PerfilUsuario.objects.create(
                 user=user,
-                defaults={
-                    'academia': academia_actual,
-                    'rol': 'ESTUDIANTE'
-                }
+                academia=academia_actual,
+                rol='ESTUDIANTE'
             )
 
-            # 3. Guardar el modelo Estudiante manualmente sin pasar por el super() rígido
+            # Guardar el modelo Estudiante asignando el Tenant
             form.instance.academia = academia_actual
-            self.object = form.save() # Guardamos el estudiante en la BD y lo asignamos a la vista
+            self.object = form.save() 
             
-        # 🚀 CONTROL SENIOR: Redireccionamos directamente usando la función success_url limpia
+        messages.success(self.request, f"Estudiante {nombres} registrado con éxito.")
         return HttpResponseRedirect(self.get_success_url())
 
     def get_success_url(self):
@@ -191,36 +192,64 @@ class PortalEstudianteView(LoginRequiredMixin, TemplateView):
         user = self.request.user
         academia_actual = self.request.tenant
 
+        from apps.asistencias.models import Asistencia 
+
+        estudiante = None
+
         try:
-            # 1. Buscamos el estudiante por su correo electrónico
-            estudiante = Estudiante.objects.get(email=user.email, academia=academia_actual)
-            context['estudiante'] = estudiante
+            # 🚀 CONTROL SENIOR 1: Prioridad Absoluta a la Identidad Real
+            # Buscamos primero por los nombres que Django guardó fielmente al crear el usuario.
+            # Esto evita que los "correos autocompletados" crucen información entre alumnos.
+            if user.first_name and user.last_name:
+                queryset = Estudiante.objects.filter(
+                    nombres=user.first_name,
+                    apellidos=user.last_name,
+                    academia=academia_actual
+                )
+                
+                # Si hay dos alumnos que se llaman EXACTAMENTE igual, desempatamos con el email
+                if queryset.count() > 1 and user.email and user.email.strip() != "":
+                    estudiante = queryset.filter(email__iexact=user.email).first()
+                else:
+                    estudiante = queryset.first()
 
-            # 2. Traemos TODAS las tiqueteras para sacar la actual, pero al contexto solo pasamos las últimas 10 para el historial de pagos
-            todas_inscripciones = InscripcionPlan.objects.filter(
-                estudiante=estudiante, 
-                academia=academia_actual
-            ).order_by('-fecha_inicio')
-            
-            context['pagos'] = todas_inscripciones[:10] # 🚀 LIMITADO A LOS ÚLTIMOS 10 PAGOS
+            # 🚀 CONTROL SENIOR 2: Red de seguridad
+            # Si el alumno no se encontró por nombre (muy raro), buscamos por email
+            if not estudiante and user.email and user.email.strip() != "":
+                estudiante = Estudiante.objects.filter(
+                    email__iexact=user.email, 
+                    academia=academia_actual
+                ).first()
 
-            # 3. Identificamos su tiquetera/plan más reciente (el activo)
-            plan_actual = todas_inscripciones.first()
-            context['plan_actual'] = plan_actual
+            # --- RENDERIZADO DEL PORTAL ---
+            if estudiante:
+                context['estudiante'] = estudiante
 
-            # 4. 🧠 FILTRADO INTELIGENTE DE ASISTENCIAS:
-            if plan_actual:
-                # Traemos solo las asistencias desde la fecha en que inició este plan en adelante
-                context['asistencias'] = Asistencia.objects.filter(
-                    estudiante=estudiante,
-                    academia=academia_actual,
-                    fecha_hora__date__gte=plan_actual.fecha_inicio # 🚀 Solo desde que empezó el plan actual
-                ).order_by('-fecha_hora')
+                todas_inscripciones = InscripcionPlan.objects.filter(
+                    estudiante=estudiante, 
+                    academia=academia_actual
+                ).order_by('-fecha_inicio')
+                
+                context['pagos'] = todas_inscripciones[:10] 
+
+                plan_actual = todas_inscripciones.first()
+                context['plan_actual'] = plan_actual
+
+                if plan_actual:
+                    context['asistencias'] = Asistencia.objects.filter(
+                        estudiante=estudiante,
+                        academia=academia_actual,
+                        fecha_hora__date__gte=plan_actual.fecha_inicio
+                    ).order_by('-fecha_hora')
+                else:
+                    context['asistencias'] = Asistencia.objects.none()
+
             else:
-                context['asistencias'] = Asistencia.objects.none()
+                context['error'] = "No se encontró la ficha de estudiante asociada a tu usuario."
 
-        except Estudiante.DoesNotExist:
-            context['error'] = "No se encontró un perfil de estudiante asociado a esta cuenta corporativa."
+        except Exception as e:
+            print(f"🚨 Error cargando portal del estudiante: {e}")
+            context['error'] = "Ocurrió un error al cargar tu información."
         
         return context
     

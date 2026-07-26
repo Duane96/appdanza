@@ -5,6 +5,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 
 from apps.eventos.models import Evento
+from apps.profesores.models import OrdenPagoMensual
 from .models import Academia
 from django.contrib.auth.views import LoginView
 
@@ -16,7 +17,7 @@ from django.utils import timezone
 from django.db.models import Sum, Max, Prefetch
 import json
 
-from .forms import ConfigMascaraForm
+from .forms import ConfigMascaraForm, TenantLoginForm
 
 from django.contrib.auth.views import LogoutView
 
@@ -113,32 +114,35 @@ class LandingAcademiaView(TemplateView):
 class LoginAcademiaView(LoginView):
     """Formulario de inicio de sesión adaptado al tenant con control anti-morosos."""
     template_name = "academias/login.html"
+    form_class = TenantLoginForm
 
     def get_success_url(self):
-        """🚀 REDIRECCIÓN INTELIGENTE: Evalúa si el inquilino está suspendido antes de dar paso."""
+        """🚀 REDIRECCIÓN INTELIGENTE: Evalúa roles y suspensiones."""
         user = self.request.user
         tenant = self.request.tenant
         slug = tenant.slug
         suscripcion = tenant.suscripcion_saas
 
-        # 🛑 FILTRO DE CONTROL SAAS: Si la academia está bloqueada/suspendida
+        # 🛑 FILTRO DE CONTROL SAAS
         if suscripcion.estado == 'SUSPENDIDO':
-            # Si es un estudiante, no debería usar la plataforma; si es admin, va directo a la pantalla de cobro
-            # Redirigimos a una ruta segura que maneje el aviso (por ejemplo, la landing page o la URL capturada por el middleware)
             return reverse('academias:dashboard', kwargs={'slug_academia': slug})
 
         try:
             perfil = user.perfil
-            # 1. Si es Administrador o Profesor, va al panel de control global
-            if perfil.rol in ['ADMIN_ACADEMIA', 'PROFESOR']:
+            
+            # 1. 👑 Administrador -> Panel Global
+            if perfil.rol == 'ADMIN_ACADEMIA':
                 return reverse('academias:dashboard', kwargs={'slug_academia': slug})
             
-            # 2. 🎯 Si es Estudiante, va DIRECTO a su portal de tiqueteras y QR
+            # 2. 👨‍🏫 Profesor -> Su propio Dashboard (NUEVO)
+            elif perfil.rol == 'PROFESOR':
+                return reverse('profesores:dashboard_profesor', kwargs={'slug_academia': slug})
+            
+            # 3. 🎓 Estudiante -> Portal Estudiantil
             elif perfil.rol == 'ESTUDIANTE':
                 return reverse('planes_estudiantes:portal_estudiante', kwargs={'slug_academia': slug})
         
         except AttributeError:
-            # Si es un Superusuario maestro de Django, al dashboard por defecto
             if user.is_staff:
                 return reverse('academias:dashboard', kwargs={'slug_academia': slug})
         
@@ -276,6 +280,16 @@ class DashboardAdminView(TenantAdminRequiredMixin, TemplateView):
 
         context['chart_ingresos'] = json.dumps(chart_ingresos)
         context['chart_gastos'] = json.dumps(chart_gastos)
+
+
+        # 🚀 NUEVO: Traer cuentas de cobro esperando pago
+        cuentas_por_pagar = OrdenPagoMensual.objects.filter(
+            academia=academia, 
+            estado='APROBADA_PROFE'
+        ).select_related('profesor__usuario') # select_related para no ahogar la base de datos
+        
+        context['cuentas_por_pagar'] = cuentas_por_pagar
+        context['total_cuentas_pendientes'] = cuentas_por_pagar.count()
 
         return context
 

@@ -1,0 +1,555 @@
+<!-- templates/calendario/admin_calendario.html -->
+{% extends "base_tenant.html" %}
+{% load calendario_extras %}
+
+{% block content %}
+<style>
+    /* ---------------------------------------------------
+       ✨ ESTILO TABLERO ADHESIVO (MIRO / TRELLO VIBES)
+       --------------------------------------------------- */
+    .board-container {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 1.25rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+        overflow: hidden;
+    }
+
+    .board-header-day {
+        background-color: #f1f5f9;
+        font-weight: 800;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 1px;
+        color: #475569;
+        padding: 12px 0;
+        border-bottom: 2px solid #e2e8f0;
+    }
+
+    .board-cell {
+        min-height: 130px;
+        background-color: #ffffff;
+        border-right: 1px solid #f1f5f9;
+        border-bottom: 1px solid #f1f5f9;
+        transition: background-color 0.2s ease;
+        position: relative;
+        vertical-align: top;
+        padding: 8px !important;
+    }
+
+    .board-cell:hover {
+        background-color: #fafcfd;
+    }
+
+    .board-cell.other-month {
+        background-color: #fcfcfc;
+        opacity: 0.5;
+    }
+
+    .board-cell.is-today {
+        background-color: rgba(var(--bs-primary-rgb, 111, 66, 193), 0.02);
+    }
+
+    .day-number {
+        font-weight: 700;
+        font-size: 0.85rem;
+        color: #64748b;
+        width: 26px; height: 26px;
+        display: inline-flex;
+        align-items: center; justify-content: center;
+        border-radius: 50%;
+        margin-bottom: 6px;
+    }
+
+    .board-cell.is-today .day-number {
+        background-color: var(--bg-academia-primary, #6f42c1);
+        color: #ffffff;
+        box-shadow: 0 2px 6px rgba(111, 66, 193, 0.4);
+    }
+
+    /* ---------------- NOTAS ADHESIVAS (POST-ITS) MEJORADAS ---------------- */
+    .postit-card {
+        border-radius: 8px; 
+        padding: 8px 10px; 
+        margin-bottom: 6px;
+        color: #ffffff; /* Letra blanca por defecto */
+        text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.85); /* 🚀 SOMBRA AGRESIVA para contraste perfecto en fondos claros */
+        box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+        cursor: pointer; 
+        position: relative; 
+        border: none; 
+        text-align: left; 
+        width: 100%;
+        transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+    }
+
+    .postit-card:hover { 
+        transform: translateY(-3px) scale(1.02); 
+        box-shadow: 0 8px 20px rgba(0,0,0,0.3); 
+        z-index: 10; 
+    }
+    
+    /* 🚀 Clases pasadas/canceladas se ven transparentes para limpiar la vista */
+    .postit-faded { 
+        opacity: 0.65; 
+        border: 1px dashed rgba(255,255,255,0.5); 
+    }
+    .postit-faded:hover { 
+        opacity: 1; 
+    }
+
+    .postit-title { 
+        font-weight: 900; 
+        font-size: 0.8rem; 
+        letter-spacing: -0.2px; 
+        margin-bottom: 4px; 
+        display: -webkit-box; 
+        -webkit-line-clamp: 2; 
+        -webkit-box-orient: vertical; 
+        overflow: hidden; 
+    }
+
+    .postit-footer { 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        font-size: 0.7rem; 
+        font-weight: 700; 
+    }
+</style>
+
+<!-- ENCABEZADO Y NAVEGACIÓN DE MESES -->
+<div class="row mb-4 align-items-center">
+    <div class="col-md-4">
+        <h3 class="fw-bold text-dark m-0">
+            <i class="bi bi-kanban text-primary me-2"></i>Agenda Operativa
+        </h3>
+        <p class="text-muted small mb-0 mt-1">Gestión visual y dinámica de tus clases.</p>
+    </div>
+    
+    <div class="col-md-8 text-md-end mt-3 mt-md-0 d-flex flex-wrap justify-content-md-end align-items-center gap-3">
+        <!-- Controles de Mes (Estilo Píldora) -->
+        <div class="btn-group shadow-sm rounded-pill overflow-hidden border bg-white">
+            <a href="?mes={{ mes_anterior }}&anio={{ anio_anterior }}" class="btn btn-white text-dark border-0 px-3 py-2">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+            <span class="btn btn-white text-dark border-0 fw-bold px-3 py-2 d-flex align-items-center bg-light">
+                {{ nombre_mes }} {{ anio_actual }}
+            </span>
+            <a href="?mes={{ mes_siguiente }}&anio={{ anio_siguiente }}" class="btn btn-white text-dark border-0 px-3 py-2">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        </div>
+
+        <a href="{% url 'calendario:lista_clases' request.tenant.slug %}" class="btn btn-white rounded-pill fw-bold shadow-sm hover-lift text-dark border py-2">
+            <i class="bi bi-gear-fill text-secondary me-1"></i> Catálogo
+        </a>
+        
+        <!-- BOTÓN PARA ABRIR MODAL DE AGENDAMIENTO -->
+        <button type="button" class="btn btn-primary rounded-pill fw-bold shadow-sm hover-lift py-2 px-4" data-bs-toggle="modal" data-bs-target="#modalAgendarSesion">
+            <i class="bi bi-plus-lg me-1"></i> Agendar Clase
+        </button>
+    </div>
+</div>
+
+<!-- TABLERO TIPO CALENDARIO GRID -->
+<div class="board-container mb-5">
+    <div class="table-responsive m-0">
+        <table class="table table-bordered m-0 align-middle">
+            <thead>
+                <tr>
+                    <th class="board-header-day text-center" style="width: 14.28%;">Lunes</th>
+                    <th class="board-header-day text-center" style="width: 14.28%;">Martes</th>
+                    <th class="board-header-day text-center" style="width: 14.28%;">Miércoles</th>
+                    <th class="board-header-day text-center" style="width: 14.28%;">Jueves</th>
+                    <th class="board-header-day text-center" style="width: 14.28%;">Viernes</th>
+                    <th class="board-header-day text-center" style="width: 14.28%;">Sábado</th>
+                    <th class="board-header-day text-center" style="width: 14.28%;">Domingo</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for semana in dias_mes %}
+                <tr>
+                    {% for dia in semana %}
+                        {% with dia_iso=dia.isoformat %}
+                        <td class="board-cell 
+                            {% if dia.month != mes_actual %}other-month{% endif %} 
+                            {% if dia == hoy %}is-today{% endif %}">
+                            
+                            <div class="day-number">{{ dia.day }}</div>
+
+                            <!-- CONTENEDOR DE POST-ITS PARA ESTE DÍA -->
+                            <div class="d-flex flex-column gap-1">
+                                {% for sesion in sesiones_por_fecha|get_item:dia_iso %}
+                                    <button type="button" 
+                                            class="postit-card {% if sesion.estado != 'PROGRAMADA' %}postit-faded{% endif %}" 
+                                            style="background-color: {% if sesion.estado == 'CANCELADA' %}#dc3545{% elif sesion.estado == 'DICTADA' %}#198754{% else %}{{ sesion.clase.color_calendario }}{% endif %};"
+                                            onclick='abrirModalSesion({
+                                                id: {{ sesion.id }},
+                                                nombre: "{{ sesion.clase.nombre|escapejs }}",
+                                                profe: "{{ sesion.profe_a_pagar.usuario.get_full_name|escapejs }}",
+                                                horario: "{{ sesion.fecha_hora_inicio|time:"h:i A" }} - {{ sesion.fecha_hora_fin|time:"h:i A" }}",
+                                                cupos: "{{ sesion.total_reservas }} / {{ sesion.clase.limite_cupos }}",
+                                                estado: "{{ sesion.estado }}",
+                                                pagada: {% if sesion.pagada_al_profesor %}true{% else %}false{% endif %},
+                                                tipoPago: "{{ sesion.profe_a_pagar.tipo_pago }}",
+                                                urlExcepcion: "{% url 'calendario:excepcion_sesion' request.tenant.slug sesion.id %}",
+                                                /* 🚀 ARRAY DE ALUMNOS INSCRITOS PARA EL CHISMÓGRAFO */
+                                                alumnos: [
+                                                    {% for r in sesion.reservas.all %}
+                                                        "{{ r.estudiante.first_name|escapejs }} {{ r.estudiante.last_name|escapejs }}"{% if not forloop.last %},{% endif %}
+                                                    {% endfor %}
+                                                ]
+                                            })'>
+                                        
+                                        <div class="postit-title">{{ sesion.clase.nombre }}</div>
+                                        <div class="postit-footer">
+                                            <span><i class="bi bi-clock me-1"></i>{{ sesion.fecha_hora_inicio|time:"h:i A" }}</span>
+                                            <span class="badge bg-dark bg-opacity-50 text-white shadow-sm px-1 py-0">{{ sesion.total_reservas }}/{{ sesion.clase.limite_cupos }}</span>
+                                        </div>
+                                    </button>
+                                {% endfor %}
+                            </div>
+
+                        </td>
+                        {% endwith %}
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+<!-- ======================================================= -->
+<!-- 🚀 MODAL 1: DETALLE DE SESIÓN, ALUMNOS Y PAGO           -->
+<!-- ======================================================= -->
+<div class="modal fade" id="modalDetalleSesion" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
+            <div class="modal-header border-0 p-4" id="modalHeaderColor">
+                <h4 class="modal-title fw-black text-white m-0" id="modalClaseNombre" style="text-shadow: 0 2px 4px rgba(0,0,0,0.2);"></h4>
+                <button type="button" class="btn-close btn-close-white z-3" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-light">
+                
+                <!-- CAJA DE INFORMACIÓN DEL PROFE Y HORARIOS -->
+                <div class="bg-white p-3 rounded-4 shadow-sm mb-4">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center me-3 shadow-sm" style="width: 45px; height: 45px;">
+                            <i class="bi bi-person-fill fs-5"></i>
+                        </div>
+                        <div>
+                            <small class="text-muted d-block lh-1 text-uppercase fw-bold" style="font-size: 0.7rem;">Instructor Asignado</small>
+                            <strong class="text-dark fs-6" id="modalProfe"></strong>
+                        </div>
+                    </div>
+                    
+                    <div class="row text-center g-2">
+                        <div class="col-6">
+                            <div class="p-2 bg-light rounded-3 border">
+                                <i class="bi bi-clock-history text-warning d-block mb-1 fs-5"></i>
+                                <span class="fw-bold small text-dark d-block" id="modalHorario"></span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-2 bg-light rounded-3 border">
+                                <i class="bi bi-people-fill text-success d-block mb-1 fs-5"></i>
+                                <span class="fw-bold small text-dark d-block" id="modalCupos"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 🚀 NUEVA CAJA DE ALUMNOS INSCRITOS -->
+                <div class="mb-4 text-start">
+                    <span class="small text-muted fw-bold text-uppercase d-block mb-2"><i class="bi bi-card-checklist me-1"></i> Lista de Asistencia</span>
+                    <div class="bg-white border rounded-3 overflow-hidden shadow-sm" id="modalListaAlumnos">
+                        <!-- Javascript inyectará los alumnos aquí -->
+                    </div>
+                </div>
+
+                <!-- ESTADO Y ACCIONES -->
+                <div class="text-center mb-3">
+                    <span class="small text-muted fw-bold text-uppercase d-block mb-1">Estado de la Sesión</span>
+                    <div id="modalEstado"></div>
+                </div>
+
+                <div class="d-grid gap-2" id="contenedorBotones"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ======================================================= -->
+<!-- 🚀 MODAL 2: AGENDAR NUEVA CLASE DESDE EL CALENDARIO     -->
+<!-- ======================================================= -->
+<div class="modal fade" id="modalAgendarSesion" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white border-0 rounded-top-4 p-4">
+                <h5 class="modal-title fw-bold"><i class="bi bi-calendar-plus me-2"></i>Agendar Nueva Clase</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-light">
+                <form id="formAgendarSesion">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">¿Qué clase se dictará? (Catálogo)</label>
+                        <select class="form-select rounded-3 shadow-sm border-0" id="agendarClaseId" required>
+                            <option value="">Seleccione una materia...</option>
+                            {% for c in catalogo_clases %}
+                                <option value="{{ c.id }}">{{ c.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">Profesor Asignado</label>
+                        <select class="form-select rounded-3 shadow-sm border-0" id="agendarProfeId" required>
+                            <option value="">Seleccione al instructor...</option>
+                            {% for p in profesores_activos %}
+                                <option value="{{ p.id }}">{{ p.usuario.first_name }} {{ p.usuario.last_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-bold small text-muted">Inicia</label>
+                            <input type="datetime-local" class="form-control rounded-3 shadow-sm border-0" id="agendarInicio" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold small text-muted">Finaliza</label>
+                            <input type="datetime-local" class="form-control rounded-3 shadow-sm border-0" id="agendarFin" required>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white p-3 rounded-3 border border-primary border-opacity-25 shadow-sm mb-2">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="agendarRepetir" onchange="toggleSemanas(this)">
+                            <label class="form-check-label fw-bold text-dark" for="agendarRepetir">Repetir Semanalmente</label>
+                        </div>
+                        <div class="mt-3 d-none animate__animated animate__fadeIn" id="divSemanas">
+                            <label class="form-label small text-muted mb-1">¿Por cuántas semanas seguidas?</label>
+                            <input type="number" class="form-control rounded-3 bg-light" id="agendarSemanas" value="4" min="2" max="52">
+                            <small class="text-primary mt-1 d-block"><i class="bi bi-info-circle me-1"></i>Creará copias exactas cada 7 días a la misma hora.</small>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-white border-0 rounded-bottom-4 p-3 d-flex justify-content-between">
+                <button type="button" class="btn btn-light rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary rounded-pill px-4 shadow-sm fw-bold hover-lift" onclick="procesarAgendamiento()">
+                    <i class="bi bi-save me-1"></i> Programar en Calendario
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 🛡️ INYECCIÓN DEL TOKEN CSRF -->
+<div style="display: none;">
+    {% csrf_token %}
+</div>
+
+<!-- 🚀 IMPORTACIÓN DE SWEETALERT2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<!-- SCRIPTS DE GESTIÓN -->
+<script>
+    // -------------------------------------------------------------
+    // 1. LÓGICA DEL MODAL DE DETALLES DE SESIÓN Y PAGOS
+    // -------------------------------------------------------------
+    let modalActivo = null;
+
+    function abrirModalSesion(data) {
+        var modalElement = document.getElementById('modalDetalleSesion');
+        modalActivo = new bootstrap.Modal(modalElement);
+
+        let headerColor = data.estado === 'CANCELADA' ? '#dc3545' : (data.estado === 'DICTADA' ? '#198754' : '#6f42c1');
+        document.getElementById('modalHeaderColor').style.backgroundColor = headerColor;
+        document.getElementById('modalClaseNombre').innerText = data.nombre;
+        document.getElementById('modalProfe').innerText = data.profe;
+        document.getElementById('modalHorario').innerText = data.horario;
+        document.getElementById('modalCupos').innerText = data.cupos;
+        
+        // 🚀 INYECTAR LISTA DE ALUMNOS (CHISMÓGRAFO)
+        let listaHTML = '';
+        if (data.alumnos.length > 0) {
+            listaHTML = '<ul class="list-group list-group-flush text-start small mb-0 style-scroll" style="max-height: 160px; overflow-y: auto;">';
+            data.alumnos.forEach(alumno => {
+                listaHTML += `<li class="list-group-item py-2 px-3 border-bottom"><i class="bi bi-person-check text-success me-2"></i><strong>${alumno}</strong></li>`;
+            });
+            listaHTML += '</ul>';
+        } else {
+            listaHTML = '<div class="text-muted small py-3 px-3 fst-italic text-center">Nadie se ha registrado en esta clase aún.</div>';
+        }
+        document.getElementById('modalListaAlumnos').innerHTML = listaHTML;
+        
+        // 🚀 BADGES DE ESTADO
+        let badgeEstado = '';
+        if(data.estado === 'PROGRAMADA') badgeEstado = '<span class="badge bg-primary fs-6 rounded-pill px-4 py-2 shadow-sm">PROGRAMADA</span>';
+        if(data.estado === 'DICTADA') badgeEstado = '<span class="badge bg-success fs-6 rounded-pill px-4 py-2 shadow-sm">DICTADA</span>';
+        if(data.estado === 'CANCELADA') badgeEstado = '<span class="badge bg-danger fs-6 rounded-pill px-4 py-2 shadow-sm">CANCELADA</span>';
+        document.getElementById('modalEstado').innerHTML = badgeEstado;
+
+        // 🚀 BOTONES DINÁMICOS
+        let botonesHTML = '';
+        if(data.estado === 'PROGRAMADA') {
+            botonesHTML += `
+                <button class="btn btn-success btn-lg rounded-pill fw-bold shadow-sm mb-2" onclick="marcarClaseDictada(${data.id})">
+                    <i class="bi bi-check2-circle me-2"></i> Confirmar Clase Dictada
+                </button>
+                <a href="${data.urlExcepcion}" class="btn btn-outline-dark rounded-pill fw-bold shadow-sm">
+                    <i class="bi bi-sliders me-1"></i> Configurar Excepción Específica
+                </a>
+            `;
+        } else if(data.estado === 'DICTADA') {
+            let pagoTxt = data.pagada ? 'Pago transferido' : (data.tipoPago === 'MENSUAL' ? 'Agregado a planilla' : 'Deuda pendiente');
+            botonesHTML += `
+                <button class="btn btn-light text-success fw-bold rounded-pill border shadow-sm" disabled>
+                    <i class="bi bi-shield-check me-1"></i> Completado (${pagoTxt})
+                </button>
+            `;
+        } else {
+            botonesHTML += `
+                <button class="btn btn-light text-danger fw-bold rounded-pill border shadow-sm" disabled>
+                    <i class="bi bi-x-octagon-fill me-1"></i> Cancelada
+                </button>
+            `;
+        }
+
+        document.getElementById('contenedorBotones').innerHTML = botonesHTML;
+        modalActivo.show();
+    }
+
+    function marcarClaseDictada(sesionId) {
+        if (modalActivo) { modalActivo.hide(); }
+        
+        setTimeout(() => {
+            Swal.fire({
+                title: '¿Confirmar clase?',
+                text: "Se registrará como dictada y se notificará a Finanzas.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#6f42c1',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, confirmar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        title: 'Procesando...',
+                        text: 'Actualizando registros contables',
+                        allowOutsideClick: false,
+                        didOpen: () => { Swal.showLoading(); }
+                    });
+                    procesarPago(sesionId, false);
+                }
+            });
+        }, 300);
+    }
+
+    function procesarPago(sesionId, confirmarPagoInmediato) {
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        const endpointURL = "{% url 'calendario:ajax_marcar_dictada' slug_academia=request.tenant.slug %}";
+
+        fetch(endpointURL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            body: JSON.stringify({ 'sesion_id': sesionId, 'confirmar_pago': confirmarPagoInmediato })
+        })
+        .then(async r => {
+            if (!r.ok) throw new Error(`Código ${r.status}: Problema de servidor.`);
+            return r.json();
+        })
+        .then(data => {
+            if(data.status === 'success') {
+                if(data.tipo_pago === 'POR_CLASE' && !data.pagado) {
+                    Swal.fire({
+                        title: 'Liquidación de Pago',
+                        html: `<b>${data.profesor_nombre}</b> cobra por clase.<br><br>¿Registrar salida de <b>$${data.tarifa}</b> en Finanzas?`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonColor: '#198754',
+                        cancelButtonColor: '#ffc107',
+                        confirmButtonText: 'Registrar Pago',
+                        cancelButtonText: 'Dejar Pendiente'
+                    }).then((res) => {
+                        if (res.isConfirmed) { 
+                            Swal.fire({title: 'Guardando egreso...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+                            procesarPago(sesionId, true); 
+                        } else { 
+                            Swal.fire('Guardado', 'Pago marcado como pendiente.', 'info').then(() => location.reload()); 
+                        }
+                    });
+                } else {
+                    Swal.fire('¡Éxito!', data.message, 'success').then(() => location.reload());
+                }
+            } else {
+                Swal.fire('Error', data.message, 'error');
+            }
+        })
+        .catch(error => Swal.fire('Error', error.message, 'error'));
+    }
+
+    // -------------------------------------------------------------
+    // 2. LÓGICA DE AGENDAMIENTO DESDE EL CALENDARIO
+    // -------------------------------------------------------------
+    function toggleSemanas(checkbox) {
+        const div = document.getElementById('divSemanas');
+        if(checkbox.checked) {
+            div.classList.remove('d-none');
+        } else {
+            div.classList.add('d-none');
+        }
+    }
+
+    function procesarAgendamiento() {
+        const clase_id = document.getElementById('agendarClaseId').value;
+        const profe_id = document.getElementById('agendarProfeId').value;
+        const inicio = document.getElementById('agendarInicio').value;
+        const fin = document.getElementById('agendarFin').value;
+        const repetir = document.getElementById('agendarRepetir').checked;
+        const semanas = document.getElementById('agendarSemanas').value;
+
+        if(!clase_id || !profe_id || !inicio || !fin) {
+            Swal.fire('Atención', 'Por favor selecciona la clase, el profesor y los horarios.', 'warning');
+            return;
+        }
+
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        const urlEndpoint = "{% url 'calendario:ajax_agendar_sesion' request.tenant.slug %}";
+
+        bootstrap.Modal.getInstance(document.getElementById('modalAgendarSesion')).hide();
+
+        Swal.fire({
+            title: 'Agendando...',
+            text: repetir ? `Generando horario por ${semanas} semanas...` : 'Guardando sesión única...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        fetch(urlEndpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            body: JSON.stringify({
+                clase_id: clase_id, profe_id: profe_id,
+                inicio: inicio, fin: fin, repetir: repetir, semanas: semanas
+            })
+        })
+        .then(async r => {
+            if(!r.ok) throw new Error("Error conectando con el servidor.");
+            return r.json();
+        })
+        .then(data => {
+            if(data.status === 'success') {
+                Swal.fire('¡Calendario Actualizado!', data.message, 'success').then(() => location.reload());
+            } else {
+                Swal.fire('Error', data.message, 'error');
+            }
+        })
+        .catch(err => Swal.fire('Error', err.message, 'error'));
+    }
+</script>
+{% endblock %}

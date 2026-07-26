@@ -1,0 +1,75 @@
+{% extends "base_tenant.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm rounded-4 hover-lift">
+            <div class="card-header bg-white border-0 pt-4 pb-0 px-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4 class="fw-bold text-dark m-0">
+                        <i class="bi bi-tags text-primary me-2"></i>{% if object %}Editar Configuración: {{ object.nombre }}{% else %}Crear Regla de Clase{% endif %}
+                    </h4>
+                    <a href="{% url 'calendario:lista_clases' request.tenant.slug %}" class="btn btn-sm btn-light rounded-pill text-muted border shadow-sm">
+                        <i class="bi bi-arrow-left me-1"></i> Volver
+                    </a>
+                </div>
+                <p class="text-muted small mt-2 mb-0">Configura la regla de recurrencia. El sistema generará automáticamente las sesiones futuras en el calendario.</p>
+                <hr class="opacity-25 mt-3 mb-0">
+            </div>
+            
+            <div class="card-body p-4">
+                <form method="POST" novalidate>
+                    {% csrf_token %}
+                    
+                    <div class="row g-3">
+                        {% for field in form %}
+                            <!-- 🚀 Lógica Frontend Senior: Asignación dinámica de anchos de columna -->
+                            {% if field.name == 'descripcion' %}
+                                <div class="col-12">
+                            {% elif field.name in 'dia_semana,hora_inicio,hora_fin' %}
+                                <div class="col-md-4">
+                            {% elif field.name == 'color_calendario' %}
+                                <div class="col-md-3">
+                            {% else %}
+                                <div class="col-md-6">
+                            {% endif %}
+                                
+                                <label for="{{ field.id_for_label }}" class="form-label fw-semibold text-secondary small text-uppercase mb-1">
+                                    {{ field.label }}
+                                    {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+                                </label>
+                                
+                                {{ field }}
+                                
+                                {% if field.help_text %}
+                                    <div class="form-text small text-muted mt-1">
+                                        <i class="bi bi-info-circle me-1"></i>{{ field.help_text }}
+                                    </div>
+                                {% endif %}
+                                
+                                {% if field.errors %}
+                                    <div class="text-danger small fw-bold mt-1">
+                                        {% for error in field.errors %}
+                                            <i class="bi bi-x-circle-fill me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="alert bg-warning bg-opacity-10 text-dark border-0 rounded-3 mt-4 small border-start border-warning border-4">
+                        <i class="bi bi-lightning-charge-fill text-warning me-2"></i><strong>Automatización Activa:</strong> Al guardar, el sistema poblará tu calendario con las clases de los próximos 2 meses para este día y horario.
+                    </div>
+                    
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg rounded-pill fw-bold shadow-sm hover-lift">
+                            <i class="bi bi-save-fill me-2"></i>Guardar Regla
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

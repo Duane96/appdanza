@@ -39,6 +39,12 @@ urlpatterns = [
     path('', include('apps.eventos.urls')), # 👈 ENGANCHAMOS LAS URLS DE EVENTOS DE UNA
     path('', include('apps.multimedia.urls')),
     path('', include('apps.tienda.urls')),
+    # 👨‍🏫 Módulo de Profesores
+    # El <slug:slug_academia> captura la academia actual para el TenantMiddleware
+    path('<slug:slug_academia>/profesores/', include('apps.profesores.urls', namespace='profesores')),
+    
+    # 📅 Módulo de Calendario y Clases
+    path('<slug:slug_academia>/calendario/', include('apps.calendario.urls', namespace='calendario')),
     
 ]
 

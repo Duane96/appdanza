@@ -1,5 +1,6 @@
 # apps/finanzas/models.py
 from django.db import models
+from django.utils import timezone # 🕒 Importación vital para la hora local (Colombia)
 from apps.academias.models import Academia
 from apps.planes_estudiantes.models import InscripcionPlan
 from django.contrib.auth.models import User
@@ -50,14 +51,30 @@ class ReciboIngreso(models.Model):
     motivo_anulacion = models.TextField(blank=True, null=True, help_text="Por qué se anuló este recibo de caja")
     anulado_por = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True, related_name='recibos_anulados')
     
-    fecha = models.DateField(auto_now_add=True)
-    creado_en = models.DateTimeField(auto_now_add=True)
+    # 🕒 HORA COLOMBIA: Usamos timezone.now como default en lugar de auto_now_add
+    fecha = models.DateField(default=timezone.now)
+    creado_en = models.DateTimeField(default=timezone.now)
 
     def save(self, *args, **kwargs):
-        """Generador de consecutivo automático por Tenant antes de guardar"""
+        """Generador de consecutivo automático seguro para Recibos (RC)"""
         if not self.numero_recibo:
-            total_recibos = ReciboIngreso.objects.filter(academia=self.academia).count() + 1
-            self.numero_recibo = f"RC-{total_recibos:04d}"
+            # Buscamos el último RECIBO creado por esta academia, ordenado por ID descendente
+            # Usamos -id porque es más rápido a nivel SQL (ORDER BY id DESC LIMIT 1)
+            ultimo_recibo = ReciboIngreso.objects.filter(academia=self.academia).order_by('-id').first()
+            
+            if ultimo_recibo and ultimo_recibo.numero_recibo.startswith('RC-'):
+                try:
+                    # Extraemos la parte numérica (ej: de "RC-0005" sacamos 5) y le sumamos 1
+                    ultimo_numero = int(ultimo_recibo.numero_recibo.split('-')[1])
+                    nuevo_numero = ultimo_numero + 1
+                except ValueError:
+                    nuevo_numero = 1
+            else:
+                nuevo_numero = 1
+            
+            # Formateamos con 4 ceros a la izquierda
+            self.numero_recibo = f"RC-{nuevo_numero:04d}"
+            
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -84,19 +101,21 @@ class Gasto(models.Model):
     # 📝 CONSECUTIVO AUTOMÁTICO DE EGRESO
     numero_egreso = models.CharField(max_length=50, editable=False, help_text="Consecutivo automático (Ej: CE-0001)")
     
-    # 🧾 NÚMERO DE FACTURA EXTERNA (Opcional por si no dan factura o es cuenta de cobro interna)
+    # 🧾 NÚMERO DE FACTURA EXTERNA
     numero_factura_proveedor = models.CharField(max_length=100, blank=True, null=True, help_text="Número de la factura que te dio el proveedor")
     
     categoria = models.CharField(max_length=50, choices=CATEGORIAS_GASTO, default='OTROS')
     concepto = models.CharField(max_length=255, help_text="Ej: Pago de 4 clases de Salsa dictadas por el Prof. Carlos")
     monto = models.DecimalField(max_digits=12, decimal_places=2)
-    fecha = models.DateField(help_text="Fecha real del gasto o pago")
     
-    # 🏢 DATOS DE A QUIÉN LE PAGAMOS (Tercero / Profesor / Empresa Servicios)
+    # 🕒 HORA COLOMBIA
+    fecha = models.DateField(default=timezone.now, help_text="Fecha real del gasto o pago")
+    
+    # 🏢 DATOS DE A QUIÉN LE PAGAMOS
     proveedor_nit = models.CharField(max_length=50, help_text="Cédula o NIT del tercero que recibe el dinero")
     proveedor_nombre = models.CharField(max_length=255, help_text="Nombre o Razón Social del tercero")
     
-    # 📎 ARCHIVO DE SOPORTE FÍSICO (Opcional, tal cual como me lo pediste)
+    # 📎 ARCHIVO DE SOPORTE FÍSICO
     soporte_digital = models.FileField(
         upload_to='soportes_gastos/', 
         blank=True, 
@@ -109,7 +128,8 @@ class Gasto(models.Model):
     motivo_anulacion = models.TextField(blank=True, null=True, help_text="Por qué se anuló este egreso")
     anulado_por = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True, related_name='gastos_anulados')
     
-    creado_en = models.DateTimeField(auto_now_add=True)
+    # 🕒 HORA COLOMBIA
+    creado_en = models.DateTimeField(default=timezone.now)
 
     es_deducible = models.BooleanField(
         default=True, 
@@ -117,39 +137,42 @@ class Gasto(models.Model):
     )
 
     def save(self, *args, **kwargs):
-        """Generador de consecutivo automático y optimización de soportes"""
+        """Generador de consecutivo automático seguro y optimización de soportes (CE)"""
         
-        # 1. Consecutivo automático
+        # 1. Consecutivo automático seguro
         if not self.numero_egreso:
-            total_gastos = Gasto.objects.filter(academia=self.academia).count() + 1
-            self.numero_egreso = f"CE-0001" if total_gastos == 1 else f"CE-{total_gastos:04d}"
+            ultimo_gasto = Gasto.objects.filter(academia=self.academia).order_by('-id').first()
+            
+            if ultimo_gasto and ultimo_gasto.numero_egreso.startswith('CE-'):
+                try:
+                    ultimo_numero = int(ultimo_gasto.numero_egreso.split('-')[1])
+                    nuevo_numero = ultimo_numero + 1
+                except ValueError:
+                    nuevo_numero = 1
+            else:
+                nuevo_numero = 1
+                
+            self.numero_egreso = f"CE-{nuevo_numero:04d}"
             
         # 2. ⚡ Optimización del Soporte Digital a WebP (Baja Resolución)
         if self.soporte_digital and not self.soporte_digital.name.lower().endswith('.webp'):
             try:
-                # Abrimos la imagen con Pillow
                 img = Image.open(self.soporte_digital)
                 
-                # Convertimos a RGB (Por si suben un PNG con transparencia o RGBA)
                 if img.mode != 'RGB':
                     img = img.convert('RGB')
                 
-                # Reducimos la resolución máxima a 1200px manteniendo proporción
                 img.thumbnail((1200, 1200))
                 
-                # Guardamos en memoria como WebP comprimido
                 output = BytesIO()
-                img.save(output, format='WEBP', quality=65) # Quality 65% es perfecto para recibos legibles pero ligeros
+                img.save(output, format='WEBP', quality=65) 
                 output.seek(0)
                 
-                # Renombramos el archivo original
                 base_name = os.path.splitext(os.path.basename(self.soporte_digital.name))[0]
                 nuevo_nombre = f"{base_name}_optimizado.webp"
                 
-                # Reasignamos el archivo sin lanzar otro save global
                 self.soporte_digital.save(nuevo_nombre, ContentFile(output.read()), save=False)
             except Exception as e:
-                # Si suben un PDF, Pillow lanzará error, lo capturamos y lo dejamos como PDF
                 print(f"No se pudo convertir a WebP (Probablemente sea un PDF o archivo corrupto): {e}")
 
         super().save(*args, **kwargs)

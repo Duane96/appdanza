@@ -1,57 +1,133 @@
 {% extends "base_tenant.html" %}
 
 {% block content %}
-<ul class="nav nav-tabs mb-4 justify-content-center">
-    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-qr">Escanear QR</button></li>
-    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-manual">Manual</button></li>
+<!-- ========================================== -->
+<!-- NAVEGACIÓN DE PESTAÑAS (TABS)              -->
+<!-- ========================================== -->
+<ul class="nav nav-tabs mb-4 justify-content-center border-bottom-0">
+    <li class="nav-item">
+        <button class="nav-link active fw-bold px-4" data-bs-toggle="tab" data-bs-target="#tab-qr">
+            <i class="bi bi-qr-code-scan me-2"></i> Escanear QR
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link fw-bold px-4" data-bs-toggle="tab" data-bs-target="#tab-manual">
+            <i class="bi bi-person-check me-2"></i> Manual
+        </button>
+    </li>
 </ul>
 
 <div class="tab-content">
+    <!-- ========================================== -->
+    <!-- PESTAÑA 1: ESCÁNER QR                      -->
+    <!-- ========================================== -->
     <div class="tab-pane fade show active" id="tab-qr">
-        <div id="reader" style="width: 100%; max-width: 350px;" class="mx-auto"></div>
+        <!-- Contenedor de la cámara -->
+        <div id="reader" style="width: 100%; max-width: 350px;" class="mx-auto overflow-hidden rounded-4 shadow-sm border"></div>
+        
+        <!-- 🚀 NOTA INFORMATIVA DE SEGURIDAD (AÑADIDA) -->
+        <div class="text-center mt-3 mx-auto" style="max-width: 350px;">
+            <div class="p-2 bg-light rounded-3 border border-secondary-subtle">
+                <small class="text-muted d-block">
+                    <i class="bi bi-shield-lock text-primary me-1"></i> 
+                    Para evitar registros dobles, cada QR requiere un intervalo de <strong>1 minuto</strong> entre lecturas exitosas.
+                </small>
+            </div>
+        </div>
+
+        <!-- Caja de notificaciones (Oculta por defecto) -->
+        <div id="resultado-escaner" class="mt-3 d-none" style="max-width: 350px; margin: 0 auto;">
+            <div id="alerta-box" class="alert p-3 m-0 rounded-4 shadow-sm border-0 text-center">
+                <h5 id="alerta-titulo" class="fw-bold m-0 mb-1"></h5>
+                <p id="alerta-mensaje" class="m-0 small"></p>
+            </div>
+        </div>
     </div>
 
+    <!-- ========================================== -->
+    <!-- PESTAÑA 2: ASISTENCIA MANUAL               -->
+    <!-- ========================================== -->
     <div class="tab-pane fade" id="tab-manual">
-    <div class="card p-4 border-0 shadow-sm">
-        <label class="fw-bold mb-2">Seleccionar Estudiante:</label>
-        <select id="buscador-estudiantes" class="form-select select2">
-            <option value="">Buscar por nombre...</option>
-            {% for est in estudiantes %}
-                <option value="{{ est.id }}">{{ est.nombres }} {{ est.apellidos }}</option>
-            {% endfor %}
-        </select>
-        <button class="btn btn-primary mt-3" onclick="marcarManual()">Registrar Asistencia</button>
-    </div>
+        <div class="card p-4 border-0 shadow-sm rounded-4" style="max-width: 400px; margin: 0 auto;">
+            <label class="fw-bold mb-2 text-dark">Seleccionar Estudiante:</label>
+            <select id="buscador-estudiantes" class="form-select form-select-lg mb-3 shadow-none border-secondary-subtle">
+                <option value="">Buscar por nombre...</option>
+                {% for est in estudiantes %}
+                    <option value="{{ est.id }}">{{ est.nombres }} {{ est.apellidos }}</option>
+                {% endfor %}
+            </select>
+            <button class="btn btn-tenant-primary btn-lg w-100 fw-bold rounded-pill" onclick="marcarManual()">
+                <i class="bi bi-check-circle me-1"></i> Registrar Asistencia
+            </button>
+        </div>
 
-    <div id="resultado-manual" class="mt-4 d-none">
-        <div id="alerta-box-manual" class="alert p-3 m-0 rounded border">
-            <h5 id="alerta-titulo-manual" class="fw-bold m-0"></h5>
-            <p id="alerta-mensaje-manual" class="m-0 small mt-1"></p>
+        <!-- Caja de notificaciones para modo manual -->
+        <div id="resultado-manual" class="mt-4 d-none" style="max-width: 400px; margin: 0 auto;">
+            <div id="alerta-box-manual" class="alert p-3 m-0 rounded-4 shadow-sm border-0 text-center">
+                <h5 id="alerta-titulo-manual" class="fw-bold m-0 mb-1"></h5>
+                <p id="alerta-mensaje-manual" class="m-0 small"></p>
+            </div>
         </div>
     </div>
 </div>
-</div>
 
+<!-- ========================================== -->
+<!-- SCRIPTS DE FUNCIONAMIENTO                  -->
+<!-- ========================================== -->
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
 <script>
-    // Obtener el token CSRF que exige Django para peticiones POST
+    // 1. Configuraciones iniciales y variables de estado
     const csrftoken = "{{ csrf_token }}";
     let lastResult = "";
+    let isProcessing = false;
 
+    // 2. Función para reproducir el Beep sin usar archivos MP3 (Sintetizador Web)
+    function reproducirBeep() {
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return; 
+            
+            const ctx = new AudioContext();
+            const oscillator = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(ctx.destination);
+            
+            oscillator.type = 'sine'; // Tipo de onda suave
+            oscillator.frequency.value = 850; // Frecuencia del beep
+            
+            // Efecto de fade in/out súper rápido para evitar "clicks"
+            gainNode.gain.setValueAtTime(0, ctx.currentTime);
+            gainNode.gain.linearRampToValueAtTime(1, ctx.currentTime + 0.05);
+            gainNode.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.15); 
+            
+            oscillator.start(ctx.currentTime);
+            oscillator.stop(ctx.currentTime + 0.2);
+        } catch(e) {
+            console.warn("Audio no soportado en este navegador.", e);
+        }
+    }
+
+    // 3. Lógica del escáner QR
     function onScanSuccess(decodedText, decodedResult) {
-        // Evitamos que vuelva a disparar la petición si lee el mismo QR seguido en menos de 3 segundos
-        if (decodedText === lastResult) return;
-        lastResult = decodedText;
+        // Bloqueo de seguridad: Evita doble lectura si ya está procesando
+        if (decodedText === lastResult || isProcessing) return;
         
-        // Efecto visual de procesamiento
-        document.getElementById('resultado-escaner').classList.remove('d-none');
+        lastResult = decodedText;
+        isProcessing = true; 
+        
+        reproducirBeep(); // Suena inmediatamente al captar el código
+        
+        // Efectos visuales de "Procesando"
         const box = document.getElementById('alerta-box');
-        box.className = "alert alert-info p-3 m-0";
-        document.getElementById('alerta-titulo').innerText = "Procesando...";
-        document.getElementById('alerta-mensaje').innerText = "Validando credenciales en el servidor...";
+        document.getElementById('resultado-escaner').classList.remove('d-none');
+        box.className = "alert alert-info p-3 m-0 rounded-4 shadow-sm text-center";
+        document.getElementById('alerta-titulo').innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Procesando...';
+        document.getElementById('alerta-mensaje').innerText = "Validando acceso en el servidor...";
 
-        // 🚀 Petición asíncrona (AJAX) a nuestro backend Django
+        // Petición AJAX al backend
         fetch("{% url 'asistencias:api_procesar_qr' request.tenant.slug %}", {
             method: 'POST',
             headers: {
@@ -62,81 +138,103 @@
         })
         .then(response => response.json().then(data => ({ status: response.status, body: data })))
         .then(res => {
-            box.className = res.status === 200 ? "alert alert-success p-3 m-0" : "alert alert-danger p-3 m-0";
-            document.getElementById('alerta-titulo').innerText = res.status === 200 ? "¡Acceso Autorizado!" : "¡Acceso Denegado!";
+            // Evaluamos la respuesta (200 = Éxito, Otros = Error)
+            const esExito = res.status === 200;
+            box.className = esExito ? "alert alert-success p-3 m-0 rounded-4 shadow-sm text-center" : "alert alert-danger p-3 m-0 rounded-4 shadow-sm text-center";
+            document.getElementById('alerta-titulo').innerText = esExito ? "¡Ingreso Autorizado!" : "¡Acceso Denegado!";
             
-            if (res.status === 200) {
-                document.getElementById('alerta-mensaje').innerHTML = `<strong>${res.body.estudiante}</strong> ha ingresado. <br> Clases restantes en su plan: <strong>${res.body.clases_restantes}</strong>`;
+            if (esExito) {
+                document.getElementById('alerta-mensaje').innerHTML = `<strong>${res.body.estudiante}</strong><br>Clases restantes: <span class="badge bg-success rounded-pill mt-1">${res.body.clases_restantes}</span>`;
             } else {
                 document.getElementById('alerta-mensaje').innerText = res.body.mensaje;
             }
             
-            // Limpiamos el candado de escaneo a los 4 segundos para permitir otra lectura
-            setTimeout(() => { lastResult = ""; }, 4000);
+            // Temporizador para limpiar la pantalla y permitir el siguiente escaneo (3 segundos visuales)
+            setTimeout(() => { 
+                lastResult = ""; 
+                isProcessing = false;
+                document.getElementById('resultado-escaner').classList.add('d-none');
+            }, 3000);
         })
         .catch(err => {
-            box.className = "alert alert-danger p-3 m-0";
-            document.getElementById('alerta-titulo').innerText = "Error";
-            document.getElementById('alerta-mensaje').innerText = "Hubo un problema de conexión con el servidor.";
-            setTimeout(() => { lastResult = ""; }, 4000);
+            box.className = "alert alert-danger p-3 m-0 rounded-4 shadow-sm text-center";
+            document.getElementById('alerta-titulo').innerText = "Error de Conexión";
+            document.getElementById('alerta-mensaje').innerText = "Verifica tu internet o contacta soporte.";
+            
+            setTimeout(() => { 
+                lastResult = ""; 
+                isProcessing = false;
+                document.getElementById('resultado-escaner').classList.add('d-none');
+            }, 3000);
         });
     }
 
-    // Inicializamos el escáner apuntando a la cámara trasera (environment)
-    let html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
-    html5QrcodeScanner.render(onScanSuccess);
-
-
-function marcarManual() {
-    const estId = $('#buscador-estudiantes').val();
-    if (!estId) {
-        alert("Por favor, selecciona un estudiante de la lista.");
-        return;
-    }
-
-    // Efecto de carga inicial
-    const box = document.getElementById('resultado-manual');
-    box.classList.remove('d-none');
-    const alertaBox = document.getElementById('alerta-box-manual');
-    
-    alertaBox.className = "alert alert-info p-3";
-    document.getElementById('alerta-titulo-manual').innerText = "Procesando...";
-    document.getElementById('alerta-mensaje-manual').innerText = "Registrando asistencia...";
-
-    fetch("{% url 'asistencias:api_manual' request.tenant.slug %}", {
-        method: 'POST',
-        headers: { 
-            'Content-Type': 'application/json', 
-            'X-CSRFToken': csrftoken 
-        },
-        body: JSON.stringify({ estudiante_id: estId })
-    })
-    .then(response => response.json().then(data => ({ status: response.status, body: data })))
-    .then(res => {
-        const isSuccess = res.status === 200;
-        
-        // Estilo según resultado
-        alertaBox.className = isSuccess ? "alert alert-success p-3" : "alert alert-danger p-3";
-        
-        // Título
-        document.getElementById('alerta-titulo-manual').innerText = isSuccess ? "¡Asistencia Registrada!" : "¡Error en registro!";
-        
-        // Cuerpo del mensaje
-        if (isSuccess) {
-            document.getElementById('alerta-mensaje-manual').innerHTML = 
-                `<strong>${res.body.estudiante}</strong> ha sido marcado manualmente.<br>` +
-                `Clases restantes: <strong>${res.body.clases_restantes}</strong>`;
-        } else {
-            // Si el backend envía 'mensaje', lo mostramos, si no, un genérico
-            document.getElementById('alerta-mensaje-manual').innerText = res.body.mensaje || "Ocurrió un error inesperado.";
-        }
-    })
-    .catch(err => {
-        console.error(err);
-        alertaBox.className = "alert alert-danger p-3";
-        document.getElementById('alerta-titulo-manual').innerText = "Error de Conexión";
-        document.getElementById('alerta-mensaje-manual').innerText = "No se pudo conectar con el servidor.";
+    // 4. Inicializar el escáner SOLO cuando el DOM esté listo
+    document.addEventListener("DOMContentLoaded", function() {
+        let html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
+            fps: 10, 
+            qrbox: {width: 250, height: 250}, // Forzamos un marco cuadrado exacto
+            rememberLastUsedCamera: true
+        });
+        html5QrcodeScanner.render(onScanSuccess);
     });
-}
+
+    // ==========================================
+    // 5. LÓGICA DE ASISTENCIA MANUAL
+    // ==========================================
+    function marcarManual() {
+        const estId = document.getElementById('buscador-estudiantes').value;
+        if (!estId) {
+            alert("Por favor, selecciona un estudiante de la lista.");
+            return;
+        }
+
+        const box = document.getElementById('resultado-manual');
+        const alertaBox = document.getElementById('alerta-box-manual');
+        
+        // UI de carga
+        box.classList.remove('d-none');
+        alertaBox.className = "alert alert-info p-3 rounded-4 text-center";
+        document.getElementById('alerta-titulo-manual').innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Procesando...';
+        document.getElementById('alerta-mensaje-manual').innerText = "Registrando asistencia...";
+
+        fetch("{% url 'asistencias:api_manual' request.tenant.slug %}", {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json', 
+                'X-CSRFToken': csrftoken 
+            },
+            body: JSON.stringify({ estudiante_id: estId })
+        })
+        .then(response => response.json().then(data => ({ status: response.status, body: data })))
+        .then(res => {
+            const isSuccess = res.status === 200;
+            
+            alertaBox.className = isSuccess ? "alert alert-success p-3 rounded-4 text-center shadow-sm" : "alert alert-danger p-3 rounded-4 text-center shadow-sm";
+            document.getElementById('alerta-titulo-manual').innerText = isSuccess ? "¡Asistencia Registrada!" : "¡Error en registro!";
+            
+            if (isSuccess) {
+                document.getElementById('alerta-mensaje-manual').innerHTML = 
+                    `<strong>${res.body.estudiante}</strong><br>` +
+                    `Clases restantes: <span class="badge bg-success rounded-pill mt-1">${res.body.clases_restantes}</span>`;
+            } else {
+                document.getElementById('alerta-mensaje-manual').innerText = res.body.mensaje || "Ocurrió un error inesperado.";
+            }
+
+            // Ocultar mensaje después de 4 segundos
+            setTimeout(() => {
+                box.classList.add('d-none');
+                document.getElementById('buscador-estudiantes').value = ""; // Limpiar selector
+            }, 4000);
+        })
+        .catch(err => {
+            console.error(err);
+            alertaBox.className = "alert alert-danger p-3 rounded-4 text-center shadow-sm";
+            document.getElementById('alerta-titulo-manual').innerText = "Error de Conexión";
+            document.getElementById('alerta-mensaje-manual').innerText = "No se pudo conectar con el servidor.";
+            
+            setTimeout(() => box.classList.add('d-none'), 4000);
+        });
+    }
 </script>
 {% endblock %}

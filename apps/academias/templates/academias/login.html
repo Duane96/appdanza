@@ -127,6 +127,15 @@
             object-fit: contain;
             filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
         }
+
+        /* 🚀 NUEVO: Estilo para la caja de errores adaptada al Glassmorphism */
+        .glass-alert {
+            background: rgba(220, 53, 69, 0.15);
+            border: 1px solid rgba(220, 53, 69, 0.4);
+            color: #ff8793;
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+        }
     </style>
 </head>
 <body>
@@ -151,11 +160,27 @@
             <form method="post">
                 {% csrf_token %}
                 
+                <!-- 🚀 CONTROL SENIOR: BLOQUE DE ERRORES INYECTADO -->
+                {% if form.errors %}
+                    <div class="glass-alert p-3 mb-4 small fw-medium shadow-sm">
+                        <ul class="mb-0 list-unstyled">
+                            {% for error in form.non_field_errors %}
+                                <li class="mb-1"><i class="bi bi-exclamation-triangle-fill me-2"></i>{{ error }}</li>
+                            {% endfor %}
+                            {% for field in form %}
+                                {% for error in field.errors %}
+                                    <li class="mb-1"><i class="bi bi-exclamation-triangle-fill me-2"></i>{{ field.label }}: {{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+                
                 <div class="mb-3">
                     <label class="form-label">Nombre de Usuario</label>
                     <div class="input-group">
                         <span class="input-group-text border-end-0" style="border-radius: 12px 0 0 12px;"><i class="bi bi-person"></i></span>
-                        <input type="text" name="username" class="form-control border-start-0" style="border-radius: 0 12px 12px 0;" placeholder="Usuario o correo" required>
+                        <input type="text" name="username" class="form-control border-start-0" style="border-radius: 0 12px 12px 0;" placeholder="Usuario, correo o documento" required>
                     </div>
                 </div>
                 

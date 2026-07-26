@@ -73,6 +73,8 @@ INSTALLED_APPS = [
     'saas_core',
     'tienda',
     'comunicaciones',
+    'profesores',
+    'calendario',
 ]
 
 MIDDLEWARE = [

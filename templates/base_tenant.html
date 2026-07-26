@@ -56,7 +56,11 @@
 
     <div class="container-fluid">
         <div class="row">
-            <nav class="col-md-3 col-lg-2 d-md-block sidebar-tenant text-white collapse p-3" id="sidebarMenu">
+            <!-- En base_tenant.html, reemplaza todo tu <nav id="sidebarMenu">... hasta ...</nav> por esto: -->
+
+<!-- Reemplaza el <nav id="sidebarMenu"> actual en tu base_tenant.html con este: -->
+
+<nav class="col-md-3 col-lg-2 d-md-block sidebar-tenant text-white collapse p-3" id="sidebarMenu">
     <div class="text-center my-3">
         {% if request.tenant.logo %}
             <img src="{{ request.tenant.logo.url }}" alt="Logo" class="img-fluid rounded-circle mb-2" style="max-height: 80px; width: 80px; object-fit: cover;">
@@ -65,8 +69,13 @@
         {% endif %}
         <h5 class="fw-bold text-truncate px-2">{{ request.tenant.nombre }}</h5>
         
-        {% if request.user.perfil.rol == 'ESTUDIANTE' %}
+        <!-- 🏷️ Badge Dinámico según el Rol -->
+        {% if request.user.is_superuser %}
+            <span class="badge bg-dark text-white border border-secondary text-uppercase small">🚀 Soporte Maestro</span>
+        {% elif request.user.perfil.rol == 'ESTUDIANTE' %}
             <span class="badge bg-success text-white text-uppercase small">Estudiante</span>
+        {% elif request.user.perfil.rol == 'PROFESOR' %}
+            <span class="badge bg-primary text-white text-uppercase small">Instructor</span>
         {% else %}
             <span class="badge bg-light text-dark text-uppercase small">Admin / Staff</span>
         {% endif %}
@@ -75,138 +84,184 @@
     
     <ul class="nav flex-column gap-2">
         
-        {% if request.user.perfil.rol == 'ESTUDIANTE' %}
+        {% if request.user.is_authenticated %}
             
-            <li class="nav-item">
-                <a class="nav-link text-white-50 {% if 'portal' in request.path %}active-menu{% endif %}" href="{% url 'planes_estudiantes:portal_estudiante' request.tenant.slug %}">
-                    <i class="bi bi-person-workspace me-2"></i> Mi Portal Core
-                </a>
-            </li>
-
-            {% if request.tenant.suscripcion_saas.modulo_multimedia_activo %}
-            <li class="nav-item">
-                <a class="nav-link text-white-50 d-flex align-items-center justify-content-between" 
-                   data-bs-toggle="collapse" 
-                   href="#menuMultimedia" 
-                   role="button" 
-                   aria-expanded="false">
-                    <span><i class="bi bi-play-btn me-2"></i> Mis Clases Virtuales</span>
-                    <i class="bi bi-chevron-down small opacity-50"></i>
-                </a>
+            <!-- ============================================== -->
+            <!-- 👑 MENÚ GLOBAL (ADMINISTRADORES Y SUPERUSER SAAS) -->
+            <!-- ============================================== -->
+            {% if request.user.is_superuser or request.user.perfil.rol == 'ADMIN_ACADEMIA' %}
                 
-                <div class="collapse {% if 'multimedia' in request.path %}show{% endif %} ps-3 mt-1" id="menuMultimedia">
-                    <ul class="nav flex-column gap-1 border-start border-white border-opacity-10 ps-2">
-                        {% for modulo in request.tenant.modulos_multimedia.all %}
-                            <li class="nav-item">
-                                <a class="nav-link text-white-50 small py-1 {% if modulo.id|slugify in request.path %}text-white fw-bold{% endif %}" 
-                                   href="{% url 'multimedia:visor_clase' request.tenant.slug modulo.id %}">
-                                    <i class="bi bi-collection-play me-1"></i> {{ modulo.titulo }}
-                                </a>
-                            </li>
-                        {% empty %}
-                            <li class="nav-item"><span class="nav-link text-muted small py-1">Sin clases cargadas</span></li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            </li>
-            {% endif %}
-
-        {% else %}
-            
-            <li class="nav-item">
-                <a class="nav-link text-white-50 {% if 'dashboard' in request.path %}active-menu{% endif %}" href="{% url 'academias:dashboard' request.tenant.slug %}">
-                    <i class="bi bi-speedometer2 me-2"></i> Dashboard
-                </a>
-            </li>
-            
-            {% if request.tenant.suscripcion_saas.modulo_estudiantes_activo %}
-            <li class="nav-item">
-                <a class="nav-link text-white-50 {% if 'estudiantes' in request.path %}active-menu{% endif %}" href="{% url 'planes_estudiantes:lista_estudiantes' request.tenant.slug %}">
-                    <i class="bi bi-people me-2"></i> Estudiantes
-                </a>
-            </li>
-            {% endif %}
-
-            {% if request.tenant.suscripcion_saas.modulo_asistencias_activo %}
-            <li class="nav-item">
-                <a class="nav-link text-white-50 {% if 'asistencia' in request.path %}active-menu{% endif %}" href="{% url 'asistencias:panel_escaner' request.tenant.slug %}">
-                    <i class="bi bi-qr-code-scan me-2"></i> Asistencias
-                </a>
-            </li>
-            {% endif %}
-
-            {% if request.tenant.suscripcion_saas.modulo_tienda_activo %}
                 <li class="nav-item">
-                    <a class="nav-link text-white-50 {% if 'tienda' in request.path %}active-menu{% endif %}" href="{% url 'tienda:pos' request.tenant.slug %}">
-                        <i class="bi bi-shop me-2"></i> Tienda POS
+                    <a class="nav-link text-white-50 {% if 'dashboard' in request.path %}active-menu{% endif %}" href="{% url 'academias:dashboard' request.tenant.slug %}">
+                        <i class="bi bi-speedometer2 me-2"></i> Dashboard
                     </a>
                 </li>
-            {% endif %}
-
-            {% if request.tenant.suscripcion_saas.modulo_finanzas_activo %}
-            <li class="nav-item">
-                <a class="nav-link text-white-50 {% if 'finanzas' in request.path %}active-menu{% endif %}" href="{% url 'finanzas:panel_finanzas' request.tenant.slug %}">
-                    <i class="bi bi-wallet2 me-2"></i> Finanzas
-                </a>
-            </li>
-            {% endif %}
-
-            {% if request.tenant.suscripcion_saas.modulo_eventos_activo %}
-            <li class="nav-item">
-                <a class="nav-link text-white-50 {% if 'eventos' in request.path %}active-menu{% endif %}" href="{% url 'eventos:admin_lista' request.tenant.slug %}">
-                    <i class="bi bi-calendar-event me-2"></i> Eventos
-                </a>
-            </li>
-            {% endif %}
-
-            {% if request.tenant.suscripcion_saas.modulo_multimedia_activo %}
-            <li class="nav-item">
-                <a class="nav-link text-white-50 d-flex align-items-center justify-content-between py-2.5 px-3 rounded-3 transition-all" 
-                   data-bs-toggle="collapse" 
-                   href="#menuAdminMultimedia" 
-                   role="button" 
-                   aria-expanded="{% if 'control/clases/' in request.path or 'control/subir-video/' in request.path %}true{% else %}false{% endif %}"
-                   id="nav-link-multimedia-admin">
-                     <span>
-                         <i class="bi bi-camera-reels-fill me-2 text-info"></i> 
-                         <span class="small fw-semibold">Contenido Virtual</span>
-                     </span>
-                     <i class="bi bi-chevron-down small opacity-50 trigger-arrow"></i>
-                </a>
                 
-                <div class="collapse {% if 'control/clases/' in request.path or 'control/subir-video/' in request.path %}show{% endif %} ps-3 mt-1" id="menuAdminMultimedia">
-                    <ul class="nav flex-column gap-1 border-start border-white border-opacity-10 ps-2">
-                        
-                        <li class="nav-item">
-                            <a class="nav-link text-white-50 small py-1.5 rounded-2 d-flex align-items-center gap-2 {% if 'control/clases/' in request.path and not 'nueva' in request.path %}text-white fw-bold bg-white bg-opacity-10{% endif %}" 
-                               href="{% url 'multimedia:lista_clases_admin' slug_academia=request.tenant.slug %}"> <i class="bi bi-folder2-open"></i> Ver mis Clases
-                            </a>
-                        </li>
+                {% if request.tenant.suscripcion_saas.modulo_estudiantes_activo %}
+                <li class="nav-item">
+                    <a class="nav-link text-white-50 {% if 'estudiantes' in request.path %}active-menu{% endif %}" href="{% url 'planes_estudiantes:lista_estudiantes' request.tenant.slug %}">
+                        <i class="bi bi-people me-2"></i> Estudiantes
+                    </a>
+                </li>
+                {% endif %}
 
-                        <li class="nav-item">
-                            <a class="nav-link text-white-50 small py-1.5 rounded-2 d-flex align-items-center gap-2 {% if 'control/clases/nueva/' in request.path %}text-white fw-bold bg-white bg-opacity-10{% endif %}" 
-                               href="{% url 'multimedia:crear_clase' slug_academia=request.tenant.slug %}"> <i class="bi bi-plus-circle"></i> Crear Módulo / Clase
-                            </a>
-                        </li>
-                        
-                        <li class="nav-item">
-                            <a class="nav-link text-white-50 small py-1.5 rounded-2 d-flex align-items-center gap-2 {% if 'control/subir-video/' in request.path %}text-white fw-bold bg-white bg-opacity-10{% endif %}" 
-                               href="{% url 'multimedia:subir_video' slug_academia=request.tenant.slug %}"> <i class="bi bi-cloud-arrow-up"></i> Subir Video a YouTube
-                            </a>
-                        </li>
+                <li class="nav-item">
+                    <a class="nav-link text-white-50 d-flex align-items-center justify-content-between py-2.5 px-3 rounded-3 transition-all" data-bs-toggle="collapse" href="#menuCalendarioStaff" role="button" aria-expanded="{% if 'calendario' in request.path %}true{% else %}false{% endif %}">
+                        <span>
+                            <i class="bi bi-calendar-week me-2 text-primary"></i> 
+                            <span class="small fw-semibold">Calendario Operativo</span>
+                        </span>
+                        <i class="bi bi-chevron-down small opacity-50 trigger-arrow"></i>
+                    </a>
+                    <div class="collapse {% if 'calendario' in request.path %}show{% endif %} ps-3 mt-1" id="menuCalendarioStaff">
+                        <ul class="nav flex-column gap-1 border-start border-white border-opacity-10 ps-2">
+                            <li class="nav-item">
+                                <a class="nav-link text-white-50 small py-1.5 rounded-2 d-flex align-items-center gap-2 {% if request.path == '/'|add:request.tenant.slug|add:'/calendario/admin/' %}text-white fw-bold bg-white bg-opacity-10{% endif %}" href="{% url 'calendario:admin_calendario' request.tenant.slug %}">
+                                   <i class="bi bi-calendar-event"></i> Ver Agenda Semanal
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-white-50 small py-1.5 rounded-2 d-flex align-items-center gap-2 {% if 'clases' in request.path %}text-white fw-bold bg-white bg-opacity-10{% endif %}" href="{% url 'calendario:lista_clases' request.tenant.slug %}">
+                                   <i class="bi bi-tags"></i> Configurar Clases
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link text-white-50 {% if 'profesores' in request.path %}active-menu{% endif %}" href="{% url 'profesores:lista' request.tenant.slug %}">
+                        <i class="bi bi-person-badge me-2"></i> Profesores
+                    </a>
+                </li>
 
-                    </ul>
-                </div>
-            </li>
+                {% if request.tenant.suscripcion_saas.modulo_asistencias_activo %}
+                <li class="nav-item">
+                    <a class="nav-link text-white-50 {% if 'asistencia' in request.path %}active-menu{% endif %}" href="{% url 'asistencias:panel_escaner' request.tenant.slug %}">
+                        <i class="bi bi-qr-code-scan me-2"></i> Asistencias
+                    </a>
+                </li>
+                {% endif %}
+
+                {% if request.tenant.suscripcion_saas.modulo_tienda_activo %}
+                    <li class="nav-item">
+                        <a class="nav-link text-white-50 {% if 'tienda' in request.path %}active-menu{% endif %}" href="{% url 'tienda:pos' request.tenant.slug %}">
+                            <i class="bi bi-shop me-2"></i> Tienda POS
+                        </a>
+                    </li>
+                {% endif %}
+
+                {% if request.tenant.suscripcion_saas.modulo_finanzas_activo %}
+                <li class="nav-item">
+                    <a class="nav-link text-white-50 {% if 'finanzas' in request.path %}active-menu{% endif %}" href="{% url 'finanzas:panel_finanzas' request.tenant.slug %}">
+                        <i class="bi bi-wallet2 me-2"></i> Finanzas
+                    </a>
+                </li>
+                {% endif %}
+
+                {% if request.tenant.suscripcion_saas.modulo_eventos_activo %}
+                <li class="nav-item">
+                    <a class="nav-link text-white-50 {% if 'eventos' in request.path %}active-menu{% endif %}" href="{% url 'eventos:admin_lista' request.tenant.slug %}">
+                        <i class="bi bi-calendar-event me-2"></i> Eventos
+                    </a>
+                </li>
+                {% endif %}
+
+                {% if request.tenant.suscripcion_saas.modulo_multimedia_activo %}
+                <li class="nav-item">
+                    <a class="nav-link text-white-50 d-flex align-items-center justify-content-between py-2.5 px-3 rounded-3 transition-all" data-bs-toggle="collapse" href="#menuAdminMultimedia" role="button" aria-expanded="{% if 'control/clases/' in request.path or 'control/subir-video/' in request.path %}true{% else %}false{% endif %}" id="nav-link-multimedia-admin">
+                         <span>
+                             <i class="bi bi-camera-reels-fill me-2 text-info"></i> 
+                             <span class="small fw-semibold">Contenido Virtual</span>
+                         </span>
+                         <i class="bi bi-chevron-down small opacity-50 trigger-arrow"></i>
+                    </a>
+                    <div class="collapse {% if 'control/clases/' in request.path or 'control/subir-video/' in request.path %}show{% endif %} ps-3 mt-1" id="menuAdminMultimedia">
+                        <ul class="nav flex-column gap-1 border-start border-white border-opacity-10 ps-2">
+                            <li class="nav-item">
+                                <a class="nav-link text-white-50 small py-1.5 rounded-2 d-flex align-items-center gap-2 {% if 'control/clases/' in request.path and not 'nueva' in request.path %}text-white fw-bold bg-white bg-opacity-10{% endif %}" href="{% url 'multimedia:lista_clases_admin' slug_academia=request.tenant.slug %}"> <i class="bi bi-folder2-open"></i> Ver mis Clases
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-white-50 small py-1.5 rounded-2 d-flex align-items-center gap-2 {% if 'control/clases/nueva/' in request.path %}text-white fw-bold bg-white bg-opacity-10{% endif %}" href="{% url 'multimedia:crear_clase' slug_academia=request.tenant.slug %}"> <i class="bi bi-plus-circle"></i> Crear Módulo / Clase
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-white-50 small py-1.5 rounded-2 d-flex align-items-center gap-2 {% if 'control/subir-video/' in request.path %}text-white fw-bold bg-white bg-opacity-10{% endif %}" href="{% url 'multimedia:subir_video' slug_academia=request.tenant.slug %}"> <i class="bi bi-cloud-arrow-up"></i> Subir Video a YouTube
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </li>
+                {% endif %}
+
+                <li class="nav-item">
+                    <a class="nav-link text-white-50 {% if 'configuracion' in request.path %}active-menu{% endif %}" href="{% url 'academias:configuracion' request.tenant.slug %}">
+                        <i class="bi bi-gear me-2"></i> Configuración
+                    </a>
+                </li>
+
+
+            <!-- ============================================== -->
+            <!-- 👨‍🏫 MENÚ EXCLUSIVO PROFESOR -->
+            <!-- ============================================== -->
+            {% elif request.user.perfil.rol == 'PROFESOR' %}
+                <li class="nav-item">
+                    <a class="nav-link text-white-50 {% if 'mi-panel' in request.path %}active-menu{% endif %}" href="{% url 'profesores:dashboard_profesor' request.tenant.slug %}">
+                        <i class="bi bi-speedometer2 me-2"></i> Mi Panel
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-white-50 {% if 'mi-agenda' in request.path %}active-menu{% endif %}" href="{% url 'calendario:profesor_calendario' request.tenant.slug %}">
+                        <i class="bi bi-calendar-week me-2"></i> Mis Clases (Agenda)
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-white-50 {% if 'mis-pagos' in request.path %}active-menu{% endif %}" href="#">
+                        <i class="bi bi-wallet2 me-2"></i> Historial de Cobros
+                    </a>
+                </li>
+
+            <!-- ============================================== -->
+            <!-- 🎓 MENÚ EXCLUSIVO ESTUDIANTE -->
+            <!-- ============================================== -->
+            {% elif request.user.perfil.rol == 'ESTUDIANTE' %}
+                <li class="nav-item">
+                    <a class="nav-link text-white-50 {% if 'portal' in request.path %}active-menu{% endif %}" href="{% url 'planes_estudiantes:portal_estudiante' request.tenant.slug %}">
+                        <i class="bi bi-person-workspace me-2"></i> Mi Portal
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-white-50 {% if 'calendario' in request.path %}active-menu{% endif %}" href="{% url 'calendario:estudiante_calendario' request.tenant.slug %}">
+                        <i class="bi bi-calendar-check me-2"></i> Reservar Clases
+                    </a>
+                </li>
+                
+                {% if request.tenant.suscripcion_saas.modulo_multimedia_activo %}
+                <li class="nav-item">
+                    <a class="nav-link text-white-50 d-flex align-items-center justify-content-between" data-bs-toggle="collapse" href="#menuMultimedia" role="button" aria-expanded="false">
+                        <span><i class="bi bi-play-btn me-2"></i> Mis Clases Virtuales</span>
+                        <i class="bi bi-chevron-down small opacity-50"></i>
+                    </a>
+                    <div class="collapse {% if 'multimedia' in request.path %}show{% endif %} ps-3 mt-1" id="menuMultimedia">
+                        <ul class="nav flex-column gap-1 border-start border-white border-opacity-10 ps-2">
+                            {% for modulo in request.tenant.modulos_multimedia.all %}
+                                <li class="nav-item">
+                                    <a class="nav-link text-white-50 small py-1 {% if modulo.id|slugify in request.path %}text-white fw-bold{% endif %}" href="{% url 'multimedia:visor_clase' request.tenant.slug modulo.id %}">
+                                        <i class="bi bi-collection-play me-1"></i> {{ modulo.titulo }}
+                                    </a>
+                                </li>
+                            {% empty %}
+                                <li class="nav-item"><span class="nav-link text-muted small py-1">Sin clases cargadas</span></li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </li>
+                {% endif %}
+                
             {% endif %}
-
-            <li class="nav-item">
-                <a class="nav-link text-white-50 {% if 'configuracion' in request.path %}active-menu{% endif %}" href="{% url 'academias:configuracion' request.tenant.slug %}">
-                    <i class="bi bi-gear me-2"></i> Configuración
-                </a>
-            </li>
-
-        {% endif %}
+            
+        {% endif %} <!-- Fin if is_authenticated -->
         
     </ul>
 </nav>

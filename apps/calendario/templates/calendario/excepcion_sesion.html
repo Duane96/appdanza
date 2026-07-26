@@ -1,0 +1,60 @@
+{% extends "base_tenant.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm rounded-4 hover-lift">
+            <div class="card-header bg-dark text-white border-0 pt-4 pb-3 px-4 rounded-top-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold m-0">
+                        <i class="bi bi-calendar2-x me-2"></i>Modificar Sesión Específica
+                    </h5>
+                    <a href="{% url 'calendario:admin_calendario' request.tenant.slug %}" class="btn btn-sm btn-light bg-opacity-25 text-white border-0 rounded-pill">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                </div>
+            </div>
+            
+            <div class="card-body p-4 bg-white">
+                <!-- Resumen de la sesión original -->
+                <div class="bg-light p-3 rounded-3 mb-4 border-start border-primary border-4">
+                    <h6 class="fw-bold text-dark mb-1">{{ object.clase.nombre }}</h6>
+                    <p class="small text-muted mb-0">
+                        <i class="bi bi-clock me-1"></i> {{ object.fecha_hora_inicio|date:"l, d \d\e F - h:i A" }}<br>
+                        <i class="bi bi-person me-1"></i> Profe Original: {{ object.clase.profesor_asignado.usuario.get_full_name }}
+                    </p>
+                </div>
+
+                <form method="POST" novalidate>
+                    {% csrf_token %}
+                    <div class="row g-4">
+                        {% for field in form %}
+                            <div class="col-12">
+                                <label for="{{ field.id_for_label }}" class="form-label fw-bold text-dark mb-1">
+                                    {{ field.label }}
+                                    {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+                                </label>
+                                {{ field }}
+                                {% if field.help_text %}
+                                    <div class="form-text small text-muted"><i class="bi bi-info-circle me-1"></i>{{ field.help_text }}</div>
+                                {% endif %}
+                                {% if field.errors %}
+                                    <div class="text-danger small fw-bold mt-1">
+                                        {% for error in field.errors %}<i class="bi bi-x-circle-fill me-1"></i>{{ error }}{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-warning btn-lg rounded-pill fw-bold shadow-sm hover-lift text-dark">
+                            <i class="bi bi-check2-square me-2"></i>Aplicar Cambios
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
