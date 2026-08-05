@@ -147,6 +147,9 @@ class PanelMaestroDashboardView(UserPassesTestMixin, TemplateView):
         context['planes_saas'] = PlanSaaS.objects.all()
         context['config'] = LandingPageConfig.objects.first() or LandingPageConfig()
         context['form_pago_global'] = ConfigPagoSaaSForm(instance=ConfigPagoGlobalSaaS.objects.first())
+
+        # 📍 NUEVO: Pasamos las opciones de ciudades directamente desde el modelo para el Modal
+        context['ciudades_choices'] = Academia.CIUDADES_CHOICES
         
         return context
     
@@ -160,6 +163,10 @@ class CrearAcademiaSaaSView(UserPassesTestMixin, View):
     def post(self, request, *args, **kwargs):
         nombre = request.POST.get('nombre')
         slug = request.POST.get('slug')
+
+        # 📍 NUEVO: Capturamos la ciudad enviada por el formulario, con 'Bogotá' como fallback seguro
+        ciudad = request.POST.get('ciudad', 'Bogotá')
+
         template_personalizado = request.POST.get('template_landing_personalizado', '').strip() or None
         es_productora = request.POST.get('es_solo_eventos') == 'on'
         admin_email = request.POST.get('admin_email')
@@ -170,6 +177,7 @@ class CrearAcademiaSaaSView(UserPassesTestMixin, View):
             nueva_academia = Academia.unfiltered_objects.create(
                 nombre=nombre,
                 slug=slug,
+                ciudad=ciudad,
                 template_landing_personalizado=template_personalizado,
                 es_solo_eventos=es_productora,
                 activo=True
@@ -407,17 +415,35 @@ class IndexSaaSGlobalView(TemplateView):
 
         # 🚀 NUEVO: Cartelera Global de Eventos
         try:
-            # Traemos los próximos 6 eventos activos
-            # 🚀 LÓGICA SENIOR: Calculamos el "precio a mostrar" unificando viejo y nuevo
-            context['eventos_globales'] = Evento.unfiltered_objects.filter(
+            # 1. Hacemos UNA sola query optimizada para traer todos los eventos activos
+            eventos_base = Evento.unfiltered_objects.filter(
                 academia__activo=True,
                 fecha__gte=timezone.now(),
                 estado__in=['REGISTRO_ONLINE', 'REGISTRO_PUERTA']
             ).annotate(
-                # Busca el precio mínimo de sus pases. Si no tiene, usa su precio_preventa original.
                 precio_minimo_calculado=Coalesce(Min('pases_personalizados__precio'), 'precio_preventa')
-            ).select_related('academia').order_by('fecha')[:6]
-        except Exception:
+            ).select_related('academia').order_by('fecha')
+
+            # 2. Agrupamos los eventos en un diccionario donde la clave es la ciudad
+            eventos_por_ciudad = {}
+            for evento in eventos_base:
+                # Si por alguna razón la academia es antigua y no tiene ciudad, asume 'Bogotá'
+                ciudad = evento.academia.ciudad or 'Bogotá'
+                
+                if ciudad not in eventos_por_ciudad:
+                    eventos_por_ciudad[ciudad] = []
+                
+                eventos_por_ciudad[ciudad].append(evento)
+                
+            # 3. Enviamos el diccionario al template (Ej: {'Bogotá': [evt1, evt2], 'Medellín': [evt3]})
+            context['eventos_por_ciudad'] = eventos_por_ciudad
+            
+            # 4. Mantenemos una lista plana de los 6 más próximos para el Banner Principal y el Ticker
+            context['eventos_globales'] = list(eventos_base)[:6]
+            
+        except Exception as e:
+            # Fallback de seguridad por si algo falla en la DB
+            context['eventos_por_ciudad'] = {}
             context['eventos_globales'] = []
 
         return context

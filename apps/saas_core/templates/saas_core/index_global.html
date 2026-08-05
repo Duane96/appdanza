@@ -55,7 +55,7 @@
           "name": "{{ evento.academia.nombre }}",
           "address": {
             "@type": "PostalAddress",
-            "addressLocality": "Bogotá",
+            "addressLocality": "{{ evento.academia.ciudad|default:'Bogotá' }}",
             "addressCountry": "CO",
             "streetAddress": "{{ evento.ubicacion }}"
           }
@@ -174,61 +174,45 @@
         .metrics-section { background: linear-gradient(135deg, var(--text-main) 0%, #312e81 100%); color: white; border-radius: 40px; position: relative; overflow: hidden; }
         .metrics-section::before { content: ''; position: absolute; width: 300px; height: 300px; background: var(--primary); border-radius: 50%; filter: blur(80px); opacity: 0.3; top: -50px; left: -50px; }
 
-        /* --- NUEVO: CARRUSEL INFINITO DE EVENTOS (CARTELERA) --- */
+        /* --- NUEVO: CARRUSELES ALTERNOS INFINITOS --- */
         .cartelera-wrapper {
-            width: 100%;
-            overflow: hidden;
-            padding: 2rem 0;
-            position: relative;
+            width: 100%; overflow: hidden; padding: 2rem 0; position: relative;
         }
 
-        /* Efecto de desvanecimiento a los lados */
-        .cartelera-wrapper::before,
-        .cartelera-wrapper::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            width: 80px;
-            height: 100%;
-            z-index: 3;
-            pointer-events: none;
+        /* Degradados laterales para efecto de entrada/salida suave */
+        .cartelera-wrapper::before, .cartelera-wrapper::after {
+            content: ''; position: absolute; top: 0; width: 80px; height: 100%; z-index: 3; pointer-events: none;
         }
-        .cartelera-wrapper::before {
-            left: 0;
-            background: linear-gradient(to right, var(--bg-body) 0%, transparent 100%);
-        }
-        .cartelera-wrapper::after {
-            right: 0;
-            background: linear-gradient(to left, var(--bg-body) 0%, transparent 100%);
-        }
+        .cartelera-wrapper::before { left: 0; background: linear-gradient(to right, var(--bg-body) 0%, transparent 100%); }
+        .cartelera-wrapper::after { right: 0; background: linear-gradient(to left, var(--bg-body) 0%, transparent 100%); }
 
         .cartelera-track {
-            display: flex;
-            gap: 2rem;
-            width: max-content;
-            animation: scrollInfinito 40s linear infinite; 
-            will-change: transform; /* Aceleración GPU */
+            display: flex; gap: 2rem; width: max-content; will-change: transform;
         }
+        .cartelera-track:hover { animation-play-state: paused; }
+        
+        .cartelera-item { width: 350px; flex-shrink: 0; }
 
-        /* Pausa al pasar el mouse */
-        .cartelera-track:hover {
-            animation-play-state: paused;
-        }
+        /* Movimiento hacia la Izquierda (Impares) */
+        .scroll-left { animation: moverIzquierda 40s linear infinite; }
+        
+        /* Movimiento hacia la Derecha (Pares) */
+        .scroll-right { animation: moverDerecha 40s linear infinite; }
 
-        .cartelera-item {
-            width: 350px; 
-            flex-shrink: 0;
-        }
-
-        @keyframes scrollInfinito {
+        @keyframes moverIzquierda {
             0% { transform: translateX(0); }
             100% { transform: translateX(calc(-50% - 1rem)); } 
+        }
+        @keyframes moverDerecha {
+            /* Empieza desde el centro (oculto en overflow) y avanza hacia 0 */
+            0% { transform: translateX(calc(-50% - 1rem)); }
+            100% { transform: translateX(0); } 
         }
     </style>
 </head>
 <body>
 
-    <h1 class="visually-hidden">Cartelera de Eventos, Sociales y Clases de Salsa, Bachata y Kizomba en Bogotá</h1>
+    <h1 class="visually-hidden">Cartelera de Eventos, Sociales y Clases de Salsa, Bachata y Kizomba</h1>
 
     <nav class="navbar navbar-expand-lg navbar-light navbar-appdanza fixed-top py-3" id="mainNavbar">
         <div class="container">
@@ -244,7 +228,6 @@
             <div class="collapse navbar-collapse" id="navMenu">
                 <div class="navbar-nav ms-auto align-items-center gap-4 mt-3 mt-lg-0 bg-white bg-lg-transparent p-4 p-lg-0 rounded-4 shadow-sm shadow-lg-none">
                     <a href="#cartelera" class="nav-link">Eventos</a>
-                    <a href="#academias" class="nav-link">Academias</a>
                     <a href="#software" class="btn btn-dark rounded-pill px-4 py-2 fw-bold d-none d-lg-block shadow-sm">Soy Director <i class="bi bi-laptop ms-1"></i></a>
                 </div>
             </div>
@@ -257,7 +240,7 @@
                 {% for evento in eventos_globales|slice:":3" %}
                 <div class="carousel-item h-100 {% if forloop.first %}active{% endif %}">
                     {% if evento.imagen %}
-                        <img src="{{ evento.imagen.url }}" class="d-block w-100 h-100 object-fit-cover" alt="Evento de baile {{ evento.nombre }} en Bogotá por {{ evento.academia.nombre }}">
+                        <img src="{{ evento.imagen.url }}" class="d-block w-100 h-100 object-fit-cover" alt="Evento de baile {{ evento.nombre }} por {{ evento.academia.nombre }}">
                     {% else %}
                         <div class="w-100 h-100 bg-dark"></div>
                     {% endif %}
@@ -266,7 +249,7 @@
                     
                     <div class="carousel-caption-custom px-4">
                         <span class="badge bg-primary text-white rounded-pill px-4 py-2 mb-4 fs-6 tracking-widest text-uppercase shadow-lg border border-white border-opacity-25">
-                            <i class="bi bi-star-fill me-1 text-warning"></i> Evento Destacado
+                            <i class="bi bi-star-fill me-1 text-warning"></i> Evento Destacado en {{ evento.academia.ciudad|default:'Bogotá' }}
                         </span>
                         <h2 class="display-3 font-space fw-bold text-white mb-3 text-shadow">{{ evento.nombre }}</h2>
                         <p class="fs-4 text-white opacity-75 mb-5 fw-light">
@@ -309,7 +292,7 @@
         <div class="ticker-move">
             {% for evento in eventos_globales %}
                 <div class="ticker-item text-warning"><i class="bi bi-fire"></i></div>
-                <div class="ticker-item">{{ evento.nombre|upper }}</div>
+                <div class="ticker-item">{{ evento.nombre|upper }} <span class="text-muted small">({{ evento.academia.ciudad|default:'Bogotá'|upper }})</span></div>
                 <div class="ticker-item opacity-50">{{ evento.fecha|date:"d M" }}</div>
                 {% if evento.precio_minimo_calculado > 0 %}
                     <div class="ticker-item text-accent">Desde ${{ evento.precio_minimo_calculado|floatformat:0 }}</div>
@@ -319,7 +302,7 @@
             {% endfor %}
             {% for evento in eventos_globales %}
                 <div class="ticker-item text-warning"><i class="bi bi-fire"></i></div>
-                <div class="ticker-item">{{ evento.nombre|upper }}</div>
+                <div class="ticker-item">{{ evento.nombre|upper }} <span class="text-muted small">({{ evento.academia.ciudad|default:'Bogotá'|upper }})</span></div>
                 <div class="ticker-item opacity-50">{{ evento.fecha|date:"d M" }}</div>
                 {% if evento.precio_minimo_calculado > 0 %}
                     <div class="ticker-item text-accent">Desde ${{ evento.precio_minimo_calculado|floatformat:0 }}</div>
@@ -332,123 +315,101 @@
     {% endif %}
 
     <section id="cartelera" class="py-5 my-5 position-relative" style="z-index: 2;">
-        <div class="container mb-4">
-            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end">
-                <div class="text-center text-md-start">
-                    <h2 class="font-space fw-bold display-5 text-dark mb-2">Cartelera Oficial</h2>
-                    <p class="text-muted fs-5 mb-0">No te quedes por fuera. Asegura tu pase a los mejores eventos.</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="cartelera-wrapper">
-            <div class="cartelera-track">
+        
+        {% if eventos_por_ciudad %}
+            <!-- Iteramos sobre nuestro diccionario de Ciudades -->
+            {% for ciudad, eventos_ciudad in eventos_por_ciudad.items %}
                 
-                {% for evento in eventos_globales %}
-                <div class="cartelera-item">
-                    <div class="feature-card h-100 d-flex flex-column bg-white p-0">
-                        <div class="position-relative overflow-hidden" style="aspect-ratio: 4/5; background: var(--bg-body);">
-                            {% if evento.imagen %}
-                                <img src="{{ evento.imagen.url }}" alt="Ticket para {{ evento.nombre }}" class="w-100 h-100 object-fit-cover transition-transform duration-500" style="transition: transform 0.5s ease;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'" loading="lazy">
-                            {% else %}
-                                <div class="w-100 h-100 d-flex align-items-center justify-content-center bg-light"><i class="bi bi-image fs-1 text-muted opacity-25"></i></div>
+                <div class="container mb-2 {% if not forloop.first %}mt-5{% endif %}">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end">
+                        <div class="text-center text-md-start border-start border-4 border-primary ps-3">
+                            <h2 class="font-space fw-bold display-6 text-dark mb-1">
+                                Cartelera <span class="text-gradient">{{ ciudad }}</span>
+                            </h2>
+                            {% if forloop.first %}
+                                <p class="text-muted fs-6 mb-0">Eventos activos, talleres y sociales confirmados.</p>
                             {% endif %}
-                            
-                            <div class="position-absolute bottom-0 start-0 w-100 p-4 pt-5" style="background: linear-gradient(0deg, rgba(15,23,42,0.8) 0%, transparent 100%); z-index: 1;"></div>
-                            
-                            <div class="position-absolute top-0 end-0 m-3 bg-white rounded-4 shadow-lg text-center px-3 py-2" style="z-index: 2;">
-                                <span class="d-block small fw-bold text-uppercase" style="color: var(--secondary);">{{ evento.fecha|date:"M" }}</span>
-                                <span class="d-block fs-3 font-space fw-bold text-dark lh-1">{{ evento.fecha|date:"d" }}</span>
-                            </div>
-
-                            <div class="position-absolute top-0 start-0 m-3" style="z-index: 2;">
-                                <span class="badge bg-white text-dark shadow-lg rounded-pill px-3 py-2 d-flex align-items-center gap-2">
-                                    {% if evento.academia.logo %}
-                                        <img src="{{ evento.academia.logo.url }}" alt="Logo {{ evento.academia.nombre }}" class="rounded-circle" style="width: 20px; height: 20px; object-fit: contain;" loading="lazy">
-                                    {% endif %}
-                                    <span class="fw-bold">{{ evento.academia.nombre }}</span>
-                                </span>
-                            </div>
-
-                            <div class="position-absolute bottom-0 start-0 w-100 p-3" style="z-index: 2;">
-                                <div class="p-3 rounded-4 shadow-lg" style="background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1);">
-                                    <h3 class="font-space fw-bold text-white mb-1 lh-sm fs-5">{{ evento.nombre }}</h3>
-                                    <p class="small text-white opacity-75 mb-0 fw-medium"><i class="bi bi-geo-alt-fill text-primary"></i> {{ evento.ubicacion }}</p>
-                                </div>
-                            </div>
                         </div>
+                    </div>
+                </div>
+
+                <div class="cartelera-wrapper">
+                    <!-- 🚀 LÓGICA DE ALTERNANCIA: Si es par va a la izquierda, si es impar a la derecha -->
+                    <div class="cartelera-track {% if forloop.counter0|divisibleby:2 %}scroll-left{% else %}scroll-right{% endif %}">
                         
-                        <div class="p-4 bg-white d-flex justify-content-center align-items-center mt-auto">
+                        <!-- 🚀 TRUCO SENIOR DJANGO: Iteramos '12' para duplicar los eventos en el HTML y lograr el scroll infinito continuo -->
+                        {% for iteracion_fantasma in "12" %}
+                            {% for evento in eventos_ciudad %}
+                            
+                                <div class="cartelera-item">
+                                    <div class="feature-card h-100 d-flex flex-column bg-white p-0">
+                                        
+                                        <!-- Imagen y Cabecera del Evento -->
+                                        <div class="position-relative overflow-hidden" style="aspect-ratio: 4/5; background: var(--bg-body);">
+                                            {% if evento.imagen %}
+                                                <img src="{{ evento.imagen.url }}" alt="Ticket para {{ evento.nombre }}" class="w-100 h-100 object-fit-cover" style="transition: transform 0.5s ease;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'" loading="lazy">
+                                            {% else %}
+                                                <div class="w-100 h-100 d-flex align-items-center justify-content-center bg-light"><i class="bi bi-image fs-1 text-muted opacity-25"></i></div>
+                                            {% endif %}
+                                            
+                                            <div class="position-absolute bottom-0 start-0 w-100 p-4 pt-5" style="background: linear-gradient(0deg, rgba(15,23,42,0.8) 0%, transparent 100%); z-index: 1;"></div>
+                                            
+                                            <!-- Fecha -->
+                                            <div class="position-absolute top-0 end-0 m-3 bg-white rounded-4 shadow-lg text-center px-3 py-2" style="z-index: 2;">
+                                                <span class="d-block small fw-bold text-uppercase" style="color: var(--secondary);">{{ evento.fecha|date:"M" }}</span>
+                                                <span class="d-block fs-3 font-space fw-bold text-dark lh-1">{{ evento.fecha|date:"d" }}</span>
+                                            </div>
 
-                            <a href="{% if evento.enlace_externo %}{{ evento.enlace_externo }}{% else %}{% url 'academias:index' evento.academia.slug %}{% endif %}" 
-                                target="_blank" 
-                                class="btn btn-dark rounded-pill w-100 py-3 fw-bold shadow-sm d-flex justify-content-between align-items-center px-4">
-                                Conseguir Tickets <i class="bi bi-arrow-right ms-2"></i>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                {% empty %}
-                <div class="w-100 text-center py-5">
-                    <div class="p-5 bg-white rounded-5 border shadow-sm mx-auto" style="max-width: 600px;">
-                        <i class="bi bi-calendar2-x display-1 text-muted opacity-25 mb-3 d-block"></i>
-                        <h4 class="font-space fw-bold text-dark">Agenda en preparación</h4>
-                        <p class="text-muted mb-0">Nuestras academias están organizando los próximos eventos. ¡Vuelve pronto!</p>
-                    </div>
-                </div>
-                {% endfor %}
+                                            <!-- Badge Academia -->
+                                            <div class="position-absolute top-0 start-0 m-3" style="z-index: 2;">
+                                                <span class="badge bg-white text-dark shadow-lg rounded-pill px-3 py-2 d-flex align-items-center gap-2">
+                                                    {% if evento.academia.logo %}
+                                                        <img src="{{ evento.academia.logo.url }}" alt="Logo" class="rounded-circle" style="width: 20px; height: 20px; object-fit: contain;" loading="lazy">
+                                                    {% endif %}
+                                                    <span class="fw-bold">{{ evento.academia.nombre }}</span>
+                                                </span>
+                                            </div>
 
-                {% if eventos_globales %}
-                    {% for evento in eventos_globales %}
-                    <div class="cartelera-item">
-                        <div class="feature-card h-100 d-flex flex-column bg-white p-0">
-                            <div class="position-relative overflow-hidden" style="aspect-ratio: 4/5; background: var(--bg-body);">
-                                {% if evento.imagen %}
-                                    <img src="{{ evento.imagen.url }}" alt="Ticket para {{ evento.nombre }}" class="w-100 h-100 object-fit-cover transition-transform duration-500" style="transition: transform 0.5s ease;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'" loading="lazy">
-                                {% else %}
-                                    <div class="w-100 h-100 d-flex align-items-center justify-content-center bg-light"><i class="bi bi-image fs-1 text-muted opacity-25"></i></div>
-                                {% endif %}
-                                
-                                <div class="position-absolute bottom-0 start-0 w-100 p-4 pt-5" style="background: linear-gradient(0deg, rgba(15,23,42,0.8) 0%, transparent 100%); z-index: 1;"></div>
-                                
-                                <div class="position-absolute top-0 end-0 m-3 bg-white rounded-4 shadow-lg text-center px-3 py-2" style="z-index: 2;">
-                                    <span class="d-block small fw-bold text-uppercase" style="color: var(--secondary);">{{ evento.fecha|date:"M" }}</span>
-                                    <span class="d-block fs-3 font-space fw-bold text-dark lh-1">{{ evento.fecha|date:"d" }}</span>
-                                </div>
-
-                                <div class="position-absolute top-0 start-0 m-3" style="z-index: 2;">
-                                    <span class="badge bg-white text-dark shadow-lg rounded-pill px-3 py-2 d-flex align-items-center gap-2">
-                                        {% if evento.academia.logo %}<img src="{{ evento.academia.logo.url }}" alt="Logo {{ evento.academia.nombre }}" class="rounded-circle" style="width: 20px; height: 20px; object-fit: contain;" loading="lazy">{% endif %}
-                                        <span class="fw-bold">{{ evento.academia.nombre }}</span>
-                                    </span>
-                                </div>
-
-                                <div class="position-absolute bottom-0 start-0 w-100 p-3" style="z-index: 2;">
-                                    <div class="p-3 rounded-4 shadow-lg" style="background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1);">
-                                        <h3 class="font-space fw-bold text-white mb-1 lh-sm fs-5">{{ evento.nombre }}</h3>
-                                        <p class="small text-white opacity-75 mb-0 fw-medium"><i class="bi bi-geo-alt-fill text-primary"></i> {{ evento.ubicacion }}</p>
+                                            <!-- Título Evento -->
+                                            <div class="position-absolute bottom-0 start-0 w-100 p-3" style="z-index: 2;">
+                                                <div class="p-3 rounded-4 shadow-lg" style="background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1);">
+                                                    <h3 class="font-space fw-bold text-white mb-1 lh-sm fs-5">{{ evento.nombre }}</h3>
+                                                    <p class="small text-white opacity-75 mb-0 fw-medium"><i class="bi bi-geo-alt-fill text-primary"></i> {{ evento.ubicacion }}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Botón de Ticket -->
+                                        <div class="p-4 bg-white d-flex justify-content-center align-items-center mt-auto">
+                                            <a href="{% if evento.enlace_externo %}{{ evento.enlace_externo }}{% else %}{% url 'academias:index' evento.academia.slug %}{% endif %}" 
+                                                target="_blank" 
+                                                class="btn btn-dark rounded-pill w-100 py-3 fw-bold shadow-sm d-flex justify-content-between align-items-center px-4">
+                                                Conseguir Tickets <i class="bi bi-arrow-right ms-2"></i>
+                                            </a>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            
-                            <div class="p-4 bg-white d-flex justify-content-center align-items-center mt-auto">
                                 
+                            {% endfor %}
+                        {% endfor %} <!-- Fin Truco Iteración Fantasma -->
 
-                                <a href="{% if evento.enlace_externo %}{{ evento.enlace_externo }}{% else %}{% url 'academias:index' evento.academia.slug %}{% endif %}" 
-                                    target="_blank" 
-                                    class="btn btn-dark rounded-pill w-100 py-3 fw-bold shadow-sm d-flex justify-content-between align-items-center px-4">
-                                    Conseguir Tickets <i class="bi bi-arrow-right ms-2"></i>
-                                </a>
-                            </div>
-                        </div>
                     </div>
-                    {% endfor %}
-                {% endif %}
-            </div>
-        </div>
-    </section>
+                </div>
+                
+            {% endfor %} <!-- Fin Loop Ciudades -->
 
-    
+        {% else %}
+            <!-- ESTADO VACÍO (Si no hay eventos globales activos) -->
+            <div class="w-100 text-center py-5">
+                <div class="p-5 bg-white rounded-5 border shadow-sm mx-auto" style="max-width: 600px;">
+                    <i class="bi bi-calendar2-x display-1 text-muted opacity-25 mb-3 d-block"></i>
+                    <h4 class="font-space fw-bold text-dark">Agenda en preparación</h4>
+                    <p class="text-muted mb-0">Nuestras academias están organizando los próximos eventos. ¡Vuelve pronto!</p>
+                </div>
+            </div>
+        {% endif %}
+
+    </section>
 
     <section class="container py-5 my-5">
         <div class="metrics-section p-5 p-md-5 shadow-lg">
@@ -529,29 +490,26 @@
                 
                 <div class="p-4 p-md-5">
                     <form action="#" method="POST" id="leadForm">
-    {% csrf_token %}
-    <div class="mb-3">
-        <label class="form-label text-dark small fw-bold">Tu Nombre <span class="text-danger">*</span></label>
-        <!-- 🚀 Añadimos name="director_name" -->
-        <input type="text" id="directorName" name="director_name" class="form-control form-control-lg bg-light border-0 px-4 fs-6 rounded-4" placeholder="Ej: Duane Yaleja" required>
-    </div>
-    <div class="mb-3">
-        <label class="form-label text-dark small fw-bold">Nombre de la Escuela/Productora <span class="text-danger">*</span></label>
-        <!-- 🚀 Añadimos name="academy_name" -->
-        <input type="text" id="academyName" name="academy_name" class="form-control form-control-lg bg-light border-0 px-4 fs-6 rounded-4" placeholder="Ej: Ritmo Social" required>
-    </div>
-    <div class="mb-4">
-        <label class="form-label text-dark small fw-bold">WhatsApp de Contacto <span class="text-danger">*</span></label>
-        <div class="input-group input-group-lg">
-            <span class="input-group-text bg-light border-0 text-muted ps-4 pe-2 rounded-start-4"><i class="bi bi-whatsapp"></i></span>
-            <!-- 🚀 Añadimos name="phone" -->
-            <input type="tel" id="directorPhone" name="phone" class="form-control bg-light border-0 fs-6 rounded-end-4 px-3" placeholder="+57 300 123 4567" required>
-        </div>
-    </div>
-    <button type="submit" id="btnSubmitLead" class="btn btn-primary-custom w-100 rounded-pill py-3 fw-bold font-space fs-5 mt-2">
-        Solicitar Acceso
-    </button>
-</form>
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label text-dark small fw-bold">Tu Nombre <span class="text-danger">*</span></label>
+                            <input type="text" id="directorName" name="director_name" class="form-control form-control-lg bg-light border-0 px-4 fs-6 rounded-4" placeholder="Ej: Duane Yaleja" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-dark small fw-bold">Nombre de la Escuela/Productora <span class="text-danger">*</span></label>
+                            <input type="text" id="academyName" name="academy_name" class="form-control form-control-lg bg-light border-0 px-4 fs-6 rounded-4" placeholder="Ej: Ritmo Social" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label text-dark small fw-bold">WhatsApp de Contacto <span class="text-danger">*</span></label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text bg-light border-0 text-muted ps-4 pe-2 rounded-start-4"><i class="bi bi-whatsapp"></i></span>
+                                <input type="tel" id="directorPhone" name="phone" class="form-control bg-light border-0 fs-6 rounded-end-4 px-3" placeholder="+57 300 123 4567" required>
+                            </div>
+                        </div>
+                        <button type="submit" id="btnSubmitLead" class="btn btn-primary-custom w-100 rounded-pill py-3 fw-bold font-space fs-5 mt-2">
+                            Solicitar Acceso
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -576,7 +534,7 @@
         </div>
     </footer>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
         // Sombra suave en Navbar al hacer Scroll
@@ -589,19 +547,17 @@
             }
         });
 
-        // 🚀 ÚNICA Lógica del Lead Magnet SaaS (Envío de Email vía AJAX)
+        // 🚀 Lógica del Lead Magnet SaaS (Envío de Email vía AJAX)
         document.getElementById('leadForm').addEventListener('submit', function(e) {
-            e.preventDefault(); // Evitamos recargar la página
+            e.preventDefault();
 
             const form = this;
             const btn = document.getElementById('btnSubmitLead');
             const originalText = btn.innerHTML;
             
-            // Cambiamos el estado del botón a "Cargando"
             btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Enviando...';
             btn.disabled = true;
 
-            // Extraemos la data (Incluye automáticamente el CSRF Token)
             const formData = new FormData(form);
 
             fetch("{% url 'saas_core:procesar_lead_landing' %}", {
@@ -609,14 +565,12 @@
                 body: formData,
                 headers: { 
                     "X-Requested-With": "XMLHttpRequest",
-                    // Refuerzo de seguridad: mandamos el token explícitamente en los headers
                     "X-CSRFToken": form.querySelector('[name=csrfmiddlewaretoken]').value 
                 }
             })
             .then(res => res.json())
             .then(data => {
                 if(data.status === 'success') {
-                    // Reemplazamos el formulario entero por un mensaje de Éxito Visual
                     const modalBody = form.parentElement;
                     modalBody.innerHTML = `
                         <div class="text-center py-4 slide-in">

@@ -147,6 +147,32 @@ class Academia(models.Model):
     pais = models.CharField(max_length=2, choices=PAIS_CHOICES, default='CO', verbose_name="País de Operación")
     divisa = models.CharField(max_length=3, default='COP', verbose_name="Divisa de Operación")
 
+    # Incluimos las ciudades más relevantes y una opción "Otra" por si se expanden a un municipio menor
+    CIUDADES_CHOICES = [
+        ('Bogotá', 'Bogotá'),
+        ('Medellín', 'Medellín'),
+        ('Cali', 'Cali'),
+        ('Barranquilla', 'Barranquilla'),
+        ('Bucaramanga', 'Bucaramanga'),
+        ('Pereira', 'Pereira'),
+        ('Manizales', 'Manizales'),
+        ('Armenia', 'Armenia'),
+        ('Cartagena', 'Cartagena'),
+        ('Villavicencio', 'Villavicencio'),
+        ('Ibagué', 'Ibagué'),
+        ('Otra', 'Otra ciudad...'),
+    ]
+
+    # default='Bogotá' asegura que en la migración, tus academias actuales no queden huérfanas.
+    ciudad = models.CharField(
+        max_length=50, 
+        choices=CIUDADES_CHOICES, 
+        default='Bogotá', 
+        blank=True, 
+        null=True, 
+        verbose_name="Ciudad Principal"
+    )
+
     # 🔑 PASARELA DE RECAUDO PROPIA DE LA ACADEMIA (Módulo de Configuración)
     # Colombia -> PayU (Usa Merchant ID, API Key, Account ID)
     payu_merchant_id = models.CharField(max_length=50, blank=True, null=True, verbose_name="PayU Merchant ID")

@@ -90,6 +90,7 @@
                 <thead class="table-light text-secondary small text-uppercase">
                     <tr>
                         <th>Empresa</th>
+                        <th>Ubicación</th>
                         <th>Estado</th>
                         <th>Alum.</th>
                         <th>Evts.</th>
@@ -102,6 +103,11 @@
                             <td>
                                 <div class="fw-bold text-dark">{{ aca.nombre }}</div>
                                 <span class="text-muted text-xs">/{{ aca.slug }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 rounded-pill px-2 py-1">
+                                    <i class="bi bi-geo-alt-fill text-danger me-1"></i>{{ aca.ciudad|default:"Bogotá" }}
+                                </span>
                             </td>
                             <td>
                                 <div class="fw-bold text-dark">{{ aca.suscripcion_saas.plan.nombre }}</div>
@@ -308,6 +314,16 @@
                         <option value="BR">Brasil 🇧🇷 (BRL)</option>
                         <option value="PE">Perú 🇵🇪 (PEN)</option>
                         <option value="OT">Otro País (USD)</option>
+                    </select>
+                </div>
+                <!-- 📍 NUEVA Columna Ciudad -->
+                <div class="col-md-6 mt-3 mt-md-0">
+                    <label class="form-label small fw-bold text-primary"><i class="bi bi-geo-alt"></i> Ciudad Principal</label>
+                    <select name="ciudad" class="form-select rounded-3 border-primary border-opacity-50">
+                        {% for valor, etiqueta in ciudades_choices %}
+                            <!-- Mantenemos Bogotá preseleccionado para agilizar -->
+                            <option value="{{ valor }}" {% if valor == 'Bogotá' %}selected{% endif %}>{{ etiqueta }}</option>
+                        {% endfor %}
                     </select>
                 </div>
                 <div class="mb-3">

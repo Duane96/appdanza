@@ -445,10 +445,14 @@ class EventoDetailAdminView(LoginRequiredMixin, DetailView):
                     pivote = fase_activa.precios_pases.filter(pase=pase).first()
                     if pivote and pivote.precio is not None:
                         precio_final = pivote.precio
-                pases_taquilla.append({
-                    'id': pase.id, 'nombre': pase.nombre, 
-                    'precio_actual': float(precio_final or 0)
-                })
+                
+                # 🚀 FILTRO EN TAQUILLA: Ocultamos los pases de $0
+                if precio_final and float(precio_final) > 0:
+                    pases_taquilla.append({
+                        'id': pase.id, 
+                        'nombre': pase.nombre, 
+                        'precio_actual': float(precio_final)
+                    })
         context['pases_disponibles_taquilla'] = pases_taquilla
 
         return context
@@ -600,15 +604,18 @@ class RegistroEventoPublicoView(FormView):
                 if pivote and pivote.precio is not None:
                     precio_final = pivote.precio
             
-            # Diccionario plano para que el HTML lo consuma sin hacer consultas adicionales a la BD
-            pases_data.append({
-                'id': pase.id,
-                'nombre': pase.nombre,
-                'accesos_permitidos': pase.accesos_permitidos,
-                'precio_actual': float(precio_final or 0)
-            })
+            # 🚀 LÓGICA SENIOR: Filtro inteligente para ocultar pases en $0
+            # Solo agregamos el pase al formulario público si su precio calculado es mayor a cero.
+            if precio_final and float(precio_final) > 0:
+                pases_data.append({
+                    'id': pase.id,
+                    'nombre': pase.nombre,
+                    'accesos_permitidos': pase.accesos_permitidos,
+                    'precio_actual': float(precio_final)
+                })
                 
         context['pases_disponibles'] = pases_data
+                
         context['precio_por_dia'] = float(self.evento_obj.precio_por_dia or 0)
         context['precio_full'] = float(self.evento_obj.precio_preventa or 0)
         return context
