@@ -11,8 +11,8 @@
         position: sticky;
         top: 0;
         z-index: 10;
-        background-color: #f8f9fa; /* Color idéntico al fondo light de Bootstrap */
-        box-shadow: inset 0 -1px 0 #ced4da; /* Simula el borde inferior de forma nativa */
+        background-color: #f8f9fa;
+        box-shadow: inset 0 -1px 0 #ced4da;
     }
 
     .badge-danger { background-color: #dc3545; color: white; }
@@ -60,15 +60,11 @@
     <div class="col-md-6 col-xl-3">
         <div class="card border-0 shadow-sm bg-white p-3 h-100 border-start border-4 border-info">
             <span class="text-secondary small fw-bold d-block font-monospace">ASISTENCIA / AFORO</span>
-            
-            <!-- 🚀 AGREGAMOS id="aforo-ingresados" e id="aforo-vendidos" -->
             <h2 class="fw-bold text-dark m-0">
                 <span id="aforo-ingresados">{{ total_personas_ingresadas }}</span> 
                 <span class="fs-6 fw-normal text-muted">/ <span id="aforo-vendidos">{{ total_entradas_vendidas }}</span> ing.</span>
             </h2>
-            
             <div class="progress mt-2" style="height: 6px;">
-                <!-- 🚀 AGREGAMOS id="aforo-barra" -->
                 <div id="aforo-barra" 
                      class="progress-bar bg-warning transition-all" 
                      role="progressbar" 
@@ -100,7 +96,6 @@
         <div class="card border-0 shadow-sm bg-white p-3 h-100 border-start border-4 border-success">
             <span class="text-secondary small fw-bold d-block font-monospace">BALANCE GLOBAL (NETO)</span>
             <h2 class="fw-bold m-0 text-success">${{ balance_neto|floatformat:0 }}</h2>
-            
             <div class="d-flex justify-content-between mt-2 pt-2 border-top extra-small text-muted">
                 <span title="Total recaudado en todos los canales">Bruto: <strong>${{ ingresos_totales|floatformat:0 }}</strong></span>
                 <span class="text-danger-emphasis">Gastos: <strong>${{ gastos_totales|floatformat:0 }}</strong></span>
@@ -126,7 +121,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <!-- 🚀 NUEVO SENIOR: Fila para la Entrada General Real (Tickets sin pase específico) -->
+                        <!-- Fila para la Entrada General Real -->
                         {% if general_vendidos > 0 or not evento.tiene_pases_personalizados %}
                         <tr>
                             <td class="fw-semibold text-dark small">
@@ -194,7 +189,7 @@
             </form>
         </div>
 
-        <!-- 🚀 NUEVO SENIOR: RESUMEN VISUAL DE CANTIDADES VENDIDAS -->
+        <!-- 🚀 NUEVO SENIOR: RESUMEN VISUAL DINÁMICO (Muestra los de 0 ventas en color gris) -->
         <div class="d-flex flex-wrap align-items-center gap-2 mb-3 p-3 bg-light rounded-3 border border-secondary-subtle">
             <span class="text-secondary small fw-bold me-2 text-uppercase font-monospace">
                 <i class="bi bi-pie-chart-fill me-1"></i> Entradas Activas:
@@ -202,12 +197,10 @@
             
             {% if evento.tiene_pases_personalizados and metricas_pases %}
                 {% for pase in metricas_pases %}
-                    <!-- Solo mostramos el badge si realmente han vendido al menos 1 -->
-                    {% if pase.total_vendidos > 0 %}
-                    <span class="badge bg-dark text-white px-3 py-2 rounded-pill shadow-sm fs-7">
-                        {{ pase.nombre }}: <span class="text-warning fs-6 ms-1">{{ pase.total_vendidos }}</span>
+                    <!-- 🚀 SENIOR FIX: Mostramos SIEMPRE el pase. Si tiene 0, se ve gris, si vende, resalta. -->
+                    <span class="badge {% if pase.total_vendidos > 0 %}bg-dark text-white{% else %}bg-light text-secondary border{% endif %} px-3 py-2 rounded-pill shadow-sm fs-7">
+                        {{ pase.nombre }}: <span class="{% if pase.total_vendidos > 0 %}text-warning{% else %}text-muted{% endif %} fs-6 ms-1">{{ pase.total_vendidos }}</span>
                     </span>
-                    {% endif %}
                 {% endfor %}
             {% endif %}
 
@@ -219,9 +212,8 @@
             {% endif %}
         </div>
 
-        <!-- A PARTIR DE AQUÍ SIGUE TU TABLA NORMAL -->
+        <!-- TABLA DE RECIBOS -->
         <div class="table-responsive shadow-sm rounded-3" style="max-height: 520px; overflow-y: auto; border: 1px solid #e9ecef;">
-        
                 <table class="table table-hover align-middle small table-borderless m-0">
                     <thead class="table-light text-secondary font-monospace text-uppercase" style="font-size: 0.75rem;">
                         <tr>
@@ -237,39 +229,34 @@
                         {% for recibo in recibos %}
                         <tr class="border-bottom {% if recibo.anulado %}opacity-50 text-decoration-line-through bg-light{% endif %}">
                             <td>
-    <!-- Nombre del comprador -->
-    <strong class="text-dark d-block fs-6 mb-1">{{ recibo.comprador_nombre }}</strong>
-    
-    <!-- Info básica agrupada y responsive -->
-    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-        <span class="badge bg-light text-dark font-monospace extra-small border">{{ recibo.numero_recibo }}</span>
-        <small class="text-muted extra-small"><i class="bi bi-telephone-fill me-1"></i>{{ recibo.comprador_telefono }}</small>
-    </div>
-    
-    <!-- 🚀 ETIQUETAS VISUALES DE PASE Y CUPÓN -->
-    <div class="d-flex flex-wrap gap-1">
-        
-        <!-- Etiqueta del TIPO DE PASE -->
-        {% if recibo.tipo_pase %}
-            <span class="badge bg-primary-subtle text-primary border border-primary-subtle extra-small shadow-sm" title="Tipo de Entrada">
-                <i class="bi bi-ticket-detailed-fill me-1"></i>{{ recibo.tipo_pase.nombre }}
-            </span>
-        {% else %}
-            <!-- Fallback visual por si es un recibo viejo o venta general sin pase asignado -->
-            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle extra-small shadow-sm">
-                <i class="bi bi-ticket-fill me-1"></i>Entrada General
-            </span>
-        {% endif %}
+                                <!-- Nombre del comprador -->
+                                <strong class="text-dark d-block fs-6 mb-1">{{ recibo.comprador_nombre }}</strong>
+                                
+                                <!-- Info básica agrupada -->
+                                <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                                    <span class="badge bg-light text-dark font-monospace extra-small border">{{ recibo.numero_recibo }}</span>
+                                    <small class="text-muted extra-small"><i class="bi bi-telephone-fill me-1"></i>{{ recibo.comprador_telefono }}</small>
+                                </div>
+                                
+                                <!-- ETIQUETAS VISUALES DE PASE Y CUPÓN -->
+                                <div class="d-flex flex-wrap gap-1">
+                                    {% if recibo.tipo_pase %}
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle extra-small shadow-sm" title="Tipo de Entrada">
+                                            <i class="bi bi-ticket-detailed-fill me-1"></i>{{ recibo.tipo_pase.nombre }}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle extra-small shadow-sm">
+                                            <i class="bi bi-ticket-fill me-1"></i>Entrada General
+                                        </span>
+                                    {% endif %}
 
-        <!-- Etiqueta del CUPÓN DE DESCUENTO (La mantenemos intacta) -->
-        {% if recibo.codigo_descuento_usado %}
-            <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle extra-small shadow-sm" title="Cupón Utilizado">
-                <i class="bi bi-tag-fill me-1"></i>{{ recibo.codigo_descuento_usado.nombre_codigo }}
-            </span>
-        {% endif %}
-        
-    </div>
-</td>
+                                    {% if recibo.codigo_descuento_usado %}
+                                        <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle extra-small shadow-sm" title="Cupón Utilizado">
+                                            <i class="bi bi-tag-fill me-1"></i>{{ recibo.codigo_descuento_usado.nombre_codigo }}
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </td>
                             <td class="text-center fw-bold text-secondary">{{ recibo.cantidad_entradas }}</td>
                             <td class="fw-bold {% if recibo.anulado %}text-secondary{% else %}text-dark{% endif %}">${{ recibo.monto_total|floatformat:0 }}</td>
                             
@@ -301,35 +288,27 @@
                                         </span>
                                     {% endif %}
                                 {% else %}
-<div class="d-flex flex-column gap-2 align-items-center">
-    {% for boleta in recibo.boletas_qr.all %}
-    
-    <!-- 🚀 AGREGAMOS id="fila-boleta-..." y data-permitidas -->
-    <div class="w-100 p-2 border rounded bg-white shadow-sm transition-all" id="fila-boleta-{{ boleta.codigo_unico }}" data-permitidas="{{ boleta.asistencias_permitidas }}">
-        <div class="d-flex justify-content-between align-items-center mb-1">
-            <span class="fw-bold text-dark small">TKT {{ forloop.counter }}</span>
-            
-            <!-- 🚀 AGREGAMOS id="badge-boleta-..." -->
-            <span id="badge-boleta-{{ boleta.codigo_unico }}" class="badge {% if boleta.asistencias_consumidas >= boleta.asistencias_permitidas %}bg-danger{% else %}bg-success{% endif %} rounded-pill" style="font-size: 0.65rem;">
-                {{ boleta.asistencias_consumidas }} / {{ boleta.asistencias_permitidas }} Días
-            </span>
-        </div>
-        
-        <div class="progress" style="height: 6px;">
-            <!-- 🚀 AGREGAMOS id="progreso-boleta-..." -->
-            <div id="progreso-boleta-{{ boleta.codigo_unico }}" 
-                 class="progress-bar {% if boleta.asistencias_consumidas >= boleta.asistencias_permitidas %}bg-danger{% else %}bg-success{% endif %} transition-all" 
-                 role="progressbar" 
-                 style="width: {% widthratio boleta.asistencias_consumidas boleta.asistencias_permitidas 100 %}%">
-            </div>
-        </div>
-        
-        <small class="text-muted d-block mt-1" style="font-size: 0.60rem;">
-            ID: {{ boleta.codigo_unico|slice:":8" }}...
-        </small>
-    </div>
-    {% endfor %}
-</div>
+                                    <div class="d-flex flex-column gap-2 align-items-center">
+                                        {% for boleta in recibo.boletas_qr.all %}
+                                        <div class="w-100 p-2 border rounded bg-white shadow-sm transition-all" id="fila-boleta-{{ boleta.codigo_unico }}" data-permitidas="{{ boleta.asistencias_permitidas }}">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <span class="fw-bold text-dark small">TKT {{ forloop.counter }}</span>
+                                                <span id="badge-boleta-{{ boleta.codigo_unico }}" class="badge {% if boleta.asistencias_consumidas >= boleta.asistencias_permitidas %}bg-danger{% else %}bg-success{% endif %} rounded-pill" style="font-size: 0.65rem;">
+                                                    {{ boleta.asistencias_consumidas }} / {{ boleta.asistencias_permitidas }} Días
+                                                </span>
+                                            </div>
+                                            
+                                            <div class="progress" style="height: 6px;">
+                                                <div id="progreso-boleta-{{ boleta.codigo_unico }}" 
+                                                     class="progress-bar {% if boleta.asistencias_consumidas >= boleta.asistencias_permitidas %}bg-danger{% else %}bg-success{% endif %} transition-all" 
+                                                     role="progressbar" 
+                                                     style="width: {% widthratio boleta.asistencias_consumidas boleta.asistencias_permitidas 100 %}%">
+                                                </div>
+                                            </div>
+                                            <small class="text-muted d-block mt-1" style="font-size: 0.60rem;">ID: {{ boleta.codigo_unico|slice:":8" }}...</small>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
                                 {% endif %}
                             </td>
                             <td class="text-end">
@@ -392,46 +371,43 @@
             </div>
             <div class="list-group list-group-flush small" style="max-height: 180px; overflow-y: auto;">
                 {% for cod in codigos %}
-<!-- 🚀 Si no está activo o caducó, le bajamos la opacidad (opacity-50) -->
-<div class="list-group-item d-flex justify-content-between align-items-center px-0 bg-transparent {% if not cod.activo or not cod.es_valido %}opacity-50{% endif %}">
-    <div>
-        <!-- 🚀 Si está invalidado, tachamos el texto -->
-        <strong class="{% if not cod.activo %}text-decoration-line-through text-muted{% else %}text-dark{% endif %}">
-            {{ cod.nombre_codigo }}
-        </strong>
-        <small class="text-muted d-block">
-            Full: ${{ cod.precio_especial|floatformat:0 }} 
-            {% if evento.es_multidias and cod.precio_especial_dia %}
-                <span class="text-warning-emphasis">| x Día: ${{ cod.precio_especial_dia|floatformat:0 }}</span>
-            {% endif %}
-        </small>
-    </div>
-    
-    <div class="d-flex align-items-center gap-2">
-        <span class="badge bg-light text-secondary font-monospace">{{ cod.usos_actuales }}/{{ cod.limite_usos }}</span>
-        
-        <!-- 🚀 BOTÓN DE ACCIÓN -->
-        {% if cod.activo %}
-            <form action="{% url 'eventos:invalidar_codigo' request.tenant.slug evento.slug cod.id %}" method="POST" class="d-inline m-0 p-0">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-sm btn-outline-danger border-0 py-0 px-1" title="Invalidar Cupón" onclick="return confirm('¿Seguro que deseas invalidar este código? Ya nadie podrá usarlo a partir de ahora, pero los que ya compraron conservarán su acceso.');">
-                    <i class="bi bi-x-circle-fill"></i>
-                </button>
-            </form>
-        {% else %}
-            <span class="badge bg-danger extra-small py-1">INVALIDADO</span>
-        {% endif %}
-    </div>
-</div>
-{% empty %}
-<span class="text-muted small d-block py-2">No hay códigos creados.</span>
-{% endfor %}
+                <div class="list-group-item d-flex justify-content-between align-items-center px-0 bg-transparent {% if not cod.activo or not cod.es_valido %}opacity-50{% endif %}">
+                    <div>
+                        <strong class="{% if not cod.activo %}text-decoration-line-through text-muted{% else %}text-dark{% endif %}">
+                            {{ cod.nombre_codigo }}
+                        </strong>
+                        <small class="text-muted d-block">
+                            Full: ${{ cod.precio_especial|floatformat:0 }} 
+                            {% if evento.es_multidias and cod.precio_especial_dia %}
+                                <span class="text-warning-emphasis">| x Día: ${{ cod.precio_especial_dia|floatformat:0 }}</span>
+                            {% endif %}
+                        </small>
+                    </div>
+                    
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-light text-secondary font-monospace">{{ cod.usos_actuales }}/{{ cod.limite_usos }}</span>
+                        
+                        {% if cod.activo %}
+                            <form action="{% url 'eventos:invalidar_codigo' request.tenant.slug evento.slug cod.id %}" method="POST" class="d-inline m-0 p-0">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger border-0 py-0 px-1" title="Invalidar Cupón" onclick="return confirm('¿Seguro que deseas invalidar este código? Ya nadie podrá usarlo a partir de ahora, pero los que ya compraron conservarán su acceso.');">
+                                    <i class="bi bi-x-circle-fill"></i>
+                                </button>
+                            </form>
+                        {% else %}
+                            <span class="badge bg-danger extra-small py-1">INVALIDADO</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% empty %}
+                <span class="text-muted small d-block py-2">No hay códigos creados.</span>
+                {% endfor %}
             </div>
         </div>
     </div>
 </div>
 
-<!-- REEMPLAZA EL MODAL DE VENTA PUERTA CON ESTO -->
+<!-- MODAL DE VENTA PUERTA -->
 <div class="modal fade" id="modalVentaPuerta" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
@@ -451,7 +427,6 @@
                         {{ form_puerta.comprador_telefono }}
                     </div>
 
-                    <!-- 🚀 NUEVO: SELECTOR DINÁMICO DE PASES PARA LA TAQUILLA -->
                     {% if pases_disponibles_taquilla or evento.es_multidias %}
                     <div class="mb-3 p-3 bg-light rounded border border-warning-subtle">
                         <label class="form-label small fw-bold text-dark">Tipo de Entrada / Pase a Vender</label>
@@ -479,7 +454,6 @@
                     <div class="row g-2 mb-3">
                         <div class="col-6">
                             <label class="form-label small fw-semibold text-secondary">Precio Unitario Ajustable ($)</label>
-                            <!-- Agregamos ID al input para que JS lo pueda controlar -->
                             {{ form_puerta.precio_unitario_aplicado }}
                         </div>
                         <div class="col-6">
@@ -505,6 +479,7 @@
     </div>
 </div>
 
+<!-- MODAL CÓDIGO DE DESCUENTO -->
 <div class="modal fade" id="modalAgregarCodigo" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
@@ -515,40 +490,39 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-    <div class="mb-3">
-        <label class="form-label small fw-semibold text-secondary">Nombre del Código (Cupón)</label>
-        {{ form_codigo.nombre_codigo }}
-    </div>
-    
-    {% if evento.es_multidias %}
-        <div class="mb-3">
-            <label class="form-label small fw-semibold text-secondary">Precio Descuento (Pase FULL) ($)</label>
-            {{ form_codigo.precio_especial }}
-        </div>
-        
-        <div class="mb-3 p-3 bg-light rounded border border-warning-subtle">
-            <label class="form-label small fw-semibold text-secondary"><i class="bi bi-star-half text-warning me-1"></i>Precio Descuento (Por 1 Día) ($)</label>
-            {{ form_codigo.precio_especial_dia }}
-            <small class="text-muted extra-small d-block mt-1">Este precio se aplicará SÓLO si el alumno selecciona el pase de "1 Día" en el congreso.</small>
-        </div>
-    {% else %}
-        <div class="mb-3">
-            <label class="form-label small fw-semibold text-secondary">Precio Especial con Descuento ($)</label>
-            {{ form_codigo.precio_especial }}
-        </div>
-        {% endif %}
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-secondary">Nombre del Código (Cupón)</label>
+                        {{ form_codigo.nombre_codigo }}
+                    </div>
+                    
+                    {% if evento.es_multidias %}
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold text-secondary">Precio Descuento (Pase FULL) ($)</label>
+                            {{ form_codigo.precio_especial }}
+                        </div>
+                        <div class="mb-3 p-3 bg-light rounded border border-warning-subtle">
+                            <label class="form-label small fw-semibold text-secondary"><i class="bi bi-star-half text-warning me-1"></i>Precio Descuento (Por 1 Día) ($)</label>
+                            {{ form_codigo.precio_especial_dia }}
+                            <small class="text-muted extra-small d-block mt-1">Este precio se aplicará SÓLO si el alumno selecciona el pase de "1 Día" en el congreso.</small>
+                        </div>
+                    {% else %}
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold text-secondary">Precio Especial con Descuento ($)</label>
+                            {{ form_codigo.precio_especial }}
+                        </div>
+                    {% endif %}
 
-    <div class="row g-2">
-        <div class="col-6">
-            <label class="form-label small fw-semibold text-secondary">Límite Usos Max</label>
-            {{ form_codigo.limite_usos }}
-        </div>
-        <div class="col-6">
-            <label class="form-label small fw-semibold text-secondary">Vence El</label>
-            {{ form_codigo.fecha_caducidad }}
-        </div>
-    </div>
-</div>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold text-secondary">Límite Usos Max</label>
+                            {{ form_codigo.limite_usos }}
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold text-secondary">Vence El</label>
+                            {{ form_codigo.fecha_caducidad }}
+                        </div>
+                    </div>
+                </div>
                 <div class="modal-footer border-0">
                     <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cerrar</button>
                     <button type="submit" class="btn btn-dark px-4 fw-semibold">Guardar Cupón</button>
@@ -558,6 +532,7 @@
     </div>
 </div>
 
+<!-- MODAL EGRESO -->
 <div class="modal fade" id="modalAgregarGasto" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
@@ -586,6 +561,7 @@
     </div>
 </div>
 
+<!-- ESCÁNER QR -->
 <div class="modal fade" id="modalEscanerQR" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
@@ -595,7 +571,6 @@
             </div>
             <div class="modal-body bg-light">
                 <div id="contenedor-lector" class="rounded overflow-hidden shadow-sm bg-black position-relative" style="width: 100%; min-height: 280px;"></div>
-                
                 <div id="feedback-escaner" class="alert alert-secondary text-center fw-bold mt-3 mb-0 py-2 fs-7">
                     <div class="spinner-border spinner-border-sm me-2" role="status"></div> Apunta a la boleta del asistente...
                 </div>
@@ -604,6 +579,7 @@
     </div>
 </div>
 
+<!-- MODAL ANULAR -->
 {% for recibo in recibos %}
     {% if not recibo.anulado %}
     <div class="modal fade" id="modalAnularRecibo{{ recibo.id }}" tabindex="-1" aria-hidden="true">
@@ -628,9 +604,7 @@
 {% endfor %}
 
 
-<!-- ================================================================= -->
-<!-- 🚀 MODAL SENIOR: CHECK-IN MANUAL CON BÚSQUEDA EN VIVO -->
-<!-- ================================================================= -->
+<!-- MODAL MANUAL CHECK-IN -->
 <div class="modal fade" id="modalCheckinManual" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
@@ -641,16 +615,12 @@
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            
             <div class="modal-body p-4 bg-light">
-                <!-- Buscador con icono -->
                 <div class="position-relative mb-4">
                     <input type="text" id="input-busqueda-manual" class="form-control form-control-lg ps-5 border-2 shadow-sm rounded-pill font-monospace" placeholder="Ej: Valery, 310..., REC-0005..." autocomplete="off" autofocus>
                     <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted fs-5"></i>
                     <div id="spinner-busqueda" class="spinner-border spinner-border-sm text-primary position-absolute top-50 end-0 translate-middle-y me-3 d-none" role="status"></div>
                 </div>
-
-                <!-- Contenedor de Resultados Dinámicos -->
                 <div id="contenedor-resultados-manual" class="d-flex flex-column gap-2" style="max-height: 400px; overflow-y: auto;">
                     <div class="text-center text-muted py-5">
                         <i class="bi bi-keyboard display-6 d-block mb-2 text-secondary"></i>
@@ -658,7 +628,6 @@
                     </div>
                 </div>
             </div>
-            
             <div class="modal-footer bg-white border-top-0 py-3">
                 <span class="text-muted extra-small me-auto"><i class="bi bi-info-circle me-1"></i> Muestra máximo 10 resultados simultáneos.</span>
                 <button type="button" class="btn btn-light border px-4 fw-semibold rounded-pill" data-bs-dismiss="modal">Cerrar</button>
@@ -678,9 +647,7 @@
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     
-    // =========================================================================
     // 🔊 HELPER COMPARTIDO: GENERADOR DE SONIDO (BEEP) WEB AUDIO API
-    // =========================================================================
     function playBeep(frequency, duration) {
         try {
             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -698,9 +665,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    // =========================================================================
     // 🚀 HELPER 1: ACTUALIZA EL AFORO GLOBAL EN VIVO
-    // =========================================================================
     function actualizarAforoDOM(totalDesdeBackend) {
         const elIngresados = document.getElementById("aforo-ingresados");
         const elVendidos = document.getElementById("aforo-vendidos");
@@ -733,9 +698,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    // =========================================================================
     // 🚀 NUEVO HELPER 2: ACTUALIZA LA LISTA INFERIOR DE PARTICIPANTES EN VIVO
-    // =========================================================================
     function actualizarListaDOM(codigoUUID, asistenciasConsumidas) {
         if (!codigoUUID || asistenciasConsumidas === undefined) return;
         
@@ -744,27 +707,22 @@ document.addEventListener("DOMContentLoaded", function () {
         const progresoBoleta = document.getElementById(`progreso-boleta-${codigoUUID}`);
         
         if (filaBoleta && badgeBoleta && progresoBoleta) {
-            // Extraemos los días totales permitidos que guardamos en el HTML (data-permitidas)
             const permitidas = parseInt(filaBoleta.getAttribute("data-permitidas"), 10) || 1;
             const consumidas = parseInt(asistenciasConsumidas, 10);
             
-            // Animación suave de destello verde para que el usuario note cuál cambió
             filaBoleta.style.backgroundColor = "#d1e7dd"; 
             setTimeout(() => {
                 filaBoleta.style.backgroundColor = ""; 
                 filaBoleta.style.transition = "background-color 0.8s ease";
             }, 400);
 
-            // Actualizamos los números visuales de la etiqueta
             badgeBoleta.innerText = `${consumidas} / ${permitidas} Días`;
             
-            // Calculamos cuánto rellenar la mini barra de progreso
             let porcentaje = Math.round((consumidas / permitidas) * 100);
             if (porcentaje > 100) porcentaje = 100;
             
             progresoBoleta.style.width = porcentaje + "%";
             
-            // Si agotó todos sus días, lo ponemos en rojo
             if (consumidas >= permitidas) {
                 badgeBoleta.classList.remove("bg-success");
                 badgeBoleta.classList.add("bg-danger");
@@ -774,9 +732,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    // =========================================================================
-    // 💵 1. LÓGICA DE TAQUILLA MANUAL (VENTA DIRECTA EN PUERTA)
-    // =========================================================================
+    // 💵 1. LÓGICA DE TAQUILLA MANUAL
     const selectPasePuerta = document.getElementById("puerta_tipo_pase");
     const inputPrecio = document.querySelector("input[name='precio_unitario_aplicado']");
     const inputCantidad = document.querySelector("input[name='cantidad_entradas']");
@@ -809,9 +765,7 @@ document.addEventListener("DOMContentLoaded", function () {
         calcularTotalPuerta();
     }
 
-    // =========================================================================
-    // 📷 2. SISTEMA DE ESCÁNER DE CÁMARA (CHECK-IN POR QR)
-    // =========================================================================
+    // 📷 2. SISTEMA DE ESCÁNER DE CÁMARA
     const modalEscaner = document.getElementById('modalEscanerQR');
     const feedback = document.getElementById('feedback-escaner');
     const btnCerrar = document.getElementById('btnCerrarEscaner');
@@ -879,7 +833,6 @@ document.addEventListener("DOMContentLoaded", function () {
                     feedback.innerHTML = `<div>${data.message}</div><div class="text-dark small fw-normal mt-1">Cliente: <strong>${data.comprador}</strong> (${data.recibo})</div>`;
                     playBeep(2200, 0.15);
                     
-                    // 🚀 SINCRONIZAMOS AFORO Y LA LISTA DE LA TABLA AL MISMO TIEMPO
                     actualizarAforoDOM(data.nuevo_total_ingresados);
                     actualizarListaDOM(decodedText, data.asistencias_consumidas);
                     
@@ -902,9 +855,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    // =========================================================================
     // 🔍 3. BUSCADOR EN VIVO Y CHECK-IN MANUAL
-    // =========================================================================
     const inputBusqueda = document.getElementById('input-busqueda-manual');
     const contenedorResultados = document.getElementById('contenedor-resultados-manual');
     const spinnerBusqueda = document.getElementById('spinner-busqueda');
@@ -1032,7 +983,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 if (data.status === 'success') {
                     playBeep(2200, 0.15);
                     
-                    // 🚀 SINCRONIZAMOS AFORO Y TABLA SIMULTÁNEAMENTE 
                     actualizarAforoDOM(data.nuevo_total_ingresados);
                     actualizarListaDOM(codigoUUID, data.asistencias_consumidas);
                     

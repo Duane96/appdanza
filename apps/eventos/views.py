@@ -427,14 +427,18 @@ class EventoDetailAdminView(LoginRequiredMixin, DetailView):
         context['codigos'] = CodigoDescuento.objects.filter(evento=evento).order_by('-id')
 
         # 9. MÉTRICAS AVANZADAS POR PASE Y FASE
+        # 🚀 AUTO-DETECCIÓN SENIOR: Si existen pases en la base de datos, forzamos el modo pases a True en memoria.
+        # Así evitamos que el panel se rompa si el organizador olvidó activar el switch de "tiene pases".
+        if TipoPase.objects.filter(evento=evento).exists():
+            evento.tiene_pases_personalizados = True
+
         if evento.tiene_pases_personalizados:
             context['metricas_pases'] = TipoPase.objects.filter(evento=evento).annotate(
                 total_vendidos=Coalesce(Sum('recibos__cantidad_entradas', filter=Q(recibos__anulado=False)), 0),
                 total_recaudado=Coalesce(Sum('recibos__monto_total', filter=Q(recibos__anulado=False)), 0, output_field=DecimalField())
             )
 
-        # 🚀 OPTIMIZACIÓN SENIOR: Calculamos cantidad y recaudo de las "Entradas Generales" (sin pase asignado y sin anular)
-       
+        # 🚀 OPTIMIZACIÓN SENIOR: Calculamos cantidad y recaudo de las "Entradas Generales"
         metricas_general = ReciboEvento.objects.filter(
             evento=evento, tipo_pase__isnull=True, anulado=False
         ).aggregate(
