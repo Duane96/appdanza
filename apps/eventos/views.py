@@ -322,7 +322,14 @@ class EventoDetailAdminView(LoginRequiredMixin, DetailView):
 
         # 1. BUSCADOR DE RECIBOS POR FILTRO DE TEXTO
         query = self.request.GET.get('q')
-        recibos = ReciboEvento.objects.filter(evento=evento).order_by('-id')
+        
+        # 🚀 OPTIMIZACIÓN SENIOR: select_related para las Foráneas y prefetch_related para el Many-to-Many o Inversas.
+        # Esto reduce de cientos de consultas a la base de datos, a solo 2. Vital para PythonAnywhere.
+        recibos = ReciboEvento.objects.select_related(
+            'tipo_pase', 'codigo_descuento_usado', 'fase_preventa'
+        ).prefetch_related(
+            'boletas_qr'
+        ).filter(evento=evento).order_by('-id')
         if query:
             recibos = recibos.filter(
                 Q(comprador_nombre__icontains=query) | 

@@ -195,16 +195,38 @@
                         {% for recibo in recibos %}
                         <tr class="border-bottom {% if recibo.anulado %}opacity-50 text-decoration-line-through bg-light{% endif %}">
                             <td>
-    <strong class="text-dark d-block">{{ recibo.comprador_nombre }}</strong>
-    <span class="badge bg-light text-dark font-monospace extra-small">{{ recibo.numero_recibo }}</span>
-    <small class="text-muted ms-1">{{ recibo.comprador_telefono }}</small>
+    <!-- Nombre del comprador -->
+    <strong class="text-dark d-block fs-6 mb-1">{{ recibo.comprador_nombre }}</strong>
     
-    <!-- 🚀 CORRECCIÓN SENIOR 3: ETIQUETA VISUAL DE CUPÓN -->
-    {% if recibo.codigo_descuento_usado %}
-        <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle extra-small ms-1 mt-1 d-inline-block shadow-sm" title="Cupón Utilizado">
-            <i class="bi bi-tag-fill me-1"></i>{{ recibo.codigo_descuento_usado.nombre_codigo }}
-        </span>
-    {% endif %}
+    <!-- Info básica agrupada y responsive -->
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+        <span class="badge bg-light text-dark font-monospace extra-small border">{{ recibo.numero_recibo }}</span>
+        <small class="text-muted extra-small"><i class="bi bi-telephone-fill me-1"></i>{{ recibo.comprador_telefono }}</small>
+    </div>
+    
+    <!-- 🚀 ETIQUETAS VISUALES DE PASE Y CUPÓN -->
+    <div class="d-flex flex-wrap gap-1">
+        
+        <!-- Etiqueta del TIPO DE PASE -->
+        {% if recibo.tipo_pase %}
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle extra-small shadow-sm" title="Tipo de Entrada">
+                <i class="bi bi-ticket-detailed-fill me-1"></i>{{ recibo.tipo_pase.nombre }}
+            </span>
+        {% else %}
+            <!-- Fallback visual por si es un recibo viejo o venta general sin pase asignado -->
+            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle extra-small shadow-sm">
+                <i class="bi bi-ticket-fill me-1"></i>Entrada General
+            </span>
+        {% endif %}
+
+        <!-- Etiqueta del CUPÓN DE DESCUENTO (La mantenemos intacta) -->
+        {% if recibo.codigo_descuento_usado %}
+            <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle extra-small shadow-sm" title="Cupón Utilizado">
+                <i class="bi bi-tag-fill me-1"></i>{{ recibo.codigo_descuento_usado.nombre_codigo }}
+            </span>
+        {% endif %}
+        
+    </div>
 </td>
                             <td class="text-center fw-bold text-secondary">{{ recibo.cantidad_entradas }}</td>
                             <td class="fw-bold {% if recibo.anulado %}text-secondary{% else %}text-dark{% endif %}">${{ recibo.monto_total|floatformat:0 }}</td>
