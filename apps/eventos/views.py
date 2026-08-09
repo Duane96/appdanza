@@ -2,6 +2,7 @@
 from datetime import timedelta
 from pyexpat.errors import messages
 from django.db import transaction
+from django.db.models import DecimalField
 
 from django.http import JsonResponse
 from django.views.generic import ListView, CreateView, DetailView, View
@@ -431,6 +432,17 @@ class EventoDetailAdminView(LoginRequiredMixin, DetailView):
                 total_vendidos=Coalesce(Sum('recibos__cantidad_entradas', filter=Q(recibos__anulado=False)), 0),
                 total_recaudado=Coalesce(Sum('recibos__monto_total', filter=Q(recibos__anulado=False)), 0, output_field=DecimalField())
             )
+
+        # 🚀 OPTIMIZACIÓN SENIOR: Calculamos cantidad y recaudo de las "Entradas Generales" (sin pase asignado y sin anular)
+       
+        metricas_general = ReciboEvento.objects.filter(
+            evento=evento, tipo_pase__isnull=True, anulado=False
+        ).aggregate(
+            total_vendidos=Coalesce(Sum('cantidad_entradas'), 0),
+            total_recaudado=Coalesce(Sum('monto_total', output_field=DecimalField()), 0, output_field=DecimalField())
+        )
+        context['general_vendidos'] = metricas_general['total_vendidos']
+        context['general_recaudado'] = metricas_general['total_recaudado']
 
         if evento.tiene_fases_fechas:
             context['metricas_fases'] = FasePreventa.objects.filter(evento=evento).annotate(
