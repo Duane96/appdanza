@@ -236,7 +236,13 @@
                 btnCupon.disabled = true;
                 feedbackCupon.innerHTML = `<span class="text-muted"><div class="spinner-border spinner-border-sm me-1" role="status"></div>Validando...</span>`;
 
-                fetch(`/{% if request.tenant %}{{ request.tenant.slug }}{% else %}{{ academia.slug }}{% endif %}/eventos/{{ evento.slug }}/validar-cupon/?codigo=${codigo}`)
+                // 🚀 LÓGICA SENIOR: Extraemos el ID limpio del pase seleccionado
+                let rawPaseValue = inputTipoPase ? inputTipoPase.value : "FULL";
+                // Si el value es "PASE_5", extraemos el "5". Si es "FULL" o "DIA", se va tal cual.
+                let paseIdUrl = rawPaseValue.startsWith('PASE_') ? rawPaseValue.replace('PASE_', '') : rawPaseValue;
+
+                // Añadimos el parámetro &pase_id a la URL del fetch
+                fetch(`/{% if request.tenant %}{{ request.tenant.slug }}{% else %}{{ academia.slug }}{% endif %}/eventos/{{ evento.slug }}/validar-cupon/?codigo=${codigo}&pase_id=${paseIdUrl}`)
                     .then(res => res.json())
                     .then(data => {
                         if (data.valido) {
@@ -249,7 +255,8 @@
                         } else {
                             cuponAplicado = false;
                             feedbackCupon.className = "text-danger extra-small mt-1 fw-semibold";
-                            feedbackCupon.innerHTML = `<i class="bi bi-x-circle-fill"></i> Cupón inválido o expirado.`;
+                            // 🚀 Mostramos el mensaje de error específico que envía el backend
+                            feedbackCupon.innerHTML = `<i class="bi bi-x-circle-fill"></i> ${data.error || 'Cupón inválido o expirado.'}`;
                         }
                         liquidarPrecios();
                     })
@@ -262,7 +269,20 @@
             });
         }
 
-        if(inputTipoPase) inputTipoPase.addEventListener("change", liquidarPrecios);
+        if(inputTipoPase) {
+            inputTipoPase.addEventListener("change", function() {
+                // 🚀 FIX DE UX: Si el alumno cambia el pase y ya había un cupón, lo reseteamos
+                // Esto evita que engañen a la UI mostrando un precio que no les corresponde.
+                if (cuponAplicado) {
+                    cuponAplicado = false;
+                    inputCupon.value = '';
+                    feedbackCupon.className = "text-warning text-dark extra-small mt-1 fw-semibold";
+                    feedbackCupon.innerHTML = '<i class="bi bi-info-circle-fill"></i> Cambiaste de entrada. Por favor, aplica tu cupón nuevamente.';
+                }
+                liquidarPrecios();
+            });
+        }
+        
         if(inputCantidad) inputCantidad.addEventListener("input", liquidarPrecios);
         
         // 🚀 BLINDAJE SENIOR FRONTEND: Prevención de doble envío (Double-Submit Protection)

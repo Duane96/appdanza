@@ -9,6 +9,7 @@ from django.dispatch import receiver
 from django.utils.text import slugify
 from django.apps import apps
 from .models import EntradaQR
+import textwrap
 
 # Herramientas de Pillow
 from PIL import Image, ImageDraw, ImageFont
@@ -127,8 +128,26 @@ def generar_codigo_qr_boleta(sender, instance, created, **kwargs):
         # ACADEMIA
         canvas.text((ancho_tarjeta / 2, 80), academia.nombre.upper(), fill="#6c757d", font=fuente_academia, anchor="mm")
 
-        # NOMBRE DEL EVENTO
-        canvas.text((ancho_tarjeta / 2, 145), evento.nombre, fill="#212529", font=fuente_titulo, anchor="mm")
+        # NOMBRE DEL EVENTO (Con TextWrap Inteligente y Centrado Vertical)
+        # Cortamos el texto si pasa de 22 caracteres (ajusta este número si lo ves necesario)
+        lineas_titulo = textwrap.wrap(evento.nombre, width=22)
+        
+        # Tu coordenada Y original que cuadraba perfecto
+        y_base_titulo = 145
+        
+        if len(lineas_titulo) == 1:
+            # Si el texto es corto, lo imprimimos exactamente donde estaba
+            canvas.text((ancho_tarjeta / 2, y_base_titulo), lineas_titulo[0], fill="#212529", font=fuente_titulo, anchor="mm")
+        else:
+            # Si se dividió en 2 líneas, calculamos el salto (45px es ideal para tu fuente tamaño 44)
+            salto_linea = 45
+            # Desplazamos la Y inicial hacia arriba para que el bloque de 2 líneas quede visualmente en el centro del espacio
+            y_actual = y_base_titulo - (salto_linea / 2)
+            
+            # Imprimimos máximo 2 líneas para no invadir el Badge de abajo
+            for linea in lineas_titulo[:2]:
+                canvas.text((ancho_tarjeta / 2, y_actual), linea, fill="#212529", font=fuente_titulo, anchor="mm")
+                y_actual += salto_linea
 
         # BADGE DE LA BOLETA
         total_boletas = recibo.cantidad_entradas

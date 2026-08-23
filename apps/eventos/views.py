@@ -724,6 +724,13 @@ class RegistroEventoPublicoView(FormView):
         if codigo_texto:
             cupon = CodigoDescuento.objects.filter(evento=self.evento_obj, nombre_codigo=codigo_texto).first()
             if cupon and cupon.es_valido:
+                
+                # 🚀 BLINDAJE BACKEND SENIOR: Verificamos de nuevo por seguridad
+                if cupon.pase_aplicable and cupon.pase_aplicable != pase_personalizado:
+                    from django.contrib import messages
+                    messages.error(self.request, f"El cupón {codigo_texto} solo es válido si adquieres el pase: {cupon.pase_aplicable.nombre}.")
+                    return self.form_invalid(form) # Rechazamos la compra si intentan hacer trampa
+
                 recibo.codigo_descuento_usado = cupon
                 
                 if tipo_pase_cupon == 'FULL':
@@ -793,10 +800,21 @@ class ValidarCuponAPIView(View):
     """API ultra rápida que valida el cupón vía AJAX/Fetch desde el cliente."""
     def get(self, request, slug_academia, evento_slug):
         codigo = request.GET.get('codigo', '').strip().upper()
+        # 🚀 NUEVO SENIOR: Capturamos el pase que el usuario tiene seleccionado en la pasarela
+        pase_id = request.GET.get('pase_id', '') 
+        
         evento = get_object_or_404(Evento, academia__slug=slug_academia, slug=evento_slug)
         cupon = CodigoDescuento.objects.filter(evento=evento, nombre_codigo=codigo).first()
         
         if cupon and cupon.es_valido:
+            # 🚀 BLINDAJE SENIOR: Verificamos si el cupón está restringido a un pase
+            if cupon.pase_aplicable:
+                if str(cupon.pase_aplicable.id) != str(pase_id):
+                    return JsonResponse({
+                        'valido': False,
+                        'error': f'Este cupón solo aplica para el pase: {cupon.pase_aplicable.nombre}'
+                    })
+
             # Determinamos si hay un precio específico de día, si no, igualamos al full
             precio_dia = float(cupon.precio_especial_dia) if cupon.precio_especial_dia else float(cupon.precio_especial)
             return JsonResponse({
@@ -804,7 +822,9 @@ class ValidarCuponAPIView(View):
                 'precio_especial_full': float(cupon.precio_especial),
                 'precio_especial_dia': precio_dia
             })
-        return JsonResponse({'valido': False})
+        return JsonResponse({'valido': False, 'error': 'Cupón inválido, vencido o agotado.'})
+
+
     
 
 class RegistroExitoView(TemplateView):

@@ -51,7 +51,7 @@ class CodigoDescuentoForm(forms.ModelForm):
     class Meta:
         model = CodigoDescuento
         # 🎯 Añadimos 'precio_especial_dia' a los campos permitidos
-        fields = ['nombre_codigo', 'precio_especial', 'precio_especial_dia', 'limite_usos', 'fecha_caducidad']
+        fields = ['nombre_codigo', 'precio_especial', 'precio_especial_dia', 'limite_usos', 'fecha_caducidad', 'pase_aplicable']
         widgets = {
             'nombre_codigo': forms.TextInput(attrs={'class': 'form-control text-uppercase', 'placeholder': 'Ej: PROMO25K'}),
             'precio_especial': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '25000 (Pase Full)'}),

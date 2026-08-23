@@ -191,6 +191,16 @@ class CodigoDescuento(models.Model):
     # 🚀 NUEVO: Control de borrado lógico (Soft Delete)
     activo = models.BooleanField(default=True, verbose_name="¿Código Activo?")
 
+    # 🚀 NUEVO SENIOR: Relación con el Pase Específico (Cupón Granular)
+    pase_aplicable = models.ForeignKey(
+        'TipoPase', # Usamos string porque el modelo TipoPase se define más abajo
+        on_delete=models.CASCADE, 
+        null=True, 
+        blank=True, 
+        related_name='cupones_asociados',
+        help_text="Si se deja en blanco, el cupón aplica para todo el evento. Si se selecciona un pase, solo servirá para ese pase."
+    )
+
     class Meta:
         unique_together = ('evento', 'nombre_codigo')
 

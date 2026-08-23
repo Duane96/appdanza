@@ -189,7 +189,6 @@
             </form>
         </div>
 
-        <!-- 🚀 NUEVO SENIOR: RESUMEN VISUAL DINÁMICO (Muestra los de 0 ventas en color gris) -->
         <div class="d-flex flex-wrap align-items-center gap-2 mb-3 p-3 bg-light rounded-3 border border-secondary-subtle">
             <span class="text-secondary small fw-bold me-2 text-uppercase font-monospace">
                 <i class="bi bi-pie-chart-fill me-1"></i> Entradas Activas:
@@ -197,14 +196,12 @@
             
             {% if evento.tiene_pases_personalizados and metricas_pases %}
                 {% for pase in metricas_pases %}
-                    <!-- 🚀 SENIOR FIX: Mostramos SIEMPRE el pase. Si tiene 0, se ve gris, si vende, resalta. -->
                     <span class="badge {% if pase.total_vendidos > 0 %}bg-dark text-white{% else %}bg-light text-secondary border{% endif %} px-3 py-2 rounded-pill shadow-sm fs-7">
                         {{ pase.nombre }}: <span class="{% if pase.total_vendidos > 0 %}text-warning{% else %}text-muted{% endif %} fs-6 ms-1">{{ pase.total_vendidos }}</span>
                     </span>
                 {% endfor %}
             {% endif %}
 
-            <!-- Si hay entradas generales o el evento NO usa pases, mostramos el conteo base -->
             {% if general_vendidos > 0 or not evento.tiene_pases_personalizados %}
             <span class="badge bg-secondary text-white px-3 py-2 rounded-pill shadow-sm fs-7">
                 General Base: <span class="text-light fs-6 ms-1">{{ general_vendidos }}</span>
@@ -376,9 +373,21 @@
                         <strong class="{% if not cod.activo %}text-decoration-line-through text-muted{% else %}text-dark{% endif %}">
                             {{ cod.nombre_codigo }}
                         </strong>
-                        <small class="text-muted d-block">
-                            Full: ${{ cod.precio_especial|floatformat:0 }} 
-                            {% if evento.es_multidias and cod.precio_especial_dia %}
+                        
+                        <!-- 🚀 NUEVO: Badge visual indicando a qué pase pertenece -->
+                        {% if cod.pase_aplicable %}
+                            <span class="badge bg-primary-subtle text-primary extra-small ms-1 shadow-sm" title="Restringido a este pase">
+                                <i class="bi bi-lock-fill"></i> {{ cod.pase_aplicable.nombre }}
+                            </span>
+                        {% else %}
+                            <span class="badge bg-secondary-subtle text-secondary extra-small ms-1 shadow-sm">
+                                General
+                            </span>
+                        {% endif %}
+
+                        <small class="text-muted d-block mt-1">
+                            Precio Especial: ${{ cod.precio_especial|floatformat:0 }} 
+                            {% if evento.es_multidias and cod.precio_especial_dia and not cod.pase_aplicable %}
                                 <span class="text-warning-emphasis">| x Día: ${{ cod.precio_especial_dia|floatformat:0 }}</span>
                             {% endif %}
                         </small>
@@ -495,6 +504,20 @@
                         {{ form_codigo.nombre_codigo }}
                     </div>
                     
+                    <!-- 🚀 NUEVO SENIOR: SELECTOR DE PASE ESPECÍFICO -->
+                    {% if evento.tiene_pases_personalizados %}
+                    <div class="mb-3 p-3 bg-light rounded border border-secondary-subtle">
+                        <label class="form-label small fw-bold text-tenant-primary"><i class="bi bi-ticket-detailed me-1"></i>Aplicar a un Pase Específico (Opcional)</label>
+                        <select name="pase_aplicable" class="form-select form-select-sm border-dark">
+                            <option value="">-- Cupón General (Aplica a todos) --</option>
+                            {% for pase in evento.pases_personalizados.all %}
+                                <option value="{{ pase.id }}">{{ pase.nombre }} - Precio original: ${{ pase.precio|floatformat:0 }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted extra-small d-block mt-1">Si seleccionas un pase, el cupón solo funcionará para ese ticket.</small>
+                    </div>
+                    {% endif %}
+
                     {% if evento.es_multidias %}
                         <div class="mb-3">
                             <label class="form-label small fw-semibold text-secondary">Precio Descuento (Pase FULL) ($)</label>
