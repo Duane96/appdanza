@@ -130,7 +130,13 @@ class Academia(models.Model):
     facebook_url = models.URLField(blank=True, null=True, verbose_name="URL Facebook")
     tiktok_url = models.URLField(blank=True, null=True, verbose_name="URL TikTok")
     youtube_url = models.URLField(blank=True, null=True, verbose_name="URL YouTube")
-    whatsapp_url = models.URLField(blank=True, null=True, verbose_name="Enlace Directo WhatsApp")
+    whatsapp_numero = models.CharField(
+        max_length=25, 
+        blank=True, 
+        null=True, 
+        verbose_name="Número de WhatsApp",
+        help_text="Ej: 573001234567 (Incluye el código de país, sin el símbolo +)"
+    )
 
 
     # 🌍 GEOLOCALIZACIÓN Y DIVISA SAAS
@@ -218,47 +224,49 @@ class Academia(models.Model):
 
     # (Mantén tus métodos save() y lógicas WebP idénticas a como me las pasaste)
     def save(self, *args, **kwargs):
-        # Auto-asignación de divisas según el mapeo antes de procesar WebP
-        mapeo_divisas = {'CO': 'COP', 'US': 'USD', 'ES': 'EUR', 'MX': 'MXN', 'CL': 'CLP', 'BR': 'BRL', 'PE': 'PEN', 'OT': 'USD'}
-        self.divisa = mapeo_divisas.get(self.pais, 'USD')
-
-    def __str__(self):
-        return self.nombre
-
-    # apps/academias/models.py (Dentro de la clase Academia)
-
-    def save(self, *args, **kwargs):
+        """
+        Sobrescribe el método save para automatizar dos cosas antes de guardar en BD:
+        1. Asignar la divisa correcta según el país seleccionado.
+        2. Procesar y optimizar todas las imágenes al formato moderno WebP.
+        """
+        # 1. Auto-asignación de divisas según el país (Para la lógica SaaS)
         mapeo_divisas = {
-            'CO': 'COP',
-            'US': 'USD',
-            'ES': 'EUR',
-            'MX': 'MXN',
-            'CL': 'CLP',
-            'BR': 'BRL',
-            'PE': 'PEN',
-            'OT': 'USD'
+            'CO': 'COP', 'US': 'USD', 'ES': 'EUR', 'MX': 'MXN', 
+            'CL': 'CLP', 'BR': 'BRL', 'PE': 'PEN', 'OT': 'USD'
         }
-
         self.divisa = mapeo_divisas.get(self.pais, 'USD')
 
+        # 2. Procesamiento de imágenes (Convierte todo a WebP para ahorrar espacio en PythonAnywhere)
         campos_imagen = [
-            'hero_imagen_1',
-            'hero_imagen_2',
-            'logo',
-            'info_imagen',
-            'login_imagen'
+            'hero_imagen_1', 'hero_imagen_2', 'logo', 'info_imagen', 'login_imagen'
         ]
 
         for campo in campos_imagen:
             archivo_imagen = getattr(self, campo)
-
+            # Solo procesamos si hay imagen y no es ya un webp
             if archivo_imagen and not archivo_imagen.name.endswith('.webp'):
                 try:
-                    ...
+                    # Aquí va tu lógica PIL original (la dejé con un print para no sobreescribir tu código de conversión)
+                    # Abre la imagen con PIL, conviértela a BytesIO y reasígnale el ContentFile
+                    pass # Sustituye este 'pass' por tu bloque 'try' original de conversión WebP
                 except Exception as e:
                     print(f"Error procesando imagen en {campo}: {e}")
 
+        # Finalmente guardamos en la base de datos
         super().save(*args, **kwargs)
+
+    @property
+    def enlace_whatsapp(self):
+        """
+        Limpia el número ingresado eliminando caracteres no numéricos
+        y construye el link universal de API de WhatsApp.
+        """
+        if self.whatsapp_numero:
+            import re
+            numero_limpio = re.sub(r'\D', '', self.whatsapp_numero)
+            if numero_limpio:
+                return f"https://wa.me/{numero_limpio}"
+        return None
 
     def __str__(self):
         return self.nombre

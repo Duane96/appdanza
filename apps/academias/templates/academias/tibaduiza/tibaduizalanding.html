@@ -1,0 +1,555 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adriana Tibaduiza | Pura Bachata Dominicana</title>
+    
+    <!-- Bootstrap y Fuentes -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- Tipografías: 'Lilita One' para un toque fiestero y 'Nunito' para legibilidad -->
+    <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            /* COLORES OFICIALES Y FESTIVOS RD */
+            --rd-blue: #002D62;
+            --rd-red: #CE1126;
+            --rd-white: #FFFFFF;
+            --party-yellow: #FFD100;
+            --tropical-cyan: #00E5FF;
+            --sand-bg: #FFF9ED;
+        }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: var(--sand-bg);
+            color: var(--rd-blue);
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+        }
+
+        /* --- TIPOGRAFÍA DE FIESTA --- */
+        h1, h2, h3, .font-fiesta {
+            font-family: 'Lilita One', cursive;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 2px 2px 0px rgba(0,0,0,0.1);
+        }
+
+        /* --- NAVBAR FLOTANTE ESTILO PÍLDORA --- */
+        .navbar-pill {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 50px;
+            box-shadow: 0 10px 30px rgba(0, 45, 98, 0.15);
+            margin-top: 20px;
+            border: 3px solid var(--rd-blue);
+        }
+        
+        .nav-link {
+            color: var(--rd-blue) !important;
+            font-weight: 900;
+            text-transform: uppercase;
+            padding: 10px 20px !important;
+            border-radius: 30px;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-link:hover {
+            background: var(--party-yellow);
+            color: var(--rd-blue) !important;
+            transform: translateY(-2px);
+        }
+
+        /* --- HERO: EXPLOSIÓN TROPICAL --- */
+        .hero-fiesta {
+            position: relative;
+            min-height: 100vh;
+            background: 
+                /* Patrón de puntos tipo cómic/pop-art */
+                radial-gradient(circle, rgba(0,45,98,0.05) 20%, transparent 20%),
+                radial-gradient(circle, rgba(0,45,98,0.05) 20%, transparent 20%);
+            background-size: 30px 30px;
+            background-position: 0 0, 15px 15px;
+            background-color: var(--tropical-cyan);
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+            padding-top: 100px; /* Espacio para el nav */
+        }
+
+        /* Formas dinámicas de fondo (Manchas de color RD) */
+        .blob-red {
+            position: absolute; top: -10%; right: -5%; width: 50vw; height: 50vw;
+            background: var(--rd-red); border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+            animation: morph 8s ease-in-out infinite; z-index: 0;
+            box-shadow: inset -20px -20px 0px rgba(0,0,0,0.1);
+        }
+        .blob-blue {
+            position: absolute; bottom: -20%; left: -10%; width: 60vw; height: 60vw;
+            background: var(--rd-blue); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+            animation: morph 10s ease-in-out infinite reverse; z-index: 0;
+            box-shadow: inset 20px 20px 0px rgba(0,0,0,0.2);
+        }
+
+        @keyframes morph {
+            0%, 100% { border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; }
+            34% { border-radius: 70% 30% 50% 50% / 30% 30% 70% 70%; }
+            67% { border-radius: 100% 60% 60% 100% / 100% 100% 60% 60%; }
+        }
+
+        /* --- BOTONES EXTREMOS --- */
+        .btn-gozadera {
+            background-color: var(--party-yellow);
+            color: var(--rd-blue);
+            font-family: 'Lilita One', cursive;
+            font-size: 1.5rem;
+            padding: 15px 40px;
+            border: 4px solid var(--rd-blue);
+            border-radius: 50px;
+            box-shadow: 6px 6px 0px var(--rd-blue);
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+        }
+        
+        .btn-gozadera:hover {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px var(--rd-blue);
+            color: var(--rd-blue);
+        }
+
+        .btn-red-hot {
+            background-color: var(--rd-red);
+            color: white;
+            font-family: 'Lilita One', cursive;
+            font-size: 1.2rem;
+            padding: 12px 30px;
+            border: 3px solid var(--rd-blue);
+            border-radius: 50px;
+            box-shadow: 4px 4px 0px var(--rd-blue);
+            transition: all 0.2s ease;
+        }
+        
+        .btn-red-hot:hover {
+            transform: translate(2px, 2px);
+            box-shadow: 0px 0px 0px var(--rd-blue);
+            color: white;
+        }
+
+        /* --- TÍTULOS CON BORDE (STROKE) --- */
+        .text-stroke {
+            color: white;
+            -webkit-text-stroke: 3px var(--rd-blue);
+            text-shadow: 5px 5px 0px var(--rd-blue);
+        }
+
+        /* --- SEPARADOR DE OLAS (WAVE) --- */
+        .wave-bottom {
+            position: absolute; bottom: 0; left: 0; width: 100%; overflow: hidden; line-height: 0; transform: rotate(180deg);
+        }
+        .wave-bottom svg { display: block; width: calc(100% + 1.3px); height: 80px; }
+        .wave-bottom .shape-fill { fill: var(--sand-bg); }
+
+        /* --- FLIP CARDS (Lógica mantenida, estilos de fiesta) --- */
+        .flip-card-container {
+            perspective: 1000px;
+            height: 100%;
+            min-height: 450px; 
+            z-index: 2;
+        }
+        .flip-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform-style: preserve-3d;
+        }
+        .flip-card-container:hover .flip-card-inner {
+            transform: rotateY(180deg);
+        }
+        .flip-card-front, .flip-card-back {
+            position: absolute; 
+            top: 0; left: 0; width: 100%; height: 100%;
+            backface-visibility: hidden; 
+            border-radius: 20px;
+            border: 4px solid var(--rd-blue);
+            box-shadow: 8px 8px 0px rgba(0,45,98,0.2);
+            overflow: hidden;
+        }
+        
+        /* CARA FRONTAL FIESTA */
+        .flip-card-front {
+            background: var(--rd-blue);
+            z-index: 2; 
+        }
+        
+        /* Cinta de precaución / Fiesta */
+        .tape-banner {
+            position: absolute; top: 15px; left: -30px;
+            background: var(--party-yellow); color: var(--rd-blue);
+            font-family: 'Lilita One', cursive; font-size: 1.1rem;
+            padding: 5px 40px; transform: rotate(-15deg);
+            border: 2px solid var(--rd-blue); box-shadow: 2px 2px 0px var(--rd-blue);
+            z-index: 10;
+        }
+
+        /* CARA TRASERA FIESTA */
+        .flip-card-back {
+            transform: rotateY(180deg);
+            z-index: 1; 
+            background: var(--sand-bg); 
+            background-image: radial-gradient(circle, rgba(206,17,38,0.05) 10%, transparent 10%);
+            background-size: 20px 20px;
+            display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; text-align: center;
+        }
+
+        /* --- TEMPORIZADOR POP --- */
+        .time-box {
+            background: white;
+            border: 3px solid var(--rd-blue);
+            border-radius: 12px;
+            padding: 8px;
+            text-align: center;
+            min-width: 60px;
+            box-shadow: 4px 4px 0px var(--rd-blue);
+            transform: rotate(calc(-3deg + 6deg * var(--rand))); /* Ligera rotación aleatoria para desorden divertido */
+        }
+        .time-box span.number { color: var(--rd-red); font-size: 1.8rem !important; }
+        .time-box span.label { color: var(--rd-blue); font-family: 'Nunito', sans-serif; font-weight: 900; }
+        
+        /* Ticket Item */
+        .ticket-item {
+            background: white;
+            border: 2px dashed var(--rd-blue);
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 10px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- NAVBAR PILL FLOTANTE (Rompe el esquema clásico) -->
+    <nav class="navbar navbar-expand-lg fixed-top px-3">
+        <div class="container navbar-pill px-4 py-2">
+            <a class="navbar-brand font-fiesta fs-2 d-flex align-items-center" href="#">
+                {% if academia.logo %}
+                    <img src="{{ academia.logo.url }}" alt="{{ academia.nombre }}" style="height: 50px;">
+                {% else %}
+                    <span style="color: var(--rd-blue);">ADRIANA</span>
+                    <span style="color: var(--rd-red); margin-left: 5px;">TIBADUIZA</span>
+                {% endif %}
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" style="border: 2px solid var(--rd-blue);">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+                <ul class="navbar-nav align-items-center gap-2">
+                    <li class="nav-item"><a class="nav-link" href="#cartelera">¡La Agenda!</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#online" style="color: var(--rd-red) !important;">Academia Online</a></li>
+                    <li class="nav-item ms-lg-3 mt-3 mt-lg-0">
+                        <!-- Botón CTA en el nav -->
+                        <a href="{% url 'academias:login' academia.slug %}" class="btn-red-hot text-decoration-none">Mi Panel</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- HERO SECTION: EXPLOSIÓN RD -->
+    <header class="hero-fiesta">
+        <!-- Fondos dinámicos -->
+        <div class="blob-red"></div>
+        <div class="blob-blue"></div>
+
+        <div class="container position-relative" style="z-index: 2;">
+            <div class="row align-items-center min-vh-100">
+                <div class="col-lg-7 text-center text-lg-start py-5">
+                    <span class="badge mb-3 py-2 px-4 fs-5" style="background-color: var(--rd-white); color: var(--rd-blue); border: 3px solid var(--rd-blue); border-radius: 30px; font-family: 'Lilita One', cursive; transform: rotate(-2deg); display: inline-block;">
+                        🇩🇴 EL VERDADERO SWING 🇩🇴
+                    </span>
+                    
+                    <h1 class="display-1 text-stroke mb-3" style="line-height: 0.9;">
+                        {{ academia.hero_titulo|default:"¡A GOZAR LA BACHATA!" }}
+                    </h1>
+                    
+                    <p class="fs-3 mb-5 fw-bold" style="color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); max-width: 600px;">
+                        {{ academia.hero_eslogan|default:"Siente el beat, suelta la cadera y aprende a bailar como si estuvieras en el malecón." }}
+                    </p>
+                    
+                    <div class="d-flex flex-column flex-sm-row gap-4 justify-content-center justify-content-lg-start">
+                        <a href="#cartelera" class="btn-gozadera text-decoration-none text-center">
+                            <i class="bi bi-fire me-2 text-danger"></i> ¡Ver Eventos!
+                        </a>
+                        <a href="#online" class="btn-red-hot text-decoration-none text-center d-flex align-items-center justify-content-center">
+                            <i class="bi bi-laptop me-2"></i> Clases Online
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="col-lg-5 d-none d-lg-block position-relative">
+                    <!-- Aquí iría una foto de Adriana recortada (PNG). Usamos el fallback de Django -->
+                    {% if academia.hero_imagen_1 %}
+                        <img src="{{ academia.hero_imagen_1.url }}" alt="Adriana" class="img-fluid" style="filter: drop-shadow(10px 10px 0px var(--party-yellow)); transform: rotate(3deg);">
+                    {% else %}
+                        <!-- Placeholder festivo si no hay foto -->
+                        <div class="p-5 text-center" style="background: var(--rd-white); border: 5px solid var(--rd-blue); border-radius: 50%; width: 400px; height: 400px; display: flex; align-items: center; justify-content: center; box-shadow: 15px 15px 0px var(--party-yellow); transform: rotate(5deg);">
+                            <h2 class="font-fiesta display-3 text-danger">PON TU FOTO ACÁ</h2>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Separador de olas SVG -->
+        <div class="wave-bottom">
+            <svg data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none">
+                <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z" class="shape-fill"></path>
+            </svg>
+        </div>
+    </header>
+
+    <!-- SECCIÓN: SOBRE LA PROFE (Inyectar justo después del </header> y antes de <section id="cartelera">) -->
+    <section id="sobre-mi" class="py-5 position-relative" style="background-color: var(--rd-white); border-top: 5px dashed var(--rd-blue); border-bottom: 5px dashed var(--rd-blue);">
+        
+        <!-- Elemento decorativo flotante -->
+        <div class="d-none d-lg-block position-absolute" style="top: -20px; left: 10%; z-index: 10;">
+            <span class="badge py-2 px-4 fs-5 shadow-sm" style="background-color: var(--party-yellow); color: var(--rd-blue); border: 3px solid var(--rd-blue); border-radius: 30px; font-family: 'Lilita One', cursive; transform: rotate(-5deg);">
+                ¡EL ALMA DE LA FIESTA! 🎉
+            </span>
+        </div>
+
+        <div class="container py-5 mt-3">
+            <div class="row align-items-center g-5">
+                
+                <!-- COLUMNA IMAGEN (Con efecto 3D Pop-Art) -->
+                <div class="col-lg-5 text-center position-relative">
+                    <!-- Sombra sólida descentrada (Simula papel encimado) -->
+                    <div style="position: absolute; top: 5%; left: 5%; width: 90%; height: 95%; background: var(--tropical-cyan); border: 4px solid var(--rd-blue); border-radius: 20px; transform: rotate(-4deg); z-index: 0;"></div>
+                    
+                    <div class="position-relative" style="z-index: 1;">
+                        {% if academia.info_imagen %}
+                            <!-- Cargamos la imagen dinámica del modelo Academia -->
+                            <img src="{{ academia.info_imagen.url }}" alt="{{ academia.info_titulo }}" class="img-fluid w-100 object-fit-cover" style="border: 4px solid var(--rd-blue); border-radius: 20px; transform: rotate(3deg); height: 450px; box-shadow: 8px 8px 0px rgba(0,45,98,0.2);">
+                        {% else %}
+                            <!-- Fallback por si la academia aún no sube foto -->
+                            <div class="d-flex align-items-center justify-content-center w-100" style="background: var(--party-yellow); border: 4px solid var(--rd-blue); border-radius: 20px; transform: rotate(3deg); height: 450px; box-shadow: 8px 8px 0px rgba(0,45,98,0.2);">
+                                <h2 class="font-fiesta text-danger" style="text-shadow: 2px 2px 0px white;">FOTO DE<br>ADRIANA</h2>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- COLUMNA TEXTO / DESCRIPCIÓN -->
+                <div class="col-lg-7 text-center text-lg-start ps-lg-5">
+                    
+                    <!-- Título dinámico desde la BD -->
+                    <h2 class="display-4 font-fiesta mb-4 text-stroke" style="color: var(--rd-red); -webkit-text-stroke: 1px var(--rd-blue); text-shadow: 3px 3px 0px var(--rd-blue);">
+                        {{ academia.info_titulo|default:"LA PROFE ADRIANA" }}
+                    </h2>
+                    
+                    <!-- Párrafo 1 (Resaltado / Negrita) -->
+                    <p class="fs-4 fw-bold mb-4" style="color: var(--rd-blue); line-height: 1.4;">
+                        {{ academia.info_descripcion_1|default:"Bachatera de corazón, nacida con el ritmo en las venas y lista para enseñarte a soltar la cadera como se debe." }}
+                    </p>
+                    
+                    <!-- Párrafo 2 (Texto normal de apoyo) -->
+                    <p class="fs-5 mb-5" style="color: var(--rd-blue); opacity: 0.9;">
+                        {{ academia.info_descripcion_2|default:"Aprenderemos técnica, musicalidad y disociación en un ambiente lleno de pura gozadera." }}
+                    </p>
+                    
+                    <!-- Botón para anclar a la cartelera o clases online -->
+                    <a href="#cartelera" class="btn-gozadera text-decoration-none d-inline-block" style="font-size: 1.2rem; padding: 10px 30px;">
+                        <i class="bi bi-music-note-list me-2"></i> Ver mis clases
+                    </a>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- SECCIÓN CARTELERA / EVENTOS (Flip Cards fiesteras) -->
+    <section id="cartelera" class="py-5">
+        <div class="container py-5">
+            <div class="text-center mb-5">
+                <h2 class="display-3 font-fiesta" style="color: var(--rd-red);">PRÓXIMAS RUMBAS Y CLASES</h2>
+                <div style="width: 100px; height: 6px; background: var(--rd-blue); margin: 20px auto; border-radius: 10px; transform: rotate(-2deg);"></div>
+                <p class="fs-4 fw-bold" style="color: var(--rd-blue);">¡Que no te lo cuenten, asegura tu cupo!</p>
+            </div>
+
+            <div class="row g-5 justify-content-center">
+                {% for evento in eventos %}
+                    <div class="col-md-6 col-xl-4">
+                        <!-- MANTENEMOS LA ESTRUCTURA 3D -->
+                        <div class="flip-card-container">
+                            <div class="flip-card-inner">
+                                
+                                <!-- CARA FRONTAL -->
+                                <div class="flip-card-front d-flex flex-column p-0">
+                                    <div class="tape-banner">¡IMPERDIBLE!</div>
+                                    
+                                    <div class="position-relative w-100 h-100" style="background: var(--rd-blue);">
+                                        {% if evento.imagen %}
+                                            <img src="{{ evento.imagen.url }}" alt="{{ evento.nombre }}" class="w-100 h-100 object-fit-cover" style="opacity: 0.8; mix-blend-mode: luminosity;">
+                                        {% endif %}
+                                        
+                                        <!-- Overlay pop-art -->
+                                        <div class="position-absolute bottom-0 start-0 w-100" style="background: linear-gradient(0deg, var(--rd-blue) 10%, transparent 100%); z-index: 1; height: 100%;"></div>
+                                        
+                                        <!-- Fecha gigante -->
+                                        <div class="position-absolute top-0 end-0 m-3" style="z-index: 2;">
+                                            <div style="background: var(--rd-red); color: white; border: 3px solid white; border-radius: 50%; width: 70px; height: 70px; display: flex; flex-direction: column; justify-content: center; align-items: center; box-shadow: 4px 4px 0px rgba(0,0,0,0.3); transform: rotate(10deg);">
+                                                <span class="font-fiesta fs-4 lh-1">{{ evento.fecha|date:"d" }}</span>
+                                                <span class="font-fiesta small lh-1">{{ evento.fecha|date:"M" }}</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Información frontal -->
+                                        <div class="position-absolute bottom-0 start-0 w-100 p-4" style="z-index: 2;">
+                                            
+                                            <!-- TEMPORIZADOR DIVERTIDO -->
+                                            <div class="countdown-timer d-flex gap-2 mb-3 justify-content-center" data-date="{{ evento.fecha|date:'c' }}">
+                                                <div class="time-box" style="--rand: 1;">
+                                                    <span class="d-block number font-fiesta lh-1">00</span>
+                                                    <span class="d-block small label">DÍAS</span>
+                                                </div>
+                                                <div class="time-box" style="--rand: 2;">
+                                                    <span class="d-block number font-fiesta lh-1">00</span>
+                                                    <span class="d-block small label">HRS</span>
+                                                </div>
+                                                <div class="time-box" style="--rand: 0;">
+                                                    <span class="d-block number font-fiesta lh-1">00</span>
+                                                    <span class="d-block small label">MIN</span>
+                                                </div>
+                                            </div>
+
+                                            <h3 class="font-fiesta text-white text-center mb-2 lh-sm fs-2" style="text-shadow: 3px 3px 0px var(--rd-red);">{{ evento.nombre }}</h3>
+                                            <p class="text-center mb-0 text-white fw-bold bg-dark bg-opacity-50 py-1 rounded-pill px-3 mx-auto d-inline-block">
+                                                <i class="bi bi-geo-alt-fill text-warning me-1"></i>{{ evento.ubicacion }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- CARA TRASERA (TICKETS) -->
+                                <div class="flip-card-back p-4">
+                                    <h3 class="font-fiesta fs-2 mb-4 text-stroke" style="color: var(--party-yellow); -webkit-text-stroke: 2px var(--rd-blue); text-shadow: 3px 3px 0px var(--rd-blue);">¡ASEGURA TU LUGAR!</h3>
+                                    
+                                    <div class="w-100 mb-4 px-2 overflow-auto" style="max-height: 200px;">
+                                        {% for pase in evento.pases_procesados %}
+                                            <div class="ticket-item">
+                                                <div class="text-start pe-2">
+                                                    <strong class="d-block font-fiesta text-dark" style="font-size: 1.1rem; letter-spacing: 0;">{{ pase.nombre|upper }}</strong>
+                                                </div>
+                                                <div class="text-end">
+                                                    <strong class="font-fiesta fs-4" style="color: var(--rd-red);">${{ pase.precio|floatformat:0 }}</strong>
+                                                </div>
+                                            </div>
+                                        {% empty %}
+                                            <div class="text-center fw-bold py-3 text-muted">Aún no hay tickets publicados. ¡Atento!</div>
+                                        {% endfor %}
+                                    </div>
+                                    
+                                    <div class="mt-auto w-100">
+                                        <a href="{% url 'eventos:registro_publico' academia.slug evento.slug %}" class="btn-red-hot w-100 py-3 d-flex justify-content-center align-items-center gap-2">
+                                            <span>COMPRAR TICKET</span>
+                                            <i class="bi bi-ticket-detailed-fill fs-4"></i>
+                                        </a>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="col-12 text-center py-5">
+                        <div class="p-5 d-inline-block" style="background: white; border: 4px solid var(--rd-blue); border-radius: 20px; box-shadow: 10px 10px 0px var(--party-yellow);">
+                            <i class="bi bi-music-note-list display-1 mb-3 text-danger d-block"></i>
+                            <h3 class="font-fiesta">¡AFINANDO LOS INSTRUMENTOS!</h3>
+                            <p class="fs-5 fw-bold text-muted">La agenda se está cocinando. Vuelve pronto.</p>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER CARIBEÑO -->
+    <footer class="pt-5 pb-4" style="background-color: var(--rd-blue); color: white; border-top: 10px solid var(--party-yellow);">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-6 text-center text-md-start mb-4 mb-md-0">
+                    <h3 class="font-fiesta mb-0 fs-1">
+                        {% if academia.logo %}
+                            <img src="{{ academia.logo.url }}" alt="Logo" style="height: 60px;">
+                        {% else %}
+                            <span class="text-white">ADRIANA</span><span style="color: var(--rd-red);">TIBADUIZA</span>
+                        {% endif %}
+                    </h3>
+                    <p class="fw-bold mt-2 text-info">Pura Bachata Dominicana</p>
+                </div>
+                <div class="col-md-6 text-center text-md-end">
+                    <div class="d-flex justify-content-center justify-content-md-end gap-3 fs-2">
+                        {% if academia.instagram_url %}<a href="{{ academia.instagram_url }}" target="_blank" class="text-white hover-zoom"><i class="bi bi-instagram"></i></a>{% endif %}
+                        {% if academia.instagram_url %}<a href="{{ academia.tiktok_url }}" target="_blank" class="text-white hover-zoom"><i class="bi bi-tiktok"></i></a>{% endif %}
+                        {% if academia.instagram_url %}<a href="{{ academia.youtube_url }}" target="_blank" class="text-white hover-zoom"><i class="bi bi-youtube"></i></a>{% endif %}
+                        {% if academia.facebook_url %}<a href="{{ academia.facebook_url }}" target="_blank" class="text-white hover-zoom"><i class="bi bi-facebook"></i></a>{% endif %}
+                        {% if academia.whatsapp_numero %}<a href="{{ academia.enlace_whatsapp }}" target="_blank" class="text-white hover-zoom" style="color: #25D366 !important;"><i class="bi bi-whatsapp"></i></a>{% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="text-center pt-4 mt-4" style="border-top: 2px dashed rgba(255,255,255,0.2);">
+                <p class="fw-bold mb-0">
+                    &copy; 2026 Adriana Tibaduiza. Hecho con sabor por <a href="#" class="text-warning text-decoration-none font-fiesta">AppDanza</a>
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- SCRIPTS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            // --- SCRIPT DEL TEMPORIZADOR DE EVENTOS ---
+            const timers = document.querySelectorAll('.countdown-timer');
+
+            function updateTimers() {
+                const now = new Date().getTime();
+
+                timers.forEach(timer => {
+                    const targetDateStr = timer.getAttribute('data-date');
+                    if (!targetDateStr) return;
+
+                    const targetDate = new Date(targetDateStr).getTime();
+                    const distance = targetDate - now;
+
+                    // Si el evento ya llegó
+                    if (distance < 0) {
+                        timer.innerHTML = '<div class="tape-banner" style="position:relative; top:0; left:0; transform:none; width:100%; text-align:center; font-size:1.5rem; background:var(--rd-red); color:white;">¡LA FIESTA EMPEZÓ!</div>';
+                        return;
+                    }
+
+                    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                    
+                    timer.querySelectorAll('.number')[0].innerText = days < 10 ? '0' + days : days;
+                    timer.querySelectorAll('.number')[1].innerText = hours < 10 ? '0' + hours : hours;
+                    timer.querySelectorAll('.number')[2].innerText = minutes < 10 ? '0' + minutes : minutes;
+                });
+            }
+
+            updateTimers();
+            setInterval(updateTimers, 60000); // Actualiza cada minuto
+        });
+    </script>
+</body>
+</html>

@@ -21,7 +21,7 @@ class ConfigMascaraForm(forms.ModelForm):
             'bloque_1_titulo', 'bloque_1_icono', 'bloque_2_titulo', 'bloque_2_icono',
             'bloque_3_titulo', 'bloque_3_icono', 'bloque_4_titulo', 'bloque_4_icono',
             'direccion_sede', 'horario_atencion', 
-            'instagram_url', 'facebook_url', 'tiktok_url', 'youtube_url', 'whatsapp_url',
+            'instagram_url', 'facebook_url', 'tiktok_url', 'youtube_url', 'whatsapp_numero',
             'login_imagen',
             'razon_social', 'nit', 'representante_legal', 'tipo_regimen', 'resolucion_facturacion'
         ]
@@ -48,7 +48,10 @@ class ConfigMascaraForm(forms.ModelForm):
             'facebook_url': forms.URLInput(attrs={'class': 'form-control'}),
             'tiktok_url': forms.URLInput(attrs={'class': 'form-control'}),
             'youtube_url': forms.URLInput(attrs={'class': 'form-control'}),
-            'whatsapp_url': forms.URLInput(attrs={'class': 'form-control'}),
+            'whatsapp_numero': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'Ej: 573001234567'
+            }),
             'login_imagen': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
             'bloque_1_titulo': forms.TextInput(attrs={'class': 'form-control'}),
             'bloque_1_icono': forms.Select(attrs={'class': 'form-select', 'id': 'select-icono-1'}),
