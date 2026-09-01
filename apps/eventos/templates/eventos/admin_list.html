@@ -1,6 +1,9 @@
 {% extends "base_tenant.html" %}
 
 {% block content %}
+<!-- ========================================== -->
+<!-- 1. ENCABEZADO PRINCIPAL                    -->
+<!-- ========================================== -->
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h2 class="fw-bold text-dark m-0">Gestión de Eventos</h2>
@@ -11,80 +14,178 @@
     </button>
 </div>
 
-<div class="row g-3">
-    {% for evento in eventos %}
-    <div class="col-md-6 col-lg-4">
-        <div class="card border-0 shadow-sm bg-white h-100 position-relative overflow-hidden d-flex flex-column">
-            
-            <div class="position-relative w-100" style="height: 180px; background-color: #0f172a;">
-                {% if evento.imagen %}
-                    <img src="{{ evento.imagen.url }}" alt="{{ evento.nombre }}" class="w-100 h-100 object-fit-cover opacity-75">
-                {% else %}
-                    <div class="w-100 h-100 d-flex align-items-center justify-content-center" 
-                         style="background: linear-gradient(135deg, {{ request.tenant.color_primario|default:'#6f42c1' }}, {{ request.tenant.color_secundario|default:'#e83e8c' }});">
-                        <i class="bi bi-image text-white opacity-25" style="font-size: 3rem;"></i>
-                    </div>
-                {% endif %}
-                
-                <div class="position-absolute top-0 start-0 m-3">
-                    <span class="badge 
-                        {% if evento.estado == 'REGISTRO_ONLINE' %}bg-success
-                        {% elif evento.estado == 'REGISTRO_PUERTA' %}bg-warning text-dark
-                        {% else %}bg-secondary{% endif %} text-uppercase small fw-bold shadow-sm">
-                        {{ evento.get_estado_display }}
-                    </span>
-                </div>
-            </div>
-            
-            <div class="card-body p-4 d-flex flex-column flex-grow-1">
-                <h4 class="fw-bold text-dark mb-1 text-truncate">{{ evento.nombre }}</h4>
-                <p class="text-muted small mb-3"><i class="bi bi-geo-alt me-1"></i> {{ evento.ubicacion }}</p>
-                
-                <div class="row g-2 bg-light rounded p-2 mb-3 text-center small mt-auto">
-                    <div class="col-6 border-end">
-                        <span class="text-muted d-block" style="font-size: 0.75rem;">PREVENTA WEB</span>
-                        <strong class="text-success">${{ evento.precio_preventa|floatformat:0 }}</strong>
-                    </div>
-                    <div class="col-6">
-                        <span class="text-muted d-block" style="font-size: 0.75rem;">TAQUILLA / PUERTA</span>
-                        <strong class="text-dark">${{ evento.precio_puerta|floatformat:0 }}</strong>
-                    </div>
-                </div>
-
-                <div class="d-flex align-items-center text-secondary small mb-4">
-                    <i class="bi bi-calendar3 me-2" style="color: {{ request.tenant.color_primario }};"></i>
-                    <span>{{ evento.fecha|date:"d \d\e F, Y - g:i a" }}</span>
-                </div>
-
-                <div class="row g-2">
-                    <div class="col-7">
-                        <a href="{% url 'eventos:admin_detalle' request.tenant.slug evento.slug %}" class="btn btn-outline-dark btn-sm fw-semibold w-100 py-2">
-                            <i class="bi bi-sliders me-1"></i> Control
-                        </a>
-                    </div>
-                    <div class="col-5">
-                        <a href="{% url 'eventos:admin_editar' request.tenant.slug evento.slug %}" class="btn btn-light border btn-sm fw-semibold w-100 py-2 text-secondary">
-                            <i class="bi bi-pencil-square me-1"></i> Editar
-                        </a>
-                    </div>
-                </div>
-            </div>
+<!-- ========================================== -->
+<!-- 2. ALERTA DE COBRO (SaaS)                  -->
+<!-- ========================================== -->
+{% if deuda_saas > 0 %}
+<div class="alert alert-danger bg-danger text-white border-0 shadow-lg rounded-4 p-4 mb-4 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 animate-pulse">
+    <div class="d-flex align-items-center">
+        <i class="bi bi-exclamation-octagon-fill display-4 me-3 opacity-75"></i>
+        <div>
+            <h4 class="fw-bold mb-1">Acción Requerida: Saldo Pendiente</h4>
+            <p class="mb-0 small opacity-75">Tu academia tiene comisiones por liquidar de eventos finalizados. La creación de nuevos eventos ha sido bloqueada temporalmente.</p>
         </div>
     </div>
-    {% empty %}
-    <div class="col-12">
-        <div class="bg-white p-5 rounded shadow-sm text-center">
-            <i class="bi bi-calendar-x display-1 text-muted opacity-50 mb-3"></i>
-            <h4 class="fw-bold text-dark">No hay eventos registrados</h4>
-            <p class="text-muted small mb-4">Aún no has creado ningún evento para esta academia.</p>
-            <button class="btn btn-tenant-primary" data-bs-toggle="modal" data-bs-target="#modalCrearEvento">
-                Crear tu primer evento ahora
-            </button>
-        </div>
+    <div class="text-md-end text-center flex-shrink-0">
+        <span class="d-block small text-uppercase mb-1 opacity-75 fw-bold">Total a Pagar</span>
+        <h2 class="fw-bold mb-2">${{ deuda_saas|floatformat:0 }} <span class="fs-6 fw-normal">COP</span></h2>
+        <!-- Botón futuro para integrar con ePayco / Wompi -->
+        <button class="btn btn-light text-danger fw-bold rounded-pill shadow-sm px-4">
+            <i class="bi bi-credit-card-fill me-1"></i> Pagar Ahora
+        </button>
     </div>
-    {% endfor %}
 </div>
 
+<!-- Script para ocultar el botón de crear evento visualmente -->
+<style>
+    button[data-bs-target="#modalCrearEvento"] {
+        display: none !important;
+    }
+</style>
+{% endif %} <!-- 🚀 AQUÍ ESTABA EL BUG: Faltaba cerrar el IF -->
+
+<!-- ========================================== -->
+<!-- 3. PESTAÑAS DE NAVEGACIÓN                  -->
+<!-- ========================================== -->
+<ul class="nav nav-pills mb-4 bg-white p-2 rounded-pill shadow-sm border d-inline-flex" id="eventosTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active rounded-pill fw-bold px-4" data-bs-toggle="pill" data-bs-target="#activos" type="button">
+            <i class="bi bi-calendar-event me-1"></i> Próximos y Activos ({{ eventos_activos|length }})
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link rounded-pill fw-bold px-4 text-muted" data-bs-toggle="pill" data-bs-target="#finalizados" type="button">
+            <i class="bi bi-archive me-1"></i> Historial ({{ eventos_finalizados|length }})
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="eventosTabsContent">
+    
+    <!-- ========================================== -->
+    <!-- TAB 1: EVENTOS ACTIVOS                     -->
+    <!-- ========================================== -->
+    <div class="tab-pane fade show active" id="activos" role="tabpanel">
+        <div class="row g-3">
+            {% for evento in eventos_activos %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card border-0 shadow-sm bg-white h-100 position-relative overflow-hidden d-flex flex-column transition-all hover-lift">
+                    
+                    <div class="position-relative w-100" style="height: 180px; background-color: #0f172a;">
+                        {% if evento.imagen %}
+                            <img src="{{ evento.imagen.url }}" alt="{{ evento.nombre }}" class="w-100 h-100 object-fit-cover opacity-75">
+                        {% else %}
+                            <div class="w-100 h-100 d-flex align-items-center justify-content-center" 
+                                 style="background: linear-gradient(135deg, {{ request.tenant.color_primario|default:'#6f42c1' }}, {{ request.tenant.color_secundario|default:'#e83e8c' }});">
+                                <i class="bi bi-image text-white opacity-25" style="font-size: 3rem;"></i>
+                            </div>
+                        {% endif %}
+                        
+                        <div class="position-absolute top-0 start-0 m-3">
+                            <span class="badge {% if evento.estado == 'REGISTRO_ONLINE' %}bg-success{% else %}bg-warning text-dark{% endif %} text-uppercase small fw-bold shadow-sm">
+                                {{ evento.get_estado_display }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="card-body p-4 d-flex flex-column flex-grow-1">
+                        <h4 class="fw-bold text-dark mb-1 text-truncate" title="{{ evento.nombre }}">{{ evento.nombre }}</h4>
+                        <p class="text-muted small mb-3"><i class="bi bi-geo-alt me-1"></i> {{ evento.ubicacion }}</p>
+                        
+                        <div class="row g-2 bg-light rounded border p-2 mb-3 text-center small mt-auto">
+                            <div class="col-6 border-end">
+                                <span class="text-muted d-block fw-semibold" style="font-size: 0.70rem;">TICKETS VENDIDOS</span>
+                                <strong class="text-dark fs-5"><i class="bi bi-ticket-perforated text-tenant-primary me-1"></i>{{ evento.boletas_vendidas }}</strong>
+                            </div>
+                            <div class="col-6">
+                                <span class="text-muted d-block fw-semibold" style="font-size: 0.70rem;">RECAUDO TOTAL</span>
+                                <strong class="text-success fs-5">${{ evento.ingresos_totales|floatformat:0 }}</strong>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center text-secondary small mb-4 fw-medium">
+                            <i class="bi bi-calendar3 me-2" style="color: {{ request.tenant.color_primario }};"></i>
+                            <span>{{ evento.fecha|date:"d \d\e F, Y - g:i a" }}</span>
+                        </div>
+
+                        <div class="row g-2 mt-auto">
+                            <div class="col-7">
+                                <a href="{% url 'eventos:admin_detalle' request.tenant.slug evento.slug %}" class="btn btn-dark btn-sm fw-semibold w-100 py-2 shadow-sm">
+                                    <i class="bi bi-sliders me-1"></i> Control
+                                </a>
+                            </div>
+                            <div class="col-5">
+                                <a href="{% url 'eventos:admin_editar' request.tenant.slug evento.slug %}" class="btn btn-light border btn-sm fw-semibold w-100 py-2 text-secondary shadow-sm">
+                                    <i class="bi bi-pencil-square me-1"></i> Editar
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="bg-white p-5 rounded-4 shadow-sm text-center border">
+                    <i class="bi bi-calendar-star display-1 text-tenant-primary opacity-50 mb-3"></i>
+                    <h4 class="fw-bold text-dark">No hay eventos activos</h4>
+                    <p class="text-muted small mb-4">Crea tu primer congreso, social o taller para empezar a vender entradas.</p>
+                    <button class="btn btn-dark rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#modalCrearEvento">
+                        Crear Evento Ahora
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 2: HISTORIAL (FINALIZADOS)             -->
+    <!-- ========================================== -->
+    <div class="tab-pane fade" id="finalizados" role="tabpanel">
+        <div class="row g-3 opacity-75">
+            {% for evento in eventos_finalizados %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card border-0 shadow-sm bg-light h-100 position-relative overflow-hidden d-flex flex-column" style="filter: grayscale(80%);">
+                    
+                    <div class="position-relative w-100" style="height: 120px; background-color: #6c757d;">
+                        {% if evento.imagen %}
+                            <img src="{{ evento.imagen.url }}" alt="{{ evento.nombre }}" class="w-100 h-100 object-fit-cover opacity-50">
+                        {% endif %}
+                        <div class="position-absolute top-50 start-50 translate-middle">
+                            <span class="badge bg-secondary text-white text-uppercase fw-bold shadow">
+                                EVENTO CERRADO
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="card-body p-3 d-flex flex-column flex-grow-1">
+                        <h5 class="fw-bold text-dark mb-1 text-truncate">{{ evento.nombre }}</h5>
+                        <div class="d-flex justify-content-between text-muted small mt-2">
+                            <span><i class="bi bi-ticket"></i> {{ evento.boletas_vendidas }}</span>
+                            <strong class="text-secondary">${{ evento.ingresos_totales|floatformat:0 }}</strong>
+                        </div>
+                        <a href="{% url 'eventos:admin_detalle' request.tenant.slug evento.slug %}" class="btn btn-outline-secondary btn-sm fw-bold w-100 mt-3">
+                            Ver Reporte Histórico
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-archive fs-1 d-block mb-2 opacity-50"></i>
+                    Aún no tienes eventos finalizados en tu historial.
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+
+<!-- ========================================== -->
+<!-- MODAL: CREAR EVENTO                        -->
+<!-- ========================================== -->
 <div class="modal fade" id="modalCrearEvento" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
@@ -98,76 +199,76 @@
                 </div>
 
                 <div class="modal-body px-4 py-4">
-    {% if form.errors %}
-        <div class="alert alert-danger bg-danger text-white border-0 small p-3 mb-4 rounded-3 shadow-sm d-flex align-items-center">
-            <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
-            <div>
-                <strong>No pudimos crear el evento.</strong><br> 
-                Por favor revisa los campos en rojo.
-                {{ form.non_field_errors }}
-            </div>
-        </div>
-    {% endif %}
+                    {% if form.errors %}
+                        <div class="alert alert-danger bg-danger text-white border-0 small p-3 mb-4 rounded-3 shadow-sm d-flex align-items-center">
+                            <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
+                            <div>
+                                <strong>No pudimos crear el evento.</strong><br> 
+                                Por favor revisa los campos en rojo.
+                                {{ form.non_field_errors }}
+                            </div>
+                        </div>
+                    {% endif %}
 
-    <div class="row g-4">
-        <div class="col-12">
-            <label class="small fw-bold text-dark">Nombre del Evento *</label>
-            {{ form.nombre }}
-            {% if form.nombre.errors %}
-                <div class="text-danger small mt-1 fw-bold"><i class="bi bi-asterisk"></i> {{ form.nombre.errors.0 }}</div>
-            {% endif %}
-        </div>
-        <div class="col-md-6">
-            <label class="small fw-bold text-dark">Fecha de Inicio *</label>
-            {{ form.fecha }}
-            {% if form.fecha.errors %}
-                <div class="text-danger small mt-1 fw-bold"><i class="bi bi-asterisk"></i> {{ form.fecha.errors.0 }}</div>
-            {% endif %}
-        </div>
-        <div class="col-md-6">
-            <label class="small fw-bold text-dark">Fecha de Fin</label>
-            {{ form.fecha_fin }}
-            {% if form.fecha_fin.errors %}
-                <div class="text-danger small mt-1 fw-bold"><i class="bi bi-asterisk"></i> {{ form.fecha_fin.errors.0 }}</div>
-            {% endif %}
-        </div>
-        <div class="col-12">
-            <label class="small fw-bold text-dark">Ubicación (Lugar/Ciudad) *</label>
-            {{ form.ubicacion }}
-            {% if form.ubicacion.errors %}
-                <div class="text-danger small mt-1 fw-bold"><i class="bi bi-asterisk"></i> {{ form.ubicacion.errors.0 }}</div>
-            {% endif %}
-        </div>
+                    <div class="row g-4">
+                        <div class="col-12">
+                            <label class="small fw-bold text-dark">Nombre del Evento *</label>
+                            {{ form.nombre }}
+                            {% if form.nombre.errors %}
+                                <div class="text-danger small mt-1 fw-bold"><i class="bi bi-asterisk"></i> {{ form.nombre.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="small fw-bold text-dark">Fecha de Inicio *</label>
+                            {{ form.fecha }}
+                            {% if form.fecha.errors %}
+                                <div class="text-danger small mt-1 fw-bold"><i class="bi bi-asterisk"></i> {{ form.fecha.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="small fw-bold text-dark">Fecha de Fin</label>
+                            {{ form.fecha_fin }}
+                            {% if form.fecha_fin.errors %}
+                                <div class="text-danger small mt-1 fw-bold"><i class="bi bi-asterisk"></i> {{ form.fecha_fin.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-12">
+                            <label class="small fw-bold text-dark">Ubicación (Lugar/Ciudad) *</label>
+                            {{ form.ubicacion }}
+                            {% if form.ubicacion.errors %}
+                                <div class="text-danger small mt-1 fw-bold"><i class="bi bi-asterisk"></i> {{ form.ubicacion.errors.0 }}</div>
+                            {% endif %}
+                        </div>
 
-        <div class="col-12 mt-4">
-            <div class="bg-light border rounded p-4">
-                <h6 class="fw-bold text-dark mb-3"><i class="bi bi-sliders me-2"></i>Formato de Venta</h6>
-                
-                <div class="form-check form-switch mb-3">
-    {{ form.es_multidias }}
-    <label class="form-check-label fw-bold text-dark ms-2">¿Es un evento de varios días? (Ej: Congreso)</label>
-</div>
+                        <div class="col-12 mt-4">
+                            <div class="bg-light border rounded p-4">
+                                <h6 class="fw-bold text-dark mb-3"><i class="bi bi-sliders me-2"></i>Formato de Venta</h6>
+                                
+                                <div class="form-check form-switch mb-3">
+                                    {{ form.es_multidias }}
+                                    <label class="form-check-label fw-bold text-dark ms-2">¿Es un evento de varios días? (Ej: Congreso)</label>
+                                </div>
 
-<div id="div-multidias-campos" class="mb-4 ps-4 border-start border-3 border-tenant-primary d-none">
-    <label class="small fw-bold text-dark">¿Cuántos días dura en total? *</label>
-    <input type="number" name="cantidad_dias" value="1" min="1" class="form-control w-50" required id="id_cantidad_dias">
-    {% if form.cantidad_dias.errors %}
-        <div class="text-danger small mt-1 fw-bold"><i class="bi bi-asterisk"></i> {{ form.cantidad_dias.errors.0 }}</div>
-    {% endif %}
-</div>
+                                <div id="div-multidias-campos" class="mb-4 ps-4 border-start border-3 border-tenant-primary d-none">
+                                    <label class="small fw-bold text-dark">¿Cuántos días dura en total? *</label>
+                                    <input type="number" name="cantidad_dias" value="1" min="1" class="form-control w-50" required id="id_cantidad_dias">
+                                    {% if form.cantidad_dias.errors %}
+                                        <div class="text-danger small mt-1 fw-bold"><i class="bi bi-asterisk"></i> {{ form.cantidad_dias.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
 
-<div class="form-check form-switch mb-3">
-    {{ form.tiene_pases_personalizados }}
-    <label class="form-check-label fw-bold text-dark ms-2">¿Venderás pases a la carta? (Ej: Solo Fiesta, Talleres)</label>
-</div>
-<div class="form-check form-switch mb-0">
-    {{ form.tiene_fases_fechas }}
-    <label class="form-check-label fw-bold text-dark ms-2">¿Tendrás múltiples fechas de pago? (Ej: Preventa 1, Preventa 2)</label>
-</div>
-            </div>
-        </div>
-    </div>
-</div>
+                                <div class="form-check form-switch mb-3">
+                                    {{ form.tiene_pases_personalizados }}
+                                    <label class="form-check-label fw-bold text-dark ms-2">¿Venderás pases a la carta? (Ej: Solo Fiesta, Talleres)</label>
+                                </div>
+                                <div class="form-check form-switch mb-0">
+                                    {{ form.tiene_fases_fechas }}
+                                    <label class="form-check-label fw-bold text-dark ms-2">¿Tendrás múltiples fechas de pago? (Ej: Preventa 1, Preventa 2)</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 
                 <div class="modal-footer bg-light border-top-0 d-flex justify-content-between">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>

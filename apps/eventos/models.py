@@ -11,6 +11,9 @@ from django.core.files.base import ContentFile
 from PIL import Image
 
 from apps.academias.models import TenantModel
+from django.db.models.functions import Coalesce
+from django.db.models import F, Sum
+
 
 def ruta_banners_academia(instance, filename):
     """
@@ -96,8 +99,18 @@ class Evento(TenantModel):
         # ✅ CORRECCIÓN SENIOR: Usamos models.Sum('cantidad_entradas') para contar a las personas reales.
         
         # Conteo físico real de registros emitidos para el evento actual
-        total_online = self.recibos_evento.filter(origen='ONLINE').aggregate(total=models.Sum('cantidad_entradas'))['total'] or 0
-        total_puerta = self.recibos_evento.filter(origen='PUERTA').aggregate(total=models.Sum('cantidad_entradas'))['total'] or 0
+        # 🚀 FIX SENIOR: Calculamos personas REALES cruzando las entradas con el multiplicador del pase.
+        total_online = self.recibos_evento.filter(origen='ONLINE', anulado=False).annotate(
+            multiplicador=Coalesce('tipo_pase__qrs_por_pase', 1)
+        ).aggregate(
+            total_personas=Sum(F('cantidad_entradas') * F('multiplicador'))
+        )['total_personas'] or 0
+        
+        total_puerta = self.recibos_evento.filter(origen='PUERTA', anulado=False).annotate(
+            multiplicador=Coalesce('tipo_pase__qrs_por_pase', 1)
+        ).aggregate(
+            total_personas=Sum(F('cantidad_entradas') * F('multiplicador'))
+        )['total_personas'] or 0
         
         # 🎁 FILTRO VIP COMPAÑEROS DE PRUEBA: Si es aliado o partner, la plataforma reporta cero deudas
         if suscripcion and suscripcion.es_cuenta_partner_gratis:
@@ -138,6 +151,25 @@ class Evento(TenantModel):
     
     def __str__(self):
         return f"{self.nombre} ({self.academia.nombre})"
+
+    # 🧠 NUEVO MÉTODO SENIOR: Congelar deuda y cerrar
+    def congelar_deuda_y_finalizar(self):
+        """Cierra el evento y guarda la deuda calculada de forma inmutable."""
+        datos_comision = self.calcular_estado_comisiones()
+        
+        if not datos_comision.get('modo_partner', False):
+            self.deuda_online_calculada = datos_comision['deuda_online']
+            self.deuda_puerta_calculada = datos_comision['deuda_puerta']
+            # Marcamos liquidado=False explícitamente por si acaso
+            self.online_liquidado = False 
+            self.puerta_liquidado = False
+            
+        self.estado = 'FINALIZADO'
+        # Guardamos solo los campos afectados para ahorrar recursos en la BD
+        self.save(update_fields=[
+            'estado', 'deuda_online_calculada', 'deuda_puerta_calculada', 
+            'online_liquidado', 'puerta_liquidado'
+        ])
     
     def save(self, *args, **kwargs):
         # 1. Aseguramos el slug antes de guardar
@@ -227,6 +259,13 @@ class TipoPase(models.Model):
     accesos_permitidos = models.PositiveIntegerField(
         default=1, 
         help_text="¿Cuántos días/veces puede escanear su QR con este pase?"
+    )
+
+    # 🚀 NUEVO SENIOR: Factor multiplicador para automatizar parejas o grupos
+    qrs_por_pase = models.PositiveIntegerField(
+        default=1, 
+        verbose_name="Personas por Pase",
+        help_text="1 = Individual, 2 = Pareja. Define cuántos QRs se generan al comprar 1 unidad."
     )
 
     class Meta:
@@ -334,7 +373,12 @@ class ReciboEvento(models.Model):
 
         # 2. DETONANTE INTELIGENTE DE BOLETAS QR
         if self.origen == 'ONLINE' and not self.boletas_qr.exists():
-            for _ in range(self.cantidad_entradas):
+            # Extraemos cuántas personas ampara el pase elegido (por defecto 1)
+            multiplicador = self.tipo_pase.qrs_por_pase if self.tipo_pase else 1
+            # Multiplicamos entradas compradas X cantidad de personas por pase
+            total_qrs = self.cantidad_entradas * multiplicador
+            
+            for _ in range(total_qrs):
                 EntradaQR.objects.create(recibo=self)
 
 

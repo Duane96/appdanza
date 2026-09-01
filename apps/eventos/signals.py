@@ -149,12 +149,19 @@ def generar_codigo_qr_boleta(sender, instance, created, **kwargs):
                 canvas.text((ancho_tarjeta / 2, y_actual), linea, fill="#212529", font=fuente_titulo, anchor="mm")
                 y_actual += salto_linea
 
+        #----------------------------------------------------
         # BADGE DE LA BOLETA
-        total_boletas = recibo.cantidad_entradas
-        lista_boletas = list(recibo.boletas_qr.all().order_by('id'))
-        indice_actual = lista_boletas.index(instance) + 1 if instance in lista_boletas else 1
+        # ----------------------------------------------------
+        # 🚀 FIX SENIOR: Calculamos el total ESPERADO multiplicando (entradas x personas del pase).
+        # No usamos el .count() de BD porque la señal se dispara asíncronamente a medida que se guardan.
+        multiplicador = recibo.tipo_pase.qrs_por_pase if recibo.tipo_pase else 1
+        total_boletas_esperadas = recibo.cantidad_entradas * multiplicador
         
-        texto_badge = f"BOLETA {indice_actual} DE {total_boletas}"
+        # Identificamos qué número de boleta es la que estamos imprimiendo actualmente
+        lista_boletas = list(recibo.boletas_qr.all().order_by('id'))
+        indice_actual = lista_boletas.index(instance) + 1 if instance in lista_boletas else len(lista_boletas) + 1
+        
+        texto_badge = f"BOLETA {indice_actual} DE {total_boletas_esperadas}"
         
         bw, bh = 280, 50
         bx1, by1 = (ancho_tarjeta - bw) / 2, 200

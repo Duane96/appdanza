@@ -131,6 +131,13 @@
 {% else %}
     <div class="d-none">{{ form_pase.accesos_permitidos }}</div>
 {% endif %}
+
+<!-- 🚀 NUEVO SENIOR: Campo para indicar si es Pareja/Grupo -->
+                            <div class="mb-3 p-3 bg-light rounded border border-secondary-subtle">
+                                <label class="small fw-bold text-dark"><i class="bi bi-people-fill me-1"></i> Personas por Pase</label>
+                                {{ form_pase.qrs_por_pase }}
+                                <small class="text-muted extra-small d-block mt-1">1 = Individual, 2 = Pareja. Define cuántos QRs únicos se generan al comprar 1 unidad de este pase.</small>
+                            </div>
                             
                             {% if not object.tiene_fases_fechas %}
                                 <div class="mb-4" id="div_precio_pase">
@@ -156,7 +163,9 @@
     <thead class="table-light small">
         <tr>
             <th>Pase</th>
-            {% if object.es_multidias %}<th>Accesos QR</th>{% endif %}
+            <!-- 🚀 NUEVO: Columna para ver las personas -->
+            <th class="text-center">Personas (QRs)</th>
+            {% if object.es_multidias %}<th class="text-center">Accesos QR</th>{% endif %}
             {% if not object.tiene_fases_fechas %}<th>Precio Único</th>{% endif %}
             <th class="text-end">Acciones</th>
         </tr>
@@ -165,6 +174,15 @@
         {% for pase in pases_creados %}
         <tr>
             <td class="fw-bold text-dark">{{ pase.nombre }}</td>
+            
+            <!-- 🚀 NUEVO: Badge visual del multiplicador -->
+            <td class="text-center">
+                <span class="badge {% if pase.qrs_por_pase > 1 %}bg-warning text-dark{% else %}bg-light text-secondary border{% endif %}">
+                    <i class="bi bi-person{% if pase.qrs_por_pase > 1 %}s{% endif %}-fill me-1"></i> {{ pase.qrs_por_pase }}
+                </span>
+            </td>
+
+            
             {% if object.es_multidias %}
                 <td><span class="badge bg-secondary">{{ pase.accesos_permitidos }}</span></td>
             {% endif %}
@@ -295,6 +313,12 @@
     {% else %}
         <input type="hidden" name="accesos_permitidos" value="1">
     {% endif %}
+
+    <!-- 🚀 NUEVO SENIOR: Editar el multiplicador -->
+    <div class="mb-3 p-2 bg-light rounded border border-secondary-subtle">
+        <label class="small fw-bold text-dark">Personas amparadas por este Pase (QRs)</label>
+        <input type="number" name="qrs_por_pase" class="form-control form-control-sm border-dark" value="{{ pase.qrs_por_pase|default:1 }}" min="1" required>
+    </div>
                         
                         {% if not object.tiene_fases_fechas %}
                             <div class="mb-2">

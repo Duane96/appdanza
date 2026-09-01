@@ -2,7 +2,7 @@
 from datetime import timedelta
 from pyexpat.errors import messages
 from django.db import transaction
-from django.db.models import DecimalField
+from django.db.models import F, DecimalField
 
 from django.http import JsonResponse
 from django.views.generic import ListView, CreateView, DetailView, View
@@ -37,19 +37,40 @@ from django.db.models.functions import Coalesce
 from django.contrib import messages
 
 class EventoListView(LoginRequiredMixin, ListView):
-    """Lista todos los eventos de la academia (Tenant actual)."""
+    """Lista todos los eventos de la academia separando activos de finalizados."""
     model = Evento
     template_name = "eventos/admin_list.html"
     context_object_name = "eventos"
 
     def get_queryset(self):
-        # request.tenant inyectado de forma segura por el Middleware al hacer match con slug_academia
-        return Evento.objects.filter(academia=self.request.tenant)
+        # 🚀 FIX SENIOR 1: Calculamos el dinero real y boletas reales sumando los recibos pagados
+        return Evento.objects.filter(academia=self.request.tenant).annotate(
+            ingresos_totales=Coalesce(Sum('recibos_evento__monto_total', filter=Q(recibos_evento__anulado=False)), 0, output_field=DecimalField()),
+            boletas_vendidas=Coalesce(Sum('recibos_evento__cantidad_entradas', filter=Q(recibos_evento__anulado=False)), 0)
+        ).order_by('-fecha')
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Instanciamos el formulario en limpio para que el modal de creación renderice los widgets correctos
         context['form'] = EventoForm() 
+        
+        todos_los_eventos = self.get_queryset()
+        context['eventos_activos'] = todos_los_eventos.exclude(estado='FINALIZADO')
+        context['eventos_finalizados'] = todos_los_eventos.filter(estado='FINALIZADO')
+        
+        # 🚀 NUEVO SENIOR: Cálculo de Deuda Acumulada
+        suscripcion = self.request.tenant.suscripcion_saas
+        if suscripcion and not suscripcion.es_cuenta_partner_gratis:
+            # Sumamos las comisiones de eventos finalizados que no han sido pagadas
+            deuda = Evento.objects.filter(
+                academia=self.request.tenant,
+                estado='FINALIZADO',
+                online_liquidado=False
+            ).aggregate(total=Sum('deuda_online_calculada'))['total'] or 0
+            
+            context['deuda_saas'] = deuda
+        else:
+            context['deuda_saas'] = 0
+            
         return context
 
 
@@ -57,6 +78,23 @@ class EventoCreateView(LoginRequiredMixin, CreateView):
     model = Evento
     form_class = EventoForm
     template_name = "eventos/admin_list.html" 
+
+    def dispatch(self, request, *args, **kwargs):
+        # ANTES de cargar la vista, revisamos el datacrédito interno del SaaS
+        suscripcion = request.tenant.suscripcion_saas
+        if suscripcion and not suscripcion.es_cuenta_partner_gratis:
+            tiene_deuda = Evento.objects.filter(
+                academia=request.tenant,
+                estado='FINALIZADO',
+                online_liquidado=False,
+                deuda_online_calculada__gt=0
+            ).exists()
+            
+            if tiene_deuda:
+                messages.error(request, "⛔ Tienes comisiones SaaS pendientes de eventos anteriores. Liquida tu saldo para desbloquear la creación de nuevos eventos.")
+                return redirect('eventos:admin_lista', slug_academia=request.tenant.slug)
+                
+        return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -340,9 +378,11 @@ class EventoDetailAdminView(LoginRequiredMixin, DetailView):
         context['recibos'] = recibos
         context['q'] = query or ''
 
-        # 2. MÉTRICAS CONTABLES GENERALES
-        context['total_entradas_vendidas'] = ReciboEvento.objects.filter(evento=evento, anulado=False).aggregate(
-            total=Coalesce(Sum('cantidad_entradas'), 0)
+        # 🚀 FIX SENIOR: Aforo real = (cantidad_entradas X multiplicador de personas)
+        context['total_entradas_vendidas'] = ReciboEvento.objects.filter(evento=evento, anulado=False).annotate(
+            multiplicador=Coalesce('tipo_pase__qrs_por_pase', 1)
+        ).aggregate(
+            total=Coalesce(Sum(F('cantidad_entradas') * F('multiplicador')), 0)
         )['total']
         
         context['dinero_efectivo'] = ReciboEvento.objects.filter(evento=evento, medio_pago='EFECTIVO', anulado=False).aggregate(
@@ -399,8 +439,14 @@ class EventoDetailAdminView(LoginRequiredMixin, DetailView):
             recibo__evento=evento, recibo__anulado=False, asistencias_consumidas__gt=0
         ).count()
         
+        # 🚀 FIX SENIOR: En puerta contamos solo los recibos directos que NO generaron QR
+        # (Los pases de pareja sí generaron QR y ya se contaron arriba, evitamos conteo doble)
         ingresos_puerta_data = ReciboEvento.objects.filter(
-            evento=evento, origen='PUERTA', ingresado_puerta=True, anulado=False
+            evento=evento, 
+            origen='PUERTA', 
+            ingresado_puerta=True, 
+            anulado=False,
+            boletas_qr__isnull=True 
         ).aggregate(total_personas=Sum('cantidad_entradas'))
         
         total_ingresos_puerta = ingresos_puerta_data['total_personas'] or 0
@@ -434,7 +480,8 @@ class EventoDetailAdminView(LoginRequiredMixin, DetailView):
 
         if evento.tiene_pases_personalizados:
             context['metricas_pases'] = TipoPase.objects.filter(evento=evento).annotate(
-                total_vendidos=Coalesce(Sum('recibos__cantidad_entradas', filter=Q(recibos__anulado=False)), 0),
+                # 🚀 FIX SENIOR: La tarjeta de detalles de pases también multiplica
+                total_vendidos=Coalesce(Sum(F('recibos__cantidad_entradas') * F('qrs_por_pase'), filter=Q(recibos__anulado=False)), 0),
                 total_recaudado=Coalesce(Sum('recibos__monto_total', filter=Q(recibos__anulado=False)), 0, output_field=DecimalField())
             )
 
@@ -562,9 +609,13 @@ class RegistrarVentaPuertaView(LoginRequiredMixin, View):
                 recibo.ingresado_puerta = True
                 recibo.save()
                 
-                # OJO: Si compra en puerta un pase Multidía, forzamos generación de QR para que pueda venir mañana
-                if dias_a_otorgar > 1 and not recibo.boletas_qr.exists():
-                    for _ in range(recibo.cantidad_entradas):
+                # 🚀 LÓGICA SENIOR: Identificamos si es un pase múltiple (Pareja)
+                multiplicador = pase_personalizado.qrs_por_pase if pase_personalizado else 1
+                total_qrs = recibo.cantidad_entradas * multiplicador
+                
+                # OJO: Si compra en puerta un pase Multidía O DE PAREJA, forzamos generación
+                if (dias_a_otorgar > 1 or multiplicador > 1) and not recibo.boletas_qr.exists():
+                    for _ in range(total_qrs):
                         EntradaQR.objects.create(recibo=recibo)
 
             # 🔄 3. ASIGNAR ASISTENCIAS A LAS BOLETAS CREADAS
