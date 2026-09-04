@@ -138,7 +138,6 @@
             overflow: hidden;
         }
 
-        /* Reflejo de luz en el cristal */
         .glass-panel::after {
             content: ''; position: absolute; top: -50%; left: -50%;
             width: 200%; height: 200%;
@@ -164,7 +163,6 @@
             50% { transform: translateY(-20px) rotate(3deg); }
         }
 
-        /* Botón de Neón Líquido */
         .btn-liquid {
             position: relative;
             padding: 15px 45px;
@@ -221,7 +219,7 @@
         }
 
         /* =========================================
-           8. TARJETAS 3D MAGNÉTICAS (ESENCIA Y EVENTOS)
+           8. TARJETAS 3D MAGNÉTICAS (SOLO ESENCIA)
            ========================================= */
         .reveal-on-scroll {
             opacity: 0;
@@ -245,17 +243,7 @@
             height: 100%;
         }
         .tilt-card-content {
-            transform: translateZ(30px); /* Hace que el texto resalte en 3D */
-        }
-
-        .event-date-glow {
-            font-family: 'Dancing Script', cursive;
-            font-size: 4rem;
-            line-height: 0.8;
-            background: linear-gradient(45deg, var(--neon-pink), var(--mango-orange));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0 10px 20px rgba(255, 0, 127, 0.2);
+            transform: translateZ(30px);
         }
 
         .badge-chic {
@@ -265,6 +253,64 @@
             font-weight: 700;
             padding: 8px 15px;
             border-radius: 20px;
+        }
+
+        /* =========================================
+           9. 🚀 NUEVO: FLIP CARDS EVENTOS (GLASMORFISMO)
+           ========================================= */
+        .flip-card-container {
+            perspective: 1000px;
+            height: 450px;
+            z-index: 2;
+        }
+        .flip-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform-style: preserve-3d;
+        }
+        .flip-card-container:hover .flip-card-inner {
+            transform: rotateY(180deg);
+        }
+        .flip-card-front, .flip-card-back {
+            position: absolute; 
+            top: 0; left: 0; width: 100%; height: 100%;
+            backface-visibility: hidden; 
+            border-radius: 30px; /* Bordes redondeados del Glassmorfismo de Jenssy */
+            background: var(--glass-bg);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+        .flip-card-front {
+            z-index: 2; 
+        }
+        .flip-card-back {
+            transform: rotateY(180deg);
+            z-index: 1; 
+            display: flex; 
+            flex-direction: column; 
+            padding: 30px;
+        }
+        /* Imagen completa (Flyer) en la parte frontal */
+        .event-flyer {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0; left: 0;
+            z-index: 0;
+        }
+        /* Sombra inferior en el flyer para que el texto resalte */
+        .front-overlay {
+            position: absolute;
+            bottom: 0; left: 0; width: 100%;
+            background: linear-gradient(0deg, rgba(0,0,0,0.9) 0%, transparent 100%);
+            padding: 40px 20px 20px;
+            z-index: 1;
         }
 
     </style>
@@ -327,7 +373,6 @@
 
                 <div class="col-lg-5 position-relative z-1 text-center">
                     {% if academia.hero_imagen_1 %}
-                        <!-- IMAGEN SIN FONDO RECOMENDADA -->
                         <img src="{{ academia.hero_imagen_1.url }}" alt="Jenssy" class="img-fluid img-float hover-target" style="max-height: 600px; object-fit: contain;">
                     {% else %}
                         <div class="img-float p-5 text-center d-flex align-items-center justify-content-center" style="background: rgba(255,0,127,0.1); border: 2px dashed var(--neon-pink); border-radius: 40px; height: 500px; backdrop-filter: blur(10px);">
@@ -389,7 +434,7 @@
         </div>
     </section>
 
-    <!-- 7. AGENDA DE EVENTOS (TARJETAS GLASS 3D) -->
+    <!-- 🚀 7. AGENDA DE EVENTOS (AHORA CON FLIP CARDS 3D) -->
     <section id="agenda" class="container py-5 my-5">
         <div class="text-center mb-5 pb-4 reveal-on-scroll">
             <span class="font-salsa display-5">Asegura tu cupo</span>
@@ -399,38 +444,71 @@
         <div class="row g-5">
             {% for evento in eventos %}
                 <div class="col-lg-4 col-md-6 reveal-on-scroll" style="transition-delay: 0.{{ forloop.counter }}s;">
-                    <div class="tilt-card hover-target d-flex flex-column h-100">
-                        <div class="tilt-card-content flex-grow-1">
-                            <div class="d-flex justify-content-between align-items-start mb-4">
-                                <div class="event-date-glow">
-                                    {{ evento.fecha|date:"d" }}<br>
-                                    <span class="fs-4 text-dark font-sans">{{ evento.fecha|date:"M"|upper }}</span>
+                    
+                    <!-- Contenedor Flip Card principal adaptado -->
+                    <div class="flip-card-container hover-target w-100">
+                        <div class="flip-card-inner">
+                            
+                            <!-- CARA FRONTAL (FLYER DEL EVENTO) -->
+                            <div class="flip-card-front">
+                                {% if evento.imagen %}
+                                    <img src="{{ evento.imagen.url }}" alt="{{ evento.nombre }}" class="event-flyer">
+                                {% else %}
+                                    <!-- Fallback si no suben imagen -->
+                                    <div class="w-100 h-100 d-flex justify-content-center align-items-center" style="background: rgba(255,0,127,0.1);">
+                                        <i class="bi bi-image" style="font-size: 5rem; color: var(--neon-pink);"></i>
+                                    </div>
+                                {% endif %}
+                                
+                                <!-- Fecha en la esquina superior derecha -->
+                                <div class="position-absolute top-0 end-0 m-3" style="z-index: 2;">
+                                    <div class="badge-chic bg-white text-center shadow-sm">
+                                        <span class="d-block font-salsa lh-1" style="font-size: 2rem;">{{ evento.fecha|date:"d" }}</span>
+                                        <span class="d-block small text-dark font-sans" style="font-family: 'Outfit', sans-serif;">{{ evento.fecha|date:"M"|upper }}</span>
+                                    </div>
                                 </div>
-                                <div class="badge-chic">
-                                    <i class="bi bi-clock"></i> {{ evento.fecha|date:"H:i" }}
+                                
+                                <!-- Degrade oscuro en la parte inferior para que se lea el texto sobre el flyer -->
+                                <div class="front-overlay">
+                                    <h3 class="fw-bold fs-3 text-white mb-1">{{ evento.nombre }}</h3>
+                                    <p class="text-light mb-0 small">
+                                        <i class="bi bi-geo-alt-fill" style="color: var(--neon-pink);"></i> {{ evento.ubicacion }}
+                                    </p>
                                 </div>
                             </div>
                             
-                            <h3 class="fw-bold fs-2 mb-3">{{ evento.nombre }}</h3>
-                            <p class="text-dark mb-4">
-                                <i class="bi bi-geo-alt-fill" style="color: var(--neon-pink);"></i> {{ evento.ubicacion }}
-                            </p>
-                            
-                            <div class="d-flex flex-wrap gap-2 mb-5">
-                                {% for pase in evento.pases_procesados %}
-                                    <span class="badge-chic">{{ pase.nombre|title }}: ${{ pase.precio|floatformat:0 }}</span>
-                                {% empty %}
-                                    <span class="badge-chic bg-light text-muted">Precios por confirmar</span>
-                                {% endfor %}
+                            <!-- CARA TRASERA (INFORMACIÓN Y BOTÓN DE COMPRA) -->
+                            <div class="flip-card-back">
+                                <h3 class="font-salsa fs-1 mb-4 text-center">¡Asegura tu cupo!</h3>
+                                
+                                <p class="text-dark mb-4 text-center fw-medium fs-5">
+                                    <i class="bi bi-clock" style="color: var(--mango-orange);"></i> Inicia: {{ evento.fecha|date:"H:i" }}
+                                </p>
+                                
+                                <div class="flex-grow-1 overflow-auto px-2 mb-3">
+                                    <!-- Render de pases con estilo chic -->
+                                    {% for pase in evento.pases_procesados %}
+                                        <div class="d-flex justify-content-between align-items-center mb-3 p-2 rounded-3" style="background: rgba(255,255,255,0.4); border: 1px solid rgba(255,255,255,0.6);">
+                                            <span class="fw-bold text-dark">{{ pase.nombre|title }}</span>
+                                            <span class="badge-chic px-3 py-1 fs-6">${{ pase.precio|floatformat:0 }}</span>
+                                        </div>
+                                    {% empty %}
+                                        <div class="text-center py-3">
+                                            <span class="badge-chic bg-light text-muted border-0">Precios por confirmar</span>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                
+                                <div class="mt-auto">
+                                    <a href="{% url 'eventos:registro_publico' academia.slug evento.slug %}" class="btn-liquid w-100 text-center py-3">
+                                        Comprar Ticket
+                                    </a>
+                                </div>
                             </div>
-                        </div>
-                        
-                        <div class="tilt-card-content mt-auto">
-                            <a href="{% url 'eventos:registro_publico' academia.slug evento.slug %}" class="btn-liquid w-100 text-center">
-                                Comprar Ticket
-                            </a>
+
                         </div>
                     </div>
+
                 </div>
             {% empty %}
                 <div class="col-12 text-center py-5 reveal-on-scroll">
