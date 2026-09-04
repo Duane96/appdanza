@@ -1,0 +1,583 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ academia.nombre|default:"Jenssy | Salsa Caleña" }}</title>
+    
+    <!-- Bootstrap e Iconos -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css" rel="stylesheet">
+    
+    <!-- Tipografías Premium: 'Outfit' (Moderna/Limpia) y 'Dancing Script' (Femenina/Salsera) -->
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&family=Outfit:wght@300;500;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        /* =========================================
+           1. VARIABLES Y RESET CUSTOM
+           ========================================= */
+        :root {
+            --neon-pink: #FF007F;
+            --mango-orange: #FF9900;
+            --soft-purple: #9d4edd;
+            --glass-bg: rgba(255, 255, 255, 0.15);
+            --glass-border: rgba(255, 255, 255, 0.3);
+            --text-main: #2b2b2b;
+        }
+
+        /* Ocultar el cursor por defecto para usar el nuestro animado */
+        body {
+            font-family: 'Outfit', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            background-color: #ffe6f2;
+            color: var(--text-main);
+            cursor: none; 
+        }
+
+        h1, h2, h3 { font-weight: 900; }
+        .font-salsa { font-family: 'Dancing Script', cursive; font-size: 1.2em; color: var(--neon-pink); }
+
+        /* =========================================
+           2. FONDO ANIMADO CSS (LIVING GRADIENT)
+           ========================================= */
+        .bg-animated {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: linear-gradient(120deg, #ffc3a0 0%, #ffafbd 50%, #e0c3fc 100%);
+            background-size: 300% 300%;
+            animation: gradientMove 15s ease infinite;
+            z-index: -3;
+        }
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* =========================================
+           3. CANVAS PARTICLES (JS BACKGROUND)
+           ========================================= */
+        #particleCanvas {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: -2;
+            pointer-events: none;
+        }
+
+        /* =========================================
+           4. CURSOR PERSONALIZADO (JS)
+           ========================================= */
+        .custom-cursor {
+            position: fixed; top: 0; left: 0;
+            width: 20px; height: 20px;
+            background-color: var(--neon-pink);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%, -50%);
+            transition: transform 0.1s ease, width 0.3s, height 0.3s, background-color 0.3s;
+            mix-blend-mode: difference;
+        }
+        .custom-cursor.hover {
+            width: 60px; height: 60px;
+            background-color: var(--mango-orange);
+            opacity: 0.5;
+        }
+
+        /* =========================================
+           5. NAVBAR GLASSMORFISMO
+           ========================================= */
+        .glass-nav {
+            background: var(--glass-bg);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 15px 0;
+            transition: all 0.4s ease;
+        }
+        .nav-link {
+            color: var(--text-main) !important;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            position: relative;
+            overflow: hidden;
+            border-radius: 20px;
+            padding: 10px 20px !important;
+        }
+        .nav-link::before {
+            content: ''; position: absolute; top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            transition: left 0.5s;
+        }
+        .nav-link:hover::before { left: 100%; }
+
+        /* =========================================
+           6. HERO SUPER EXPLOSIVO
+           ========================================= */
+        .hero-container {
+            min-height: 100vh;
+            display: flex; align-items: center; justify-content: center;
+            padding-top: 80px;
+            position: relative;
+        }
+        
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 40px;
+            padding: 4rem;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Reflejo de luz en el cristal */
+        .glass-panel::after {
+            content: ''; position: absolute; top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, transparent 60%);
+            opacity: 0.1; transform: rotate(30deg); pointer-events: none;
+        }
+
+        .hero-title {
+            font-size: clamp(3.5rem, 6vw, 6rem);
+            line-height: 1;
+            background: linear-gradient(45deg, var(--neon-pink), var(--soft-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 20px;
+        }
+
+        .img-float {
+            animation: floating 6s ease-in-out infinite;
+            filter: drop-shadow(0 20px 30px rgba(255, 0, 127, 0.3));
+        }
+        @keyframes floating {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(3deg); }
+        }
+
+        /* Botón de Neón Líquido */
+        .btn-liquid {
+            position: relative;
+            padding: 15px 45px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: white;
+            background: var(--neon-pink);
+            border: none;
+            border-radius: 50px;
+            overflow: hidden;
+            z-index: 1;
+            transition: all 0.3s;
+            box-shadow: 0 10px 20px rgba(255, 0, 127, 0.3);
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-liquid::before {
+            content: ''; position: absolute; top: 100%; left: 0; width: 100%; height: 100%;
+            background: var(--mango-orange);
+            z-index: -1; transition: top 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+            border-radius: 50% 50% 0 0;
+        }
+        .btn-liquid:hover::before { top: 0; border-radius: 0; }
+        .btn-liquid:hover { color: white; transform: scale(1.05); box-shadow: 0 15px 30px rgba(255, 153, 0, 0.4); }
+
+        /* =========================================
+           7. CINTA MARQUEE ROTADA CSS
+           ========================================= */
+        .marquee-wrapper {
+            position: relative;
+            width: 100vw;
+            margin-left: -50vw;
+            left: 50%;
+            background: var(--neon-pink);
+            transform: rotate(-3deg);
+            padding: 25px 0;
+            box-shadow: 0 10px 30px rgba(255, 0, 127, 0.4);
+            z-index: 10;
+            overflow: hidden;
+            display: flex;
+        }
+        .marquee-content {
+            white-space: nowrap;
+            animation: marqueeFlow 15s linear infinite;
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: white;
+            text-shadow: 2px 2px 0px rgba(0,0,0,0.1);
+        }
+        @keyframes marqueeFlow {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        /* =========================================
+           8. TARJETAS 3D MAGNÉTICAS (ESENCIA Y EVENTOS)
+           ========================================= */
+        .reveal-on-scroll {
+            opacity: 0;
+            transform: translateY(100px);
+            transition: all 0.8s cubic-bezier(0.5, 0, 0, 1);
+        }
+        .reveal-on-scroll.is-visible {
+            opacity: 1; transform: translateY(0);
+        }
+
+        .tilt-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid var(--glass-border);
+            border-radius: 30px;
+            padding: 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.05);
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
+            transform-style: preserve-3d;
+            height: 100%;
+        }
+        .tilt-card-content {
+            transform: translateZ(30px); /* Hace que el texto resalte en 3D */
+        }
+
+        .event-date-glow {
+            font-family: 'Dancing Script', cursive;
+            font-size: 4rem;
+            line-height: 0.8;
+            background: linear-gradient(45deg, var(--neon-pink), var(--mango-orange));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 10px 20px rgba(255, 0, 127, 0.2);
+        }
+
+        .badge-chic {
+            background: rgba(255, 255, 255, 0.4);
+            border: 1px solid rgba(255,255,255,0.6);
+            color: var(--neon-pink);
+            font-weight: 700;
+            padding: 8px 15px;
+            border-radius: 20px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- 1. CURSOR CUSTOM -->
+    <div class="custom-cursor" id="cursor"></div>
+
+    <!-- 2. FONDOS (GRADIENTE + CANVAS PARTICULAS) -->
+    <div class="bg-animated"></div>
+    <canvas id="particleCanvas"></canvas>
+
+    <!-- 3. NAVBAR GLASSMORFISMO -->
+    <nav class="navbar navbar-expand-lg fixed-top glass-nav px-4" id="mainNav">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center hover-target" href="#">
+                {% if academia.logo %}
+                    <img src="{{ academia.logo.url }}" alt="{{ academia.nombre }}" style="height: 50px;">
+                {% else %}
+                    <h2 class="mb-0 font-salsa ms-2" style="font-size: 2.5rem;">
+                        Jenssy<span style="color: var(--text-main); font-family: 'Outfit', sans-serif;">Salsa</span>
+                    </h2>
+                {% endif %}
+            </a>
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <i class="bi bi-stars fs-1" style="color: var(--neon-pink);"></i>
+            </button>
+            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+                <ul class="navbar-nav align-items-center gap-3">
+                    <li class="nav-item"><a class="nav-link hover-target" href="#esencia">Conóceme</a></li>
+                    <li class="nav-item"><a class="nav-link hover-target" href="#agenda">La Pista</a></li>
+                    <li class="nav-item ms-lg-3">
+                        <a href="{% url 'academias:login' academia.slug %}" class="btn-liquid hover-target" style="padding: 10px 30px; font-size: 1rem;">Mi Panel SaaS</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 4. HERO EXPLOSIVO CON CRISTAL -->
+    <header class="hero-container container">
+        <div class="glass-panel w-100 reveal-on-scroll">
+            <div class="row align-items-center">
+                <div class="col-lg-7 mb-5 mb-lg-0 z-1">
+                    <div class="d-inline-flex align-items-center gap-2 px-4 py-2 mb-4 rounded-pill hover-target" style="background: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255,255,255,0.6);">
+                        <span class="font-salsa fs-4 text-dark">🌺 De Cali para Bogotá con amor</span>
+                    </div>
+                    
+                    <h1 class="hero-title">
+                        {{ academia.hero_titulo|default:"Sabor.<br>Curvas.<br>Repique."|safe }}
+                    </h1>
+                    
+                    <p class="fs-4 mb-5 text-dark fw-medium" style="max-width: 600px;">
+                        {{ academia.hero_eslogan|default:"Enciende la pista. Despierta tu energía femenina y domina la velocidad de la verdadera salsa colombiana." }}
+                    </p>
+                    
+                    <a href="#agenda" class="btn-liquid hover-target">
+                        Reservar mi lugar <i class="bi bi-fire ms-2"></i>
+                    </a>
+                </div>
+
+                <div class="col-lg-5 position-relative z-1 text-center">
+                    {% if academia.hero_imagen_1 %}
+                        <!-- IMAGEN SIN FONDO RECOMENDADA -->
+                        <img src="{{ academia.hero_imagen_1.url }}" alt="Jenssy" class="img-fluid img-float hover-target" style="max-height: 600px; object-fit: contain;">
+                    {% else %}
+                        <div class="img-float p-5 text-center d-flex align-items-center justify-content-center" style="background: rgba(255,0,127,0.1); border: 2px dashed var(--neon-pink); border-radius: 40px; height: 500px; backdrop-filter: blur(10px);">
+                            <h2 class="font-salsa text-dark">Sube una foto de Jenssy sin fondo (PNG) aquí</h2>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 5. CINTA MARQUEE INFINITA -->
+    <div class="marquee-wrapper mt-5 mb-5 hover-target">
+        <div class="marquee-content">
+            ✨ PURA SABROSURA CALEÑA ✨ FEMINIDAD AL PODER ✨ ESTILO Y VELOCIDAD ✨ DISTRITO SOCIAL BOGOTÁ ✨ PURA SABROSURA CALEÑA ✨ FEMINIDAD AL PODER ✨ ESTILO Y VELOCIDAD ✨ 
+        </div>
+    </div>
+
+    <!-- 6. SECCIÓN ESENCIA (CON EFECTO TILT 3D) -->
+    <section id="esencia" class="container py-5">
+        <div class="row g-5 align-items-center">
+            <div class="col-lg-5 reveal-on-scroll">
+                <div class="tilt-card hover-target" style="padding: 10px;">
+                    {% if academia.info_imagen %}
+                        <img src="{{ academia.info_imagen.url }}" alt="Esencia" class="img-fluid rounded-4 w-100 tilt-card-content" style="object-fit: cover; height: 600px;">
+                    {% else %}
+                        <div class="w-100 rounded-4 tilt-card-content d-flex align-items-center justify-content-center" style="background: rgba(255,255,255,0.5); height: 600px;">
+                            <h3 class="font-salsa text-muted">Foto Vertical</h3>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="col-lg-7 ps-lg-5 reveal-on-scroll" style="transition-delay: 0.2s;">
+                <h4 class="font-salsa fs-2 mb-2">Más que baile</h4>
+                <h2 class="display-3 mb-4" style="color: var(--soft-purple); letter-spacing: -2px;">
+                    {{ academia.info_titulo|default:"Tu versión<br>más radiante."|safe }}
+                </h2>
+                
+                <p class="fs-4 mb-4 text-dark">
+                    {{ academia.info_descripcion_1|default:"Soy Jenssy. Mi objetivo no es solo enseñarte a marcar pasos rápidos, sino a que sientas la música recorrer tu cuerpo con elegancia y poder." }}
+                </p>
+                
+                <p class="fs-5 text-muted mb-5">
+                    {{ academia.info_descripcion_2|default:"Desarrollaremos agilidad mental y física, disociación y esa sabrosura indescriptible que traemos directo del Valle del Cauca a Bogotá." }}
+                </p>
+                
+                <div class="row g-4 tilt-card hover-target">
+                    <div class="col-6 tilt-card-content">
+                        <i class="{{ academia.bloque_1_icono|default:'bi-gem' }} display-4 mb-3 d-block" style="color: var(--neon-pink);"></i>
+                        <h4 class="fw-bold">{{ academia.bloque_1_titulo|default:"Técnica Femenina" }}</h4>
+                    </div>
+                    <div class="col-6 tilt-card-content">
+                        <i class="{{ academia.bloque_2_icono|default:'bi-lightning-charge-fill' }} display-4 mb-3 d-block" style="color: var(--mango-orange);"></i>
+                        <h4 class="fw-bold">{{ academia.bloque_2_titulo|default:"Velocidad Caleña" }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 7. AGENDA DE EVENTOS (TARJETAS GLASS 3D) -->
+    <section id="agenda" class="container py-5 my-5">
+        <div class="text-center mb-5 pb-4 reveal-on-scroll">
+            <span class="font-salsa display-5">Asegura tu cupo</span>
+            <h2 class="display-2" style="letter-spacing: -2px;">NUESTRAS <span style="color: var(--neon-pink);">RUMBAS</span></h2>
+        </div>
+
+        <div class="row g-5">
+            {% for evento in eventos %}
+                <div class="col-lg-4 col-md-6 reveal-on-scroll" style="transition-delay: 0.{{ forloop.counter }}s;">
+                    <div class="tilt-card hover-target d-flex flex-column h-100">
+                        <div class="tilt-card-content flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-start mb-4">
+                                <div class="event-date-glow">
+                                    {{ evento.fecha|date:"d" }}<br>
+                                    <span class="fs-4 text-dark font-sans">{{ evento.fecha|date:"M"|upper }}</span>
+                                </div>
+                                <div class="badge-chic">
+                                    <i class="bi bi-clock"></i> {{ evento.fecha|date:"H:i" }}
+                                </div>
+                            </div>
+                            
+                            <h3 class="fw-bold fs-2 mb-3">{{ evento.nombre }}</h3>
+                            <p class="text-dark mb-4">
+                                <i class="bi bi-geo-alt-fill" style="color: var(--neon-pink);"></i> {{ evento.ubicacion }}
+                            </p>
+                            
+                            <div class="d-flex flex-wrap gap-2 mb-5">
+                                {% for pase in evento.pases_procesados %}
+                                    <span class="badge-chic">{{ pase.nombre|title }}: ${{ pase.precio|floatformat:0 }}</span>
+                                {% empty %}
+                                    <span class="badge-chic bg-light text-muted">Precios por confirmar</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <div class="tilt-card-content mt-auto">
+                            <a href="{% url 'eventos:registro_publico' academia.slug evento.slug %}" class="btn-liquid w-100 text-center">
+                                Comprar Ticket
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="col-12 text-center py-5 reveal-on-scroll">
+                    <div class="glass-panel d-inline-block hover-target p-5">
+                        <i class="bi bi-emoji-heart-eyes display-1 mb-3" style="color: var(--neon-pink);"></i>
+                        <h2 class="font-salsa display-4">Cocinando la pista...</h2>
+                        <p class="fs-4 text-dark">Pronto publicaremos el cronograma oficial.</p>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- FOOTER GLASS -->
+    <footer class="mt-5 glass-nav text-center py-5 border-top border-light">
+        <div class="container tilt-card hover-target border-0 shadow-none">
+            <h2 class="font-salsa display-3 mb-3 tilt-card-content">Jenssy Salsa</h2>
+            <div class="d-flex justify-content-center gap-4 fs-3 mb-4 tilt-card-content">
+                {% if academia.instagram_url %}<a href="{{ academia.instagram_url }}" target="_blank" style="color: var(--neon-pink);"><i class="bi bi-instagram"></i></a>{% endif %}
+                {% if academia.tiktok_url %}<a href="{{ academia.tiktok_url }}" target="_blank" style="color: var(--neon-pink);"><i class="bi bi-tiktok"></i></a>{% endif %}
+                {% if academia.youtube_url %}<a href="{{ academia.youtube_url }}" target="_blank" style="color: var(--neon-pink);"><i class="bi bi-youtube"></i></a>{% endif %}
+                {% if academia.whatsapp_numero %}<a href="{{ academia.enlace_whatsapp }}" target="_blank" style="color: var(--neon-pink);"><i class="bi bi-whatsapp"></i></a>{% endif %}
+            </div>
+            <p class="tilt-card-content fw-bold text-dark mb-0">
+                &copy; 2026. Desarrollado con 💖 por <a href="#" style="color: var(--soft-purple); text-decoration: none;">AppDanza</a>
+            </p>
+        </div>
+    </footer>
+
+    <!-- SCRIPTS MÁGICOS (Vanilla JS) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            
+            // --- 1. CUSTOM CURSOR LÓGICA ---
+            const cursor = document.getElementById('cursor');
+            const hoverTargets = document.querySelectorAll('.hover-target, a, button');
+            
+            document.addEventListener('mousemove', (e) => {
+                cursor.style.left = e.clientX + 'px';
+                cursor.style.top = e.clientY + 'px';
+            });
+
+            hoverTargets.forEach(target => {
+                target.addEventListener('mouseenter', () => cursor.classList.add('hover'));
+                target.addEventListener('mouseleave', () => cursor.classList.remove('hover'));
+            });
+
+            // --- 2. SCROLL REVEAL (Intersection Observer) ---
+            const revealElements = document.querySelectorAll('.reveal-on-scroll');
+            const revealObserver = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { root: null, threshold: 0.1, rootMargin: "0px 0px -50px 0px" });
+
+            revealElements.forEach(el => revealObserver.observe(el));
+
+            // --- 3. EFECTO TILT 3D MAGNÉTICO (Para las tarjetas) ---
+            const tiltCards = document.querySelectorAll('.tilt-card');
+            tiltCards.forEach(card => {
+                card.addEventListener('mousemove', (e) => {
+                    const rect = card.getBoundingClientRect();
+                    const x = e.clientX - rect.left; 
+                    const y = e.clientY - rect.top;
+                    
+                    const centerX = rect.width / 2;
+                    const centerY = rect.height / 2;
+                    
+                    const rotateX = ((y - centerY) / centerY) * -10; // Max rotación 10 grados
+                    const rotateY = ((x - centerX) / centerX) * 10;
+                    
+                    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+                });
+                
+                card.addEventListener('mouseleave', () => {
+                    card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
+                });
+            });
+
+            // --- 4. SISTEMA DE PARTÍCULAS EN CANVAS (El Sabor Caleño Flotante) ---
+            const canvas = document.getElementById('particleCanvas');
+            const ctx = canvas.getContext('2d');
+            let particlesArray = [];
+
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            window.addEventListener('resize', () => {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                initParticles();
+            });
+
+            class Particle {
+                constructor() {
+                    this.x = Math.random() * canvas.width;
+                    this.y = Math.random() * canvas.height;
+                    this.size = Math.random() * 4 + 1; // Tamaño variable
+                    this.speedX = Math.random() * 1 - 0.5;
+                    this.speedY = Math.random() * -1 - 0.5; // Flotan hacia arriba
+                    // Colores cálidos y femeninos
+                    const colors = ['rgba(255, 0, 127, 0.4)', 'rgba(255, 153, 0, 0.4)', 'rgba(255, 255, 255, 0.6)'];
+                    this.color = colors[Math.floor(Math.random() * colors.length)];
+                }
+                update() {
+                    this.x += this.speedX;
+                    this.y += this.speedY;
+                    // Si salen de la pantalla por arriba, reaparecen abajo
+                    if (this.y < 0) {
+                        this.y = canvas.height;
+                        this.x = Math.random() * canvas.width;
+                    }
+                }
+                draw() {
+                    ctx.fillStyle = this.color;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            function initParticles() {
+                particlesArray = [];
+                // 100 partículas para no sobrecargar el navegador de los móviles
+                for (let i = 0; i < 100; i++) {
+                    particlesArray.push(new Particle());
+                }
+            }
+
+            function animateParticles() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                for (let i = 0; i < particlesArray.length; i++) {
+                    particlesArray[i].update();
+                    particlesArray[i].draw();
+                }
+                requestAnimationFrame(animateParticles);
+            }
+
+            initParticles();
+            animateParticles();
+        });
+    </script>
+</body>
+</html>

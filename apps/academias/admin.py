@@ -6,18 +6,17 @@ from .models import Academia, PerfilUsuario
 
 @admin.register(Academia)
 class AcademiaAdmin(admin.ModelAdmin):
-    # 🚀 Ajustamos las columnas para ver info más relevante (incluimos ciudad y modo productora)
     list_display = ('nombre', 'ciudad', 'slug', 'es_solo_eventos', 'activo', 'fecha_creacion')
     search_fields = ('nombre', 'slug', 'nit', 'ciudad')
     list_filter = ('activo', 'es_solo_eventos', 'pais', 'ciudad', 'fecha_creacion')
     prepopulated_fields = {'slug': ('nombre',)}
     
-    # 🚀 ORGANIZACIÓN SENIOR: Agrupamos los campos en secciones para no saturar la vista
+    # 🚀 ORGANIZACIÓN SENIOR: Agrupamos los campos en secciones
     fieldsets = (
         ('Información Principal (SaaS)', {
             'fields': (
                 'nombre', 'slug', 'activo', 'es_solo_eventos', 
-                'template_landing_personalizado' # ¡Aquí está tu campo visible!
+                'template_landing_personalizado' # Aquí está tu campo intácto
             )
         }),
         ('Geolocalización y Moneda', {
@@ -25,7 +24,7 @@ class AcademiaAdmin(admin.ModelAdmin):
         }),
         ('Identidad y Branding', {
             'fields': ('logo', 'color_primario', 'color_secundario', 'login_imagen'),
-            'classes': ('collapse',) # Esto hace que la sección inicie cerrada para ahorrar espacio
+            'classes': ('collapse',)
         }),
         ('Información Fiscal y Legal (DIAN)', {
             'fields': ('razon_social', 'nit', 'representante_legal', 'tipo_regimen', 'resolucion_facturacion'),
@@ -42,7 +41,8 @@ class AcademiaAdmin(admin.ModelAdmin):
         ('Contacto y Redes Sociales', {
             'fields': (
                 'telefono', 'direccion_sede', 'horario_atencion', 
-                'instagram_url', 'facebook_url', 'tiktok_url', 'youtube_url', 'whatsapp_url'
+                'instagram_url', 'facebook_url', 'tiktok_url', 'youtube_url', 
+                'whatsapp_numero' # 🐛 ¡AQUÍ ESTABA EL BUG! Cambiamos 'whatsapp_url' por 'whatsapp_numero'
             ),
             'classes': ('collapse',)
         }),
