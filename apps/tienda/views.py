@@ -8,6 +8,8 @@ from django.http import JsonResponse
 from django.db import transaction
 from django.contrib import messages
 
+from academias.mixins import TenantAdminRequiredMixin
+
 from .models import CategoriaProducto, Producto, VentaTienda, DetalleVenta, EntradaStock
 from .forms import CategoriaProductoForm, ProductoForm, EntradaStockForm
 from apps.finanzas.models import ReciboIngreso
@@ -20,7 +22,7 @@ import zoneinfo
 from django.utils import timezone
 from datetime import datetime, timedelta
 
-class PuntoVentaPOSView(LoginRequiredMixin, ListView):
+class PuntoVentaPOSView(TenantAdminRequiredMixin, ListView):
     template_name = "tienda/pos.html"
     context_object_name = "productos"
 
@@ -79,7 +81,7 @@ class PuntoVentaPOSView(LoginRequiredMixin, ListView):
         return context
 
 
-class ProcesarVentaPOSView(LoginRequiredMixin, View):
+class ProcesarVentaPOSView(TenantAdminRequiredMixin, View):
     """
     Endpoint asíncrono (AJAX / Fetch API) que procesa la compra del carrito,
     descuenta stock y emite de forma automática el recibo en la app de Finanzas.
@@ -162,7 +164,7 @@ class ProcesarVentaPOSView(LoginRequiredMixin, View):
             return JsonResponse({'error': f'Error crítico en pasarela interna: {str(e)}'}, status=500)
 
 
-class PanelInventarioView(LoginRequiredMixin, ListView):
+class PanelInventarioView(TenantAdminRequiredMixin, ListView):
     """Muestra el catálogo general, existencias, alertas y compras del día"""
     template_name = "tienda/panel_inventario.html"
     context_object_name = "productos"
@@ -208,7 +210,7 @@ class PanelInventarioView(LoginRequiredMixin, ListView):
         return context
 
 
-class RegistrarEntradaStockView(LoginRequiredMixin, FormView):
+class RegistrarEntradaStockView(TenantAdminRequiredMixin, FormView):
     """Permite reabastecer el inventario de forma manual actualizando costos"""
     template_name = "tienda/entrada_stock.html"
     form_class = EntradaStockForm
@@ -226,7 +228,7 @@ class RegistrarEntradaStockView(LoginRequiredMixin, FormView):
         return redirect('tienda:panel_inventario', slug_academia=self.request.tenant.slug)
 
 
-class CrearCategoriaView(LoginRequiredMixin, View):
+class CrearCategoriaView(TenantAdminRequiredMixin, View):
     """Procesa la creación rápida de una categoría desde el modal del POS"""
     def post(self, request, slug_academia):
         form = CategoriaProductoForm(request.POST)
@@ -239,7 +241,7 @@ class CrearCategoriaView(LoginRequiredMixin, View):
             messages.error(request, "Error al crear la categoría. Revisa los datos.")
         return redirect('tienda:pos', slug_academia=request.tenant.slug)
 
-class CrearProductoView(LoginRequiredMixin, View):
+class CrearProductoView(TenantAdminRequiredMixin, View):
     """Procesa la creación y le inyecta el stock inicial si el usuario lo solicita"""
     def post(self, request, slug_academia):
         form = ProductoForm(request.POST, academia=request.tenant)
@@ -266,7 +268,7 @@ class CrearProductoView(LoginRequiredMixin, View):
         next_url = request.POST.get('next', reverse('tienda:pos', kwargs={'slug_academia': request.tenant.slug}))
         return redirect(next_url)
 
-class EditarProductoView(LoginRequiredMixin, View):
+class EditarProductoView(TenantAdminRequiredMixin, View):
     def post(self, request, slug_academia, pk):
         producto = get_object_or_404(Producto, id=pk, academia=request.tenant)
         form = ProductoForm(request.POST, instance=producto, academia=request.tenant)
@@ -282,7 +284,7 @@ class EditarProductoView(LoginRequiredMixin, View):
         return redirect('tienda:panel_inventario', slug_academia=request.tenant.slug)
 
 
-class ReporteVentasDiaView(LoginRequiredMixin, View):
+class ReporteVentasDiaView(TenantAdminRequiredMixin, View):
     def get(self, request, slug_academia):
         fecha_str = request.GET.get('fecha')
         if not fecha_str:

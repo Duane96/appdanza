@@ -55,7 +55,7 @@
           "name": "{{ evento.academia.nombre }}",
           "address": {
             "@type": "PostalAddress",
-            "addressLocality": "{{ evento.academia.ciudad|default:'Bogotá' }}",
+            "addressLocality": "{{ evento.ciudad|default:'Bogotá' }}",
             "addressCountry": "CO",
             "streetAddress": "{{ evento.ubicacion }}"
           }
@@ -249,8 +249,8 @@
                     
                     <div class="carousel-caption-custom px-4">
                         <span class="badge bg-primary text-white rounded-pill px-4 py-2 mb-4 fs-6 tracking-widest text-uppercase shadow-lg border border-white border-opacity-25">
-                            <i class="bi bi-star-fill me-1 text-warning"></i> Evento Destacado en {{ evento.academia.ciudad|default:'Bogotá' }}
-                        </span>
+    <i class="bi bi-star-fill me-1 text-warning"></i> Evento Destacado en {{ evento.ciudad|default:'Bogotá' }}
+</span>
                         <h2 class="display-3 font-space fw-bold text-white mb-3 text-shadow">{{ evento.nombre }}</h2>
                         <p class="fs-4 text-white opacity-75 mb-5 fw-light">
                             <i class="bi bi-calendar-event me-2"></i>{{ evento.fecha|date:"l, d \d\e F" }} &nbsp;|&nbsp; 
@@ -292,7 +292,7 @@
         <div class="ticker-move">
             {% for evento in eventos_globales %}
                 <div class="ticker-item text-warning"><i class="bi bi-fire"></i></div>
-                <div class="ticker-item">{{ evento.nombre|upper }} <span class="text-muted small">({{ evento.academia.ciudad|default:'Bogotá'|upper }})</span></div>
+                <div class="ticker-item">{{ evento.nombre|upper }} <span class="text-muted small">({{ evento.ciudad|default:'Bogotá'|upper }})</span></div>
                 <div class="ticker-item opacity-50">{{ evento.fecha|date:"d M" }}</div>
                 {% if evento.precio_minimo_calculado > 0 %}
                     <div class="ticker-item text-accent">Desde ${{ evento.precio_minimo_calculado|floatformat:0 }}</div>
@@ -302,7 +302,7 @@
             {% endfor %}
             {% for evento in eventos_globales %}
                 <div class="ticker-item text-warning"><i class="bi bi-fire"></i></div>
-                <div class="ticker-item">{{ evento.nombre|upper }} <span class="text-muted small">({{ evento.academia.ciudad|default:'Bogotá'|upper }})</span></div>
+                <div class="ticker-item">{{ evento.nombre|upper }} <span class="text-muted small">({{ evento.ciudad|default:'Bogotá'|upper }})</span></div>
                 <div class="ticker-item opacity-50">{{ evento.fecha|date:"d M" }}</div>
                 {% if evento.precio_minimo_calculado > 0 %}
                     <div class="ticker-item text-accent">Desde ${{ evento.precio_minimo_calculado|floatformat:0 }}</div>
@@ -324,7 +324,7 @@
                     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end">
                         <div class="text-center text-md-start border-start border-4 border-primary ps-3">
                             <h2 class="font-space fw-bold display-6 text-dark mb-1">
-                                Cartelera <span class="text-gradient">{{ ciudad }}</span>
+                                Cartelera <span class="text-gradient">{{ ciudad|default:'Bogotá' }}</span>
                             </h2>
                             {% if forloop.first %}
                                 <p class="text-muted fs-6 mb-0">Eventos activos, talleres y sociales confirmados.</p>

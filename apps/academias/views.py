@@ -117,6 +117,12 @@ class LoginAcademiaView(LoginView):
     form_class = TenantLoginForm
 
     def get_success_url(self):
+        # 🚀 LA ÚNICA MODIFICACIÓN: Respetar el link directo (El ?next= de la URL)
+        # Si vienen de un link externo (ej. colaborador de evento), los manda directo allá.
+        url_destino = self.get_redirect_url()
+        if url_destino:
+            return url_destino
+
         """🚀 REDIRECCIÓN INTELIGENTE: Evalúa roles y suspensiones."""
         user = self.request.user
         tenant = self.request.tenant

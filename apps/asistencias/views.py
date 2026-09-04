@@ -5,9 +5,10 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.views import View
 from apps.planes_estudiantes.models import Estudiante, InscripcionPlan
+from academias.mixins import TenantAdminRequiredMixin
 from .models import Asistencia
 
-class PanelEscanerView(LoginRequiredMixin, TemplateView):
+class PanelEscanerView(TenantAdminRequiredMixin, TemplateView):
     template_name = "asistencias/escaner.html"
 
     def get_context_data(self, **kwargs):
@@ -17,7 +18,7 @@ class PanelEscanerView(LoginRequiredMixin, TemplateView):
         return context
 
 
-class ProcesarEscaneoQRView(LoginRequiredMixin, View):
+class ProcesarEscaneoQRView(TenantAdminRequiredMixin, View):
     """API asíncrona que procesa el token escaneado del QR."""
     
     def post(self, request, *args, **kwargs):
@@ -92,7 +93,7 @@ class ProcesarEscaneoQRView(LoginRequiredMixin, View):
             return JsonResponse({'status': 'error', 'mensaje': f'Error interno: {str(e)}'}, status=500)
         
 
-class ProcesarAsistenciaManualView(LoginRequiredMixin, View):
+class ProcesarAsistenciaManualView(TenantAdminRequiredMixin, View):
     def post(self, request, *args, **kwargs):
         import json
         data = json.loads(request.body)

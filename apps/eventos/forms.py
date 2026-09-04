@@ -9,7 +9,7 @@ class EventoForm(forms.ModelForm):
     class Meta:
         model = Evento
         fields = [
-            'nombre', 'imagen', 'fecha', 'fecha_fin', 'ubicacion', 
+            'nombre', 'imagen', 'fecha', 'fecha_fin', 'ubicacion', 'ciudad', 
             'es_multidias', 'cantidad_dias', 'tiene_fases_fechas',
             'acepta_nequi_daviplata', 'numero_nequi_daviplata', 
             'acepta_banco_manual', 'datos_banco_manual', 
@@ -17,6 +17,9 @@ class EventoForm(forms.ModelForm):
         ]
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control'}),
+            'ubicacion': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Carrera 15 # 85-42'}),
+            # 🚀 NUEVO WIDGET: UI moderna con Bootstrap para el nuevo campo
+            'ciudad': forms.Select(attrs={'class': 'form-select'}),
             'fecha': forms.DateTimeInput(format='%Y-%m-%dT%H:%M', attrs={'class': 'form-control', 'type': 'datetime-local'}),
             'fecha_fin': forms.DateTimeInput(format='%Y-%m-%dT%H:%M', attrs={'class': 'form-control', 'type': 'datetime-local'}),
             'es_multidias': forms.CheckboxInput(attrs={'class': 'form-check-input', 'role': 'switch'}),

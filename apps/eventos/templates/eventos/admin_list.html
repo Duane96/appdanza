@@ -232,13 +232,21 @@
                                 <div class="text-danger small mt-1 fw-bold"><i class="bi bi-asterisk"></i> {{ form.fecha_fin.errors.0 }}</div>
                             {% endif %}
                         </div>
-                        <div class="col-12">
-                            <label class="small fw-bold text-dark">Ubicación (Lugar/Ciudad) *</label>
-                            {{ form.ubicacion }}
-                            {% if form.ubicacion.errors %}
-                                <div class="text-danger small mt-1 fw-bold"><i class="bi bi-asterisk"></i> {{ form.ubicacion.errors.0 }}</div>
-                            {% endif %}
-                        </div>
+                        <div class="col-md-6">
+    <label class="small fw-bold text-dark">Lugar o Dirección *</label>
+    {{ form.ubicacion }}
+    {% if form.ubicacion.errors %}
+        <div class="text-danger small mt-1 fw-bold"><i class="bi bi-asterisk"></i> {{ form.ubicacion.errors.0 }}</div>
+    {% endif %}
+</div>
+<div class="col-md-6">
+    <label class="small fw-bold text-dark">Ciudad (Opcional)</label>
+    {{ form.ciudad }}
+    <div class="form-text lh-1 mt-1" style="font-size: 0.75rem;">Déjalo en blanco si es en tu ciudad sede.</div>
+    {% if form.ciudad.errors %}
+        <div class="text-danger small mt-1 fw-bold"><i class="bi bi-asterisk"></i> {{ form.ciudad.errors.0 }}</div>
+    {% endif %}
+</div>
 
                         <div class="col-12 mt-4">
                             <div class="bg-light border rounded p-4">

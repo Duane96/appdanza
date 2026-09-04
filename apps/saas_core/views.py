@@ -427,8 +427,9 @@ class IndexSaaSGlobalView(TemplateView):
             # 2. Agrupamos los eventos en un diccionario donde la clave es la ciudad
             eventos_por_ciudad = {}
             for evento in eventos_base:
-                # Si por alguna razón la academia es antigua y no tiene ciudad, asume 'Bogotá'
-                ciudad = evento.academia.ciudad or 'Bogotá'
+                # 🚀 REEMPLAZO SENIOR: Ahora usamos directamente el campo ciudad del evento
+                # (Recuerda que nuestro modelo ya aseguró que nunca esté vacío gracias al save())
+                ciudad = evento.ciudad 
                 
                 if ciudad not in eventos_por_ciudad:
                     eventos_por_ciudad[ciudad] = []

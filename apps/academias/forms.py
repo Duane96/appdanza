@@ -191,13 +191,26 @@ class TenantLoginForm(AuthenticationForm):
                 # 4. 🚀 BARRERA MULTI-TENANT
                 if hasattr(self.request, 'tenant') and not self.user_cache.is_superuser:
                     try:
-                        if self.user_cache.perfil.academia != self.request.tenant:
+                        # 1. Verificamos si es el dueño/estudiante nativo de esta academia
+                        es_dueno = (self.user_cache.perfil.academia == self.request.tenant)
+                        
+                        # 2. 🚀 VERIFICACIÓN DE INVITADO VIP (Colaborador de Evento)
+                        # Importamos aquí adentro para evitar "circular imports" entre academias y eventos
+                        from apps.eventos.models import ColaboradorEvento
+                        es_colaborador = ColaboradorEvento.objects.filter(
+                            evento__academia=self.request.tenant,
+                            usuario=self.user_cache
+                        ).exists()
+
+                        # 3. Si no es nativo ni es invitado VIP, lo pateamos
+                        if not (es_dueno or es_colaborador):
                             print(f"🚨 BLOQUEO MULTI-TENANT: El usuario pertenece a {self.user_cache.perfil.academia.nombre}, intentó entrar a {self.request.tenant.nombre}")
-                            raise forms.ValidationError("No tienes acceso a esta academia. Verifica el enlace que te compartieron.")
+                            raise forms.ValidationError("No tienes credenciales ni invitaciones para acceder a esta academia.")
+                            
                     except ObjectDoesNotExist:
                         print("🚨 BLOQUEO: El usuario no tiene perfil SaaS (ObjectDoesNotExist).")
                         raise forms.ValidationError("Este usuario no tiene un perfil SaaS asociado.")
                 
-                print("🎉 LOGIN COMPLETAMENTE APROBADO.")
+                print("🎉 LOGIN COMPLETAMENTE APROBADO (Dueño o Colaborador VIP).")
 
         return self.cleaned_data

@@ -355,6 +355,11 @@ class EventoDetailAdminView(LoginRequiredMixin, DetailView):
     def get_object(self):
         return get_object_or_404(Evento, academia=self.request.tenant, slug=self.kwargs['evento_slug'])
 
+    # 🚀 AÑADE ESTE MÉTODO AQUÍ:
+    def get_login_url(self):
+        """Enrutamos dinámicamente a los intrusos al login de la academia anfitriona."""
+        return reverse('academias:login', kwargs={'slug_academia': self.request.tenant.slug})
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         evento = self.object

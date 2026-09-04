@@ -9,6 +9,8 @@ from django.db import transaction
 from django.contrib import messages
 from django.utils import timezone
 
+from academias.mixins import TenantAdminRequiredMixin
+
 from .models import ReciboIngreso, Gasto
 from .forms import GastoForm, LiquidacionProfesorForm, IngresoExtraForm
 
@@ -32,7 +34,7 @@ import os
 from comunicaciones.services import enviar_correo_transaccional
 
 
-class PanelFinanzasView(LoginRequiredMixin, ListView):
+class PanelFinanzasView(TenantAdminRequiredMixin, ListView):
     template_name = "finanzas/panel_finanzas.html"
     context_object_name = "gastos"
 
@@ -68,7 +70,7 @@ class PanelFinanzasView(LoginRequiredMixin, ListView):
         context['ingresos'] = ReciboIngreso.objects.filter(academia=self.request.tenant).order_by('-creado_en')
         return context
 
-class RegistrarGastoView(LoginRequiredMixin, FormView):
+class RegistrarGastoView(TenantAdminRequiredMixin, FormView):
     """Registro de egresos tradicionales"""
     template_name = "finanzas/registrar_gasto.html"
     form_class = GastoForm
@@ -80,7 +82,7 @@ class RegistrarGastoView(LoginRequiredMixin, FormView):
         messages.success(self.request, f"Comprobante de egreso {gasto.numero_egreso} creado correctamente.")
         return redirect('finanzas:panel_finanzas', slug_academia=self.request.tenant.slug)
 
-class LiquidarProfesorView(LoginRequiredMixin, FormView):
+class LiquidarProfesorView(TenantAdminRequiredMixin, FormView):
     """Automatiza el documento soporte y pago de nómina de los profesores"""
     template_name = "finanzas/liquidar_profesor.html"
     form_class = LiquidacionProfesorForm
@@ -103,7 +105,7 @@ class LiquidarProfesorView(LoginRequiredMixin, FormView):
         messages.success(self.request, f"Liquidación de nómina generada con éxito por ${monto_total:,.0f} para {data['profesor_nombre']}.")
         return redirect('finanzas:panel_finanzas', slug_academia=self.request.tenant.slug)
 
-class RegistrarIngresoExtraView(LoginRequiredMixin, FormView):
+class RegistrarIngresoExtraView(TenantAdminRequiredMixin, FormView):
     """Permite facturar ingresos de la tienda, eventos, etc."""
     template_name = "finanzas/registrar_ingreso.html"
     form_class = IngresoExtraForm
@@ -133,7 +135,7 @@ class RegistrarIngresoExtraView(LoginRequiredMixin, FormView):
         messages.success(self.request, f"Recibo de Caja {ingreso.numero_recibo} expedido con éxito.")
         return redirect('finanzas:panel_finanzas', slug_academia=self.request.tenant.slug)
 
-class AnularTransaccionView(LoginRequiredMixin, View):
+class AnularTransaccionView(TenantAdminRequiredMixin, View):
     """Pone en CERO el efecto contable de un recibo o gasto guardando el rastro legal"""
     def post(self, request, slug_academia, tipo, pk):
         motivo = request.POST.get('motivo_anulacion', 'No especificado')
@@ -157,7 +159,7 @@ class AnularTransaccionView(LoginRequiredMixin, View):
         return redirect('finanzas:panel_finanzas', slug_academia=slug_academia)
     
 
-class ObtenerDetalleTransaccionView(LoginRequiredMixin, View):
+class ObtenerDetalleTransaccionView(TenantAdminRequiredMixin, View):
     """
     Retorna los datos de un ingreso o gasto en formato JSON.
     Optimiza el DOM evitando renderizar modales por cada fila.
@@ -204,7 +206,7 @@ class ObtenerDetalleTransaccionView(LoginRequiredMixin, View):
         return JsonResponse(data)
 
 
-class ExportarReporteContableView(LoginRequiredMixin, View):
+class ExportarReporteContableView(TenantAdminRequiredMixin, View):
     """
     Genera un archivo CSV estructurado contablemente con filtros de fechas.
     Es ultra ligero en memoria, ideal para los límites de PythonAnywhere.
@@ -281,7 +283,7 @@ class ExportarReporteContableView(LoginRequiredMixin, View):
         return response
     
 
-class ResumenReporteAjaxView(LoginRequiredMixin, View):
+class ResumenReporteAjaxView(TenantAdminRequiredMixin, View):
     """Retorna los totales y el listado de transacciones para previsualizar en el Modal"""
     def get(self, request, slug_academia):
         tipo = request.GET.get('tipo', 'diario')
@@ -349,7 +351,7 @@ def generar_pdf_memoria(template_src, context_dict):
 
 
 # Reemplaza SOLO la clase DescargarReciboPDFView en tu views.py
-class DescargarReciboPDFView(LoginRequiredMixin, View):
+class DescargarReciboPDFView(TenantAdminRequiredMixin, View):
     """Descarga un PDF individual (Cuenta de Cobro o Comprobante Egreso)."""
     
     def get(self, request, slug_academia, tipo, pk):
@@ -376,7 +378,7 @@ class DescargarReciboPDFView(LoginRequiredMixin, View):
             
         return HttpResponse("Error interno generando el PDF", status=500)
 
-class DescargarSoportesZipView(LoginRequiredMixin, View):
+class DescargarSoportesZipView(TenantAdminRequiredMixin, View):
     """
     Empaqueta Recibos (generados al vuelo en PDF) y Comprobantes de Egreso (PDF + Anexos)
     en un archivo .ZIP para enviárselo al contador a fin de mes.

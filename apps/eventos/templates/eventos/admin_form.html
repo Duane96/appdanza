@@ -61,11 +61,25 @@
                         {{ form.imagen }}
                     </div>
                     
-                    <div class="mb-3">{{ form.nombre.label_tag }} {{ form.nombre }}</div>
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-6">{{ form.fecha.label_tag }} {{ form.fecha }}</div>
-                        <div class="col-md-6">{{ form.ubicacion.label_tag }} {{ form.ubicacion }}</div>
-                    </div>
+                    <div class="mb-3">
+    <label class="form-label fw-semibold text-secondary small">Nombre del Evento *</label>
+    {{ form.nombre }}
+</div>
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <label class="form-label fw-semibold text-secondary small">Fecha de Inicio *</label>
+        {{ form.fecha }}
+    </div>
+    <div class="col-md-4">
+        <label class="form-label fw-semibold text-secondary small">Lugar / Dirección *</label>
+        {{ form.ubicacion }}
+    </div>
+    <div class="col-md-4">
+        <label class="form-label fw-semibold text-secondary small">Ciudad (Opcional)</label>
+        {{ form.ciudad }}
+        <small class="text-muted" style="font-size: 0.70rem;">En blanco = Asume tu sede principal.</small>
+    </div>
+</div>
                     
                     <div class="row g-3 mb-4 bg-light p-4 rounded border mt-2">
                         <h6 class="fw-bold text-dark mb-0"><i class="bi bi-sliders me-2"></i>Arquitectura del Evento</h6>

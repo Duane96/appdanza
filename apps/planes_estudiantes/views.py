@@ -3,6 +3,8 @@ from django.views.generic import ListView, CreateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse
 from django.utils import timezone
+
+from academias.mixins import TenantAdminRequiredMixin
 from .models import Estudiante, Plan, InscripcionPlan
 from .forms import EstudianteForm, PlanForm, InscripcionPlanForm
 from apps.academias.models import PerfilUsuario                 # 🚀 Importamos PerfilUsuario
@@ -19,7 +21,7 @@ from django.shortcuts import get_object_or_404
 
 from apps.comunicaciones.services import enviar_correo_transaccional
 
-class CrearEstudianteView(LoginRequiredMixin, CreateView):
+class CrearEstudianteView(TenantAdminRequiredMixin, CreateView):
     model = Estudiante
     form_class = EstudianteForm
     template_name = "planes_estudiantes/form_estudiante.html"
@@ -86,7 +88,7 @@ class CrearEstudianteView(LoginRequiredMixin, CreateView):
         return reverse('planes_estudiantes:lista_estudiantes', kwargs={'slug_academia': self.request.tenant.slug})
 
 
-class ListaEstudiantesView(LoginRequiredMixin, ListView):
+class ListaEstudiantesView(TenantAdminRequiredMixin, ListView):
     model = Estudiante
     template_name = "planes_estudiantes/lista_estudiantes.html"
     context_object_name = "estudiantes"
@@ -96,7 +98,7 @@ class ListaEstudiantesView(LoginRequiredMixin, ListView):
         return Estudiante.objects.all().prefetch_related('inscripciones__plan')
 
 
-class AsignarPlanView(LoginRequiredMixin, CreateView):
+class AsignarPlanView(TenantAdminRequiredMixin, CreateView):
     model = InscripcionPlan
     form_class = InscripcionPlanForm
     template_name = "planes_estudiantes/asignar_plan.html"

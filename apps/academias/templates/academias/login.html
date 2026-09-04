@@ -159,6 +159,11 @@
 
             <form method="post">
                 {% csrf_token %}
+
+                <!-- 🚀 EL TRUCO SENIOR: Capturamos la ruta destino -->
+    {% if request.GET.next %}
+        <input type="hidden" name="next" value="{{ request.GET.next }}">
+    {% endif %}
                 
                 <!-- 🚀 CONTROL SENIOR: BLOQUE DE ERRORES INYECTADO -->
                 {% if form.errors %}

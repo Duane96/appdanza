@@ -282,3 +282,13 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.getenv('SMTP_USER') # Reemplaza con el correo de tu SaaS
 EMAIL_HOST_PASSWORD = os.getenv('SMTP_PASSWORD') # 🚨 Mejor si usas os.getenv('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = os.getenv('SMTP_DEFAULT') # Nombre visible
+
+
+
+LOGIN_URL = 'academias:login' 
+
+# A dónde va el usuario si hace login directo sin un link previo
+LOGIN_REDIRECT_URL = '/' 
+
+# A dónde va el usuario al cerrar sesión
+LOGOUT_REDIRECT_URL = 'login'

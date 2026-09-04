@@ -1,5 +1,6 @@
 # apps/eventos/models.py
 import uuid
+from django.contrib.auth.models import User
 from django.db import models
 from apps.academias.models import Academia
 import os
@@ -83,6 +84,33 @@ class Evento(TenantModel):
         null=True, 
         verbose_name="Enlace de Registro Externo",
         help_text="Si se llena, el botón 'Conseguir Tickets' abrirá esta URL en otra pestaña."
+    )
+
+    # 🚀 NUEVO: Mapeo de Ciudades Estandarizadas (Idéntico a Academias)
+    CIUDADES_CHOICES = [
+        ('Bogotá', 'Bogotá'),
+        ('Medellín', 'Medellín'),
+        ('Cali', 'Cali'),
+        ('Barranquilla', 'Barranquilla'),
+        ('Bucaramanga', 'Bucaramanga'),
+        ('Pereira', 'Pereira'),
+        ('Manizales', 'Manizales'),
+        ('Armenia', 'Armenia'),
+        ('Cartagena', 'Cartagena'),
+        ('Villavicencio', 'Villavicencio'),
+        ('Ibagué', 'Ibagué'),
+        ('Otra', 'Otra ciudad...'),
+    ]
+
+    # 🚀 REFACTOR SENIOR: Ciudad controlada con Choices y default seguro
+    ciudad = models.CharField(
+        max_length=50, 
+        choices=CIUDADES_CHOICES, 
+        default='Bogotá', 
+        blank=True, 
+        null=True, 
+        verbose_name="Ciudad del Evento",
+        help_text="Selecciona la ciudad física del evento. Si se deja en blanco, heredará la de tu academia."
     )
 
     class Meta:
@@ -175,6 +203,15 @@ class Evento(TenantModel):
         # 1. Aseguramos el slug antes de guardar
         if not self.slug:
             self.slug = slugify(self.nombre)
+
+        # 🚀 REFACTOR SENIOR: Auto-completar ciudad inteligentemente.
+        # Si la ciudad viene vacía, intentamos heredar la de la academia. 
+        # Si la academia no tiene, forzamos 'Bogotá'.
+        if not self.ciudad:
+            if self.academia and getattr(self.academia, 'ciudad', None):
+                self.ciudad = self.academia.ciudad
+            else:
+                self.ciudad = 'Bogotá'
 
         # 2. PROCESAMIENTO INTELIGENTE DE IMAGEN A WEBP
         # Si el usuario subió una imagen nueva y esta no ha sido procesada aún
@@ -423,3 +460,23 @@ class GastoEvento(models.Model):
 
     
 
+class ColaboradorEvento(models.Model):
+    """
+    Controla el acceso VIP de usuarios de otras academias a eventos específicos.
+    """
+    ROLES = (
+        ('METRICAS', 'Gestor de Métricas y Taquilla'),
+        ('TAQUILLA', 'Solo Escáner QR y Taquilla'),
+    )
+    
+    evento = models.ForeignKey(Evento, on_delete=models.CASCADE, related_name='colaboradores')
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='eventos_colaborados')
+    rol = models.CharField(max_length=20, choices=ROLES, default='METRICAS')
+    fecha_asignacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        # Un usuario no puede ser agregado dos veces al mismo evento
+        unique_together = ('evento', 'usuario')
+
+    def __str__(self):
+        return f"{self.usuario.email} - {self.evento.nombre} ({self.get_rol_display()})"
