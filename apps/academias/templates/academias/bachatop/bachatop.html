@@ -1,0 +1,619 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ academia.nombre|default:"Luis & Camila | BachaTop" }}</title>
+    
+    <!-- Bootstrap e Iconos -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css" rel="stylesheet">
+    
+    <!-- Tipografías Premium -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+
+    <style>
+        /* =========================================
+           1. VARIABLES Y RESET CUSTOM (DARK THEME)
+           ========================================= */
+        :root {
+            --gold-accent: #D4AF37; 
+            --crimson-dark: #8B0000; 
+            --bg-dark: #0a0a0a; 
+            --glass-bg: rgba(15, 15, 15, 0.75); /* Un poco más oscuro para mejor lectura */
+            --glass-border: rgba(212, 175, 55, 0.25); 
+            --text-main: #ffffff; /* Blanco puro para máxima legibilidad */
+            --text-secondary: #e0e0e0; /* Gris muy claro en lugar de gris oscuro */
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            cursor: none; 
+        }
+
+        h1, h2, h3 { font-family: 'Playfair Display', serif; font-weight: 700; }
+        .font-elegant { font-family: 'Playfair Display', serif; font-style: italic; color: var(--gold-accent); }
+
+        /* =========================================
+           2. FONDO ANIMADO CSS (LIVING DARK GRADIENT)
+           ========================================= */
+        .bg-animated {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: linear-gradient(120deg, #050505 0%, #1a0f14 50%, #0d0d12 100%);
+            background-size: 300% 300%;
+            animation: gradientMove 20s ease infinite; 
+            z-index: -3;
+        }
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* =========================================
+           3. CANVAS PARTICLES
+           ========================================= */
+        #particleCanvas {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: -2;
+            pointer-events: none;
+        }
+
+        /* =========================================
+           4. CURSOR PERSONALIZADO
+           ========================================= */
+        .custom-cursor {
+            position: fixed; top: 0; left: 0;
+            width: 20px; height: 20px;
+            background-color: transparent;
+            border: 2px solid var(--gold-accent);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%, -50%);
+            transition: transform 0.1s ease, width 0.3s, height 0.3s, background-color 0.3s;
+            mix-blend-mode: screen;
+        }
+        .custom-cursor.hover {
+            width: 60px; height: 60px;
+            background-color: rgba(212, 175, 55, 0.2);
+            border-color: transparent;
+        }
+
+        /* =========================================
+           5. NAVBAR GLASSMORFISMO OSCURO
+           ========================================= */
+        .glass-nav {
+            background: rgba(5, 5, 5, 0.85); /* Más oscuro para que los enlaces resalten */
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 10px 0;
+            transition: all 0.4s ease;
+        }
+        .nav-link {
+            color: var(--text-main) !important;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+            border-radius: 20px;
+            padding: 10px 20px !important;
+        }
+        .nav-link::before {
+            content: ''; position: absolute; top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(212,175,55,0.2), transparent);
+            transition: left 0.5s;
+        }
+        .nav-link:hover::before { left: 100%; }
+
+        /* Botón especial para el Login del SaaS */
+        .btn-login-nav {
+            background: transparent;
+            border: 1px solid var(--gold-accent);
+            color: var(--gold-accent) !important;
+            transition: all 0.3s;
+        }
+        .btn-login-nav:hover {
+            background: var(--gold-accent);
+            color: var(--bg-dark) !important;
+        }
+
+        /* =========================================
+           6. HERO FULLSCREEN (FOTO GRANDE)
+           ========================================= */
+        .hero-fullscreen {
+            min-height: 100vh;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* Imagen de fondo inyectada dinámicamente */
+        .hero-bg-image {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            object-fit: cover;
+            object-position: center 20%; /* Enfoca un poco más arriba del centro */
+            z-index: -1;
+            /* Si no hay imagen, usamos un color base */
+            background-color: #111; 
+        }
+
+        /* Degradete oscuro para garantizar que el texto SIEMPRE se lea */
+        .hero-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(
+                180deg, 
+                rgba(0,0,0,0.8) 0%, 
+                rgba(0,0,0,0.3) 50%, 
+                rgba(10,10,10,1) 100% /* Fundido a negro absoluto hacia abajo para unir con la web */
+            );
+            z-index: 0;
+        }
+
+        .hero-title {
+            font-size: clamp(3rem, 7vw, 6.5rem); /* Texto gigantesco en escritorio, adaptable en móvil */
+            line-height: 1.1;
+            text-shadow: 0 4px 15px rgba(0,0,0,0.8);
+        }
+
+        .btn-gold {
+            position: relative;
+            padding: 15px 45px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--bg-dark);
+            background: var(--gold-accent);
+            border: none;
+            border-radius: 50px;
+            overflow: hidden;
+            z-index: 1;
+            transition: all 0.4s;
+            box-shadow: 0 10px 20px rgba(212, 175, 55, 0.3);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            letter-spacing: 1px;
+        }
+        .btn-gold:hover { 
+            transform: translateY(-3px); 
+            box-shadow: 0 15px 30px rgba(212, 175, 55, 0.5); 
+            color: var(--bg-dark); 
+        }
+
+        /* =========================================
+           7. COMPONENTES GLOBALES (Mejora de lectura)
+           ========================================= */
+        .marquee-wrapper {
+            position: relative;
+            width: 100vw;
+            margin-left: -50vw;
+            left: 50%;
+            background: var(--gold-accent);
+            padding: 20px 0;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            z-index: 10;
+            overflow: hidden;
+            display: flex;
+        }
+        .marquee-content {
+            white-space: nowrap;
+            animation: marqueeFlow 20s linear infinite;
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            font-style: italic;
+            color: var(--bg-dark);
+        }
+        @keyframes marqueeFlow {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        .reveal-on-scroll {
+            opacity: 0;
+            transform: translateY(60px);
+            transition: all 1s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        .reveal-on-scroll.is-visible {
+            opacity: 1; transform: translateY(0);
+        }
+
+        .tilt-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid var(--glass-border);
+            border-radius: 30px;
+            padding: 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.6);
+            transition: transform 0.1s ease;
+            transform-style: preserve-3d;
+            height: 100%;
+        }
+        .tilt-card-content { transform: translateZ(40px); }
+
+        .badge-chic {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--gold-accent);
+            color: var(--gold-accent);
+            font-weight: 600;
+            padding: 8px 15px;
+            border-radius: 20px;
+        }
+
+        /* Flip Cards (Se mantiene el estilo oscuro pero con texto claro) */
+        .flip-card-container { perspective: 1000px; height: 450px; z-index: 2; }
+        .flip-card-inner {
+            position: relative; width: 100%; height: 100%;
+            transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform-style: preserve-3d;
+        }
+        .flip-card-container:hover .flip-card-inner { transform: rotateY(180deg); }
+        .flip-card-front, .flip-card-back {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            backface-visibility: hidden; border-radius: 30px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            overflow: hidden;
+        }
+        .flip-card-front { z-index: 2; }
+        .flip-card-back {
+            transform: rotateY(180deg); z-index: 1; 
+            display: flex; flex-direction: column; padding: 30px;
+            background: rgba(10, 10, 10, 0.95);
+        }
+        .event-flyer {
+            width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; opacity: 0.7;
+        }
+        .front-overlay {
+            position: absolute; bottom: 0; left: 0; width: 100%;
+            background: linear-gradient(0deg, rgba(0,0,0,1) 0%, transparent 100%);
+            padding: 40px 20px 20px; z-index: 1;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 1. CURSOR CUSTOM -->
+    <div class="custom-cursor" id="cursor"></div>
+
+    <!-- 2. FONDOS -->
+    <div class="bg-animated"></div>
+    <canvas id="particleCanvas"></canvas>
+
+    <!-- 3. NAVBAR -->
+    <nav class="navbar navbar-expand-lg fixed-top glass-nav px-4" id="mainNav">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center hover-target" href="#">
+                {% if academia.logo %}
+                    <img src="{{ academia.logo.url }}" alt="{{ academia.nombre }}" style="height: 50px;">
+                {% else %}
+                    <h2 class="mb-0 font-elegant ms-2" style="font-size: 2.2rem;">
+                        Luis & Camila<span class="text-white" style="font-family: 'Outfit', sans-serif; font-style: normal; font-weight: 300; font-size: 1.5rem;"> BachaTop</span>
+                    </h2>
+                {% endif %}
+            </a>
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <i class="bi bi-list fs-1" style="color: var(--gold-accent);"></i>
+            </button>
+            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+                <ul class="navbar-nav align-items-center gap-3">
+                    <li class="nav-item"><a class="nav-link hover-target" href="#esencia">Filosofía</a></li>
+                    <li class="nav-item"><a class="nav-link hover-target" href="#agenda">Workshops</a></li>
+                    <!-- NUEVO: BOTÓN DE INGRESO PARA ESTUDIANTES (Enlazado a la URL de Django del tenant) -->
+                    <li class="nav-item ms-lg-3 mt-3 mt-lg-0">
+                        <!-- CÓDIGO CORREGIDO -->
+<a class="nav-link btn-login-nav rounded-pill px-4 hover-target fw-bold d-flex align-items-center gap-2" href="{% url 'academias:login' slug_academia=academia.slug %}">
+    <i class="bi bi-person-circle"></i> Acceso Alumnos
+</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 4. HERO FULLSCREEN (Foto Grande) -->
+    <header class="hero-fullscreen">
+        <!-- Imagen inyectada desde Django -->
+        {% if academia.hero_imagen_1 %}
+            <img src="{{ academia.hero_imagen_1.url }}" alt="Bachata Sensual" class="hero-bg-image">
+        {% else %}
+            <!-- Fallback si no suben imagen: un placeholder elegante -->
+            <img src="https://images.unsplash.com/photo-1547153760-18fc86324498?q=80&w=1920&auto=format&fit=crop" alt="Bachata Sensual" class="hero-bg-image" style="filter: grayscale(30%);">
+        {% endif %}
+        
+        <!-- Overlay oscuro para asegurar contraste del texto -->
+        <div class="hero-overlay"></div>
+
+        <div class="container position-relative z-1 text-center mt-5 reveal-on-scroll">
+            <div class="d-inline-flex align-items-center gap-2 px-4 py-2 mb-4 rounded-pill hover-target" style="background: rgba(0, 0, 0, 0.6); border: 1px solid var(--gold-accent); backdrop-filter: blur(5px);">
+                <span class="font-elegant fs-5 text-white">✨ El arte de la conexión total</span>
+            </div>
+            
+            <h1 class="hero-title text-white mb-4">
+                {{ academia.hero_titulo|default:"Fluye.<br>Siente.<br><span style='color: var(--gold-accent);'>Conecta.</span>"|safe }}
+            </h1>
+            
+            <p class="fs-4 mb-5 mx-auto fw-light" style="max-width: 800px; color: var(--text-secondary); text-shadow: 0 2px 4px rgba(0,0,0,0.8);">
+                {{ academia.hero_eslogan|default:"BachaTop no es solo una secuencia de pasos. Es una filosofía enfocada en la calidad de movimiento, la respiración compartida y la elegancia extrema." }}
+            </p>
+            
+            <a href="#agenda" class="btn-gold hover-target px-5 py-3 fs-5">
+                Ver Workshops <i class="bi bi-arrow-down ms-2"></i>
+            </a>
+        </div>
+    </header>
+
+    <!-- 5. CINTA MARQUEE -->
+    <div class="marquee-wrapper hover-target">
+        <div class="marquee-content">
+            ✦ CALIDAD DE MOVIMIENTO ✦ CONEXIÓN PROFUNDA ✦ TÉCNICA Y ESTILO ✦ BACHATOP ✦ LUIS Y CAMILA ✦ CALIDAD DE MOVIMIENTO ✦ CONEXIÓN PROFUNDA ✦
+        </div>
+    </div>
+
+    <!-- 6. SECCIÓN ESENCIA (Corregido contraste de textos) -->
+    <section id="esencia" class="container py-5 my-5">
+        <div class="row g-5 align-items-center">
+            <div class="col-lg-5 reveal-on-scroll">
+                <div class="tilt-card hover-target" style="padding: 10px;">
+                    {% if academia.info_imagen %}
+                        <img src="{{ academia.info_imagen.url }}" alt="Filosofía" class="img-fluid rounded-4 w-100 tilt-card-content" style="object-fit: cover; height: 600px; filter: contrast(110%);">
+                    {% else %}
+                        <div class="w-100 rounded-4 tilt-card-content d-flex align-items-center justify-content-center" style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); height: 600px;">
+                            <h3 class="font-elegant text-white">Sube una foto vertical</h3>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="col-lg-7 ps-lg-5 reveal-on-scroll" style="transition-delay: 0.2s;">
+                <h4 class="font-elegant fs-2 mb-2">Nuestro Método</h4>
+                <h2 class="display-3 mb-4 text-white" style="letter-spacing: -1px;">
+                    {{ academia.info_titulo|default:"El arte de <br><span style='color: var(--gold-accent);'>sentir la música.</span>"|safe }}
+                </h2>
+                
+                <!-- Cambiado text-muted a text-white para lectura perfecta -->
+                <p class="fs-4 mb-4 fw-normal text-white" style="line-height: 1.6;">
+                    {{ academia.info_descripcion_1|default:"Somos Luis y Camila. Creamos BachaTop no solo como un estilo de pasos, sino como una filosofía. Buscamos que cada movimiento tenga una intención clara." }}
+                </p>
+                
+                <p class="fs-5 mb-5" style="color: var(--text-secondary); line-height: 1.6;">
+                    {{ academia.info_descripcion_2|default:"Desarrollaremos tu disociación corporal, el manejo del peso y la respiración compartida para lograr una conexión profunda en la pista." }}
+                </p>
+                
+                <div class="row g-4 tilt-card hover-target" style="background: rgba(10,10,10,0.8);">
+                    <div class="col-6 tilt-card-content border-end border-dark">
+                        <i class="{{ academia.bloque_1_icono|default:'bi-infinity' }} display-4 mb-3 d-block" style="color: var(--gold-accent);"></i>
+                        <h4 class="fw-bold text-white">{{ academia.bloque_1_titulo|default:"Flujo Continuo" }}</h4>
+                    </div>
+                    <div class="col-6 tilt-card-content ps-4">
+                        <i class="{{ academia.bloque_2_icono|default:'bi-link-45deg' }} display-4 mb-3 d-block" style="color: var(--gold-accent);"></i>
+                        <h4 class="fw-bold text-white">{{ academia.bloque_2_titulo|default:"Conexión Total" }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 7. AGENDA DE EVENTOS (Textos aclarados) -->
+    <section id="agenda" class="container py-5 my-5">
+        <div class="text-center mb-5 pb-4 reveal-on-scroll">
+            <span class="font-elegant display-5">Aprende con nosotros</span>
+            <h2 class="display-3 text-white" style="letter-spacing: -2px;">PRÓXIMOS <span style="color: var(--gold-accent);">WORKSHOPS</span></h2>
+        </div>
+
+        <div class="row g-5">
+            {% for evento in eventos %}
+                <div class="col-lg-4 col-md-6 reveal-on-scroll" style="transition-delay: 0.{{ forloop.counter }}s;">
+                    <div class="flip-card-container hover-target w-100">
+                        <div class="flip-card-inner">
+                            
+                            <!-- CARA FRONTAL -->
+                            <div class="flip-card-front">
+                                {% if evento.imagen %}
+                                    <img src="{{ evento.imagen.url }}" alt="{{ evento.nombre }}" class="event-flyer">
+                                {% else %}
+                                    <div class="w-100 h-100 d-flex justify-content-center align-items-center" style="background: rgba(212,175,55,0.05);">
+                                        <i class="bi bi-camera" style="font-size: 4rem; color: var(--gold-accent);"></i>
+                                    </div>
+                                {% endif %}
+                                
+                                <div class="position-absolute top-0 end-0 m-3" style="z-index: 2;">
+                                    <div class="badge-chic text-center shadow-lg bg-dark">
+                                        <span class="d-block font-elegant lh-1" style="font-size: 1.8rem;">{{ evento.fecha|date:"d" }}</span>
+                                        <span class="d-block small text-white font-sans">{{ evento.fecha|date:"M"|upper }}</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="front-overlay">
+                                    <h3 class="fw-bold fs-3 text-white mb-1" style="font-family: 'Outfit', sans-serif;">{{ evento.nombre }}</h3>
+                                    <p class="text-white mb-0 small opacity-100">
+                                        <i class="bi bi-geo-alt-fill" style="color: var(--gold-accent);"></i> {{ evento.ubicacion }}
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <!-- CARA TRASERA -->
+                            <div class="flip-card-back">
+                                <h3 class="font-elegant fs-2 mb-4 text-center text-white">Reserva tu lugar</h3>
+                                
+                                <p class="text-white mb-4 text-center fw-normal fs-5 border-bottom border-secondary pb-3">
+                                    <i class="bi bi-clock" style="color: var(--gold-accent);"></i> Hora: {{ evento.fecha|date:"H:i" }}
+                                </p>
+                                
+                                <div class="flex-grow-1 overflow-auto px-2 mb-3">
+                                    {% for pase in evento.pases_procesados %}
+                                        <div class="d-flex justify-content-between align-items-center mb-3 p-2 rounded-3" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);">
+                                            <span class="fw-bold text-white">{{ pase.nombre|title }}</span>
+                                            <span class="badge-chic px-3 py-1 fs-6">${{ pase.precio|floatformat:0 }}</span>
+                                        </div>
+                                    {% empty %}
+                                        <div class="text-center py-3">
+                                            <span class="badge-chic border-0 text-white">Apertura próxima</span>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                
+                                <div class="mt-auto">
+                                    <a href="{% url 'eventos:registro_publico' academia.slug evento.slug %}" class="btn-gold w-100 text-center py-3 justify-content-center">
+                                        Adquirir Full Pass
+                                    </a>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="col-12 text-center py-5 reveal-on-scroll">
+                    <div class="glass-panel d-inline-block hover-target p-5">
+                        <i class="bi bi-moon-stars display-1 mb-3" style="color: var(--gold-accent);"></i>
+                        <h2 class="font-elegant display-4 text-white">Preparando la conexión...</h2>
+                        <p class="fs-4 text-white fw-light">Pronto revelaremos las fechas de nuestra próxima gira.</p>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- FOOTER GLASS -->
+    <footer class="glass-nav text-center py-5 border-top" style="border-color: rgba(255,255,255,0.1) !important;">
+        <div class="container tilt-card hover-target border-0 shadow-none bg-transparent">
+            <h2 class="font-elegant display-4 mb-3 tilt-card-content text-white">Luis & Camila</h2>
+            <div class="d-flex justify-content-center gap-4 fs-3 mb-4 tilt-card-content">
+                {% if academia.instagram_url %}<a href="{{ academia.instagram_url }}" target="_blank" style="color: var(--gold-accent);"><i class="bi bi-instagram"></i></a>{% endif %}
+                {% if academia.youtube_url %}<a href="{{ academia.youtube_url }}" target="_blank" style="color: var(--gold-accent);"><i class="bi bi-youtube"></i></a>{% endif %}
+                {% if academia.whatsapp_numero %}<a href="{{ academia.enlace_whatsapp }}" target="_blank" style="color: var(--gold-accent);"><i class="bi bi-whatsapp"></i></a>{% endif %}
+            </div>
+            <p class="tilt-card-content fw-light text-white mb-0 opacity-75">
+                &copy; 2026. Powered by <a href="#" style="color: var(--gold-accent); text-decoration: none; font-weight: bold;">AppDanza SaaS</a>
+            </p>
+        </div>
+    </footer>
+
+    <!-- SCRIPTS MÁGICOS (Vanilla JS) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            
+            // --- 1. CUSTOM CURSOR (Dark Mode) ---
+            const cursor = document.getElementById('cursor');
+            const hoverTargets = document.querySelectorAll('.hover-target, a, button');
+            
+            document.addEventListener('mousemove', (e) => {
+                cursor.style.left = e.clientX + 'px';
+                cursor.style.top = e.clientY + 'px';
+            });
+
+            hoverTargets.forEach(target => {
+                target.addEventListener('mouseenter', () => cursor.classList.add('hover'));
+                target.addEventListener('mouseleave', () => cursor.classList.remove('hover'));
+            });
+
+            // --- 2. SCROLL REVEAL ---
+            const revealElements = document.querySelectorAll('.reveal-on-scroll');
+            const revealObserver = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { root: null, threshold: 0.1, rootMargin: "0px 0px -50px 0px" });
+
+            revealElements.forEach(el => revealObserver.observe(el));
+
+            // --- 3. EFECTO TILT 3D ---
+            const tiltCards = document.querySelectorAll('.tilt-card');
+            tiltCards.forEach(card => {
+                card.addEventListener('mousemove', (e) => {
+                    const rect = card.getBoundingClientRect();
+                    const x = e.clientX - rect.left; 
+                    const y = e.clientY - rect.top;
+                    const centerX = rect.width / 2;
+                    const centerY = rect.height / 2;
+                    const rotateX = ((y - centerY) / centerY) * -8;
+                    const rotateY = ((x - centerX) / centerX) * 8;
+                    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.01, 1.01, 1.01)`;
+                });
+                card.addEventListener('mouseleave', () => {
+                    card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
+                });
+            });
+
+            // --- 4. SISTEMA DE PARTÍCULAS (Chispas Doradas) ---
+            const canvas = document.getElementById('particleCanvas');
+            const ctx = canvas.getContext('2d');
+            let particlesArray = [];
+
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            window.addEventListener('resize', () => {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                initParticles();
+            });
+
+            class Particle {
+                constructor() {
+                    this.x = Math.random() * canvas.width;
+                    this.y = Math.random() * canvas.height;
+                    this.size = Math.random() * 2.5 + 0.5;
+                    this.speedX = (Math.random() * 0.5) - 0.25;
+                    this.speedY = (Math.random() * -0.8) - 0.2; 
+                    const colors = ['rgba(212, 175, 55, 0.4)', 'rgba(255, 215, 0, 0.2)', 'rgba(139, 0, 0, 0.3)'];
+                    this.color = colors[Math.floor(Math.random() * colors.length)];
+                }
+                update() {
+                    this.x += this.speedX;
+                    this.y += this.speedY;
+                    if (this.y < 0) {
+                        this.y = canvas.height;
+                        this.x = Math.random() * canvas.width;
+                    }
+                }
+                draw() {
+                    ctx.fillStyle = this.color;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            function initParticles() {
+                particlesArray = [];
+                for (let i = 0; i < 80; i++) { 
+                    particlesArray.push(new Particle());
+                }
+            }
+
+            function animateParticles() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                for (let i = 0; i < particlesArray.length; i++) {
+                    particlesArray[i].update();
+                    particlesArray[i].draw();
+                }
+                requestAnimationFrame(animateParticles);
+            }
+
+            initParticles();
+            animateParticles();
+        });
+    </script>
+</body>
+</html>
