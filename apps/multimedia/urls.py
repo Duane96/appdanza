@@ -7,6 +7,8 @@ app_name = 'multimedia'
 urlpatterns = [
     # 1. Estudiante
     path('<slug:slug_academia>/visor/<int:modulo_id>/', views.VisorClaseView.as_view(), name='visor_clase'),
+
+    path('oauth2callback/', views.GoogleOAuthCallbackView.as_view(), name='google_oauth_callback'),
     
     # 2. Administrador: Gestión de Clases
     path('<slug:slug_academia>/control/clases/', views.ListaModulosAdminView.as_view(), name='lista_clases_admin'),

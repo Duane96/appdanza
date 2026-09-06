@@ -146,7 +146,26 @@ class AnularTransaccionView(TenantAdminRequiredMixin, View):
             item.motivo_anulacion = motivo
             item.anulado_por = request.user
             item.save()
-            messages.warning(request, f"El Recibo de Caja {item.numero_recibo} ha sido ANULADO.")
+            
+            # 🚀 LÓGICA SENIOR: Si el recibo pagaba un plan de estudiante, anulamos la inscripción y actualizamos al alumno
+            if item.inscripcion:
+                inscripcion = item.inscripcion
+                estudiante = inscripcion.estudiante
+                
+                # Eliminamos o invalidamos la inscripción asociada al pago falso/anulado
+                # (Opcional: Si prefieres borrarla físicamente para que no estorbe: inscripcion.delete())
+                # Aquí la eliminaremos para limpiar el historial de tiquetera activa del alumno:
+                inscripcion.delete()
+                
+                # Verificamos si al estudiante le quedan otras inscripciones activas o vigentes
+                tiene_otros_planes = estudiante.inscripciones.filter(academia=request.tenant).exists()
+                
+                if not tiene_otros_planes:
+                    estudiante.estado = 'INACTIVO'
+                    estudiante.save()
+                    messages.warning(request, f"El estudiante {estudiante.nombres} se ha quedado sin planes activos y pasó a estado Inactivo.")
+
+            messages.warning(request, f"El Recibo de Caja {item.numero_recibo} ha sido ANULADO y se desvinculó el plan del estudiante.")
             
         elif tipo == 'gasto':
             item = get_object_or_404(Gasto, pk=pk, academia=request.tenant)

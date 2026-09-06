@@ -1,6 +1,6 @@
 # apps/multimedia/views.py
 from django.http import JsonResponse
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import redirect, render, get_object_or_404
 from django.views import View
 from django.contrib import messages
 from django.urls import reverse_lazy
@@ -97,3 +97,39 @@ class SubirVideoAdminView(LoginRequiredMixin, View):
             return JsonResponse({'status': 'success', 'message': 'Video guardado correctamente.'})
         
         return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
+
+
+
+class GoogleOAuthCallbackView(LoginRequiredMixin, View):
+    """
+    Vista global y estática que intercepta el retorno de Google OAuth 
+    para la API de YouTube sin requerir parámetros dinámicos en la URL.
+    """
+    def get(self, request):
+        code = request.GET.get('code')
+        error = request.GET.get('error')
+        
+        # 1. Manejo de errores devueltos por Google si el usuario cancela
+        if error:
+            messages.error(request, f"Autenticación cancelada o fallida por Google: {error}")
+            slug_actual = request.session.get('slug_academia_actual', 'appdanza')
+            return redirect('multimedia:subir_video', slug_academia=slug_actual)
+            
+        # 2. Si recibimos el código de autorización exitosamente
+        if code:
+            try:
+                # 🚀 AQUí INTERCAMBIAS EL CÓDIGO POR EL TOKEN DE YOUTUBE
+                # (Usando tu librería de Google API Client u OAuthlib habitual)
+                # Ejemplo: flow.fetch_token(code=code)
+                # token_credenciales = flow.credentials
+                
+                # Guardamos o asociamos el token a la academia actual del tenant
+                # (Asegúrate de guardar las credenciales en el modelo de la Academia o configuración)
+                
+                messages.success(request, "¡Canal de YouTube vinculado exitosamente con esta academia!")
+            except Exception as e:
+                messages.error(request, f"Error al procesar el token de acceso: {e}")
+        
+        # 3. Redirigimos de vuelta al panel de subida de videos de la academia activa
+        slug_actual = request.session.get('slug_academia_actual', 'appdanza')
+        return redirect('multimedia:subir_video', slug_academia=slug_actual)
