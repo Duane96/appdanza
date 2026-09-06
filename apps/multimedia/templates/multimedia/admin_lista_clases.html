@@ -1,15 +1,44 @@
+<!-- apps/multimedia/templates/multimedia/admin_lista_clases.html -->
 {% extends "base_tenant.html" %}
 
 {% block content %}
+
+
+<style>
+    /* 🎨 UI/UX: Scrollbar moderno y delgado para las listas internas */
+    .lista-videos-scroll {
+        max-height: 350px; /* Altura máxima antes de hacer scroll */
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+    .lista-videos-scroll::-webkit-scrollbar {
+        width: 6px;
+    }
+    .lista-videos-scroll::-webkit-scrollbar-track {
+        background: #f8f9fa; 
+        border-radius: 10px;
+    }
+    .lista-videos-scroll::-webkit-scrollbar-thumb {
+        background: #ced4da; 
+        border-radius: 10px;
+    }
+    .lista-videos-scroll::-webkit-scrollbar-thumb:hover {
+        background: #adb5bd; 
+    }
+</style>
+
+
+
+
 <div class="container py-4">
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
         <div>
             <h2 class="fw-bold text-dark m-0">Gestión de Clases Virtuales</h2>
-            <p class="text-muted small mb-0">Administra los títulos de tus módulos y el contenido multimedia para tus alumnos.</p>
+            <p class="text-muted small mb-0">Administra, edita y organiza el contenido multimedia para tus alumnos.</p>
         </div>
         <div class="d-flex gap-2">
             <a href="{% url 'multimedia:crear_clase' request.tenant.slug %}" class="btn btn-light border rounded-pill px-4 fw-bold shadow-sm">
-                <i class="bi bi-plus-circle me-1"></i> Nueva Clase
+                <i class="bi bi-plus-circle me-1"></i> Nuevo Módulo
             </a>
             <a href="{% url 'multimedia:subir_video' request.tenant.slug %}" class="btn btn-tenant-primary rounded-pill px-4 fw-bold shadow-sm">
                 <i class="bi bi-cloud-arrow-up me-1"></i> Subir Video
@@ -18,40 +47,136 @@
     </div>
 
     <div class="row g-4">
-        {% for modulo in modulos %}
-            <div class="col-md-6 col-xl-4">
-                <div class="card border-0 shadow-sm rounded-4 h-100">
-                    <div class="card-body p-4">
-                        <div class="d-flex align-items-center gap-3 mb-3">
-                            <div class="rounded-circle bg-tenant-primary bg-opacity-10 text-center d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
-                                <i class="bi bi-collection-play-fill text-tenant-primary fs-4"></i>
+        <div class="col-12">
+            <!-- 🎨 UI/UX SENIOR: Acordeón para mantener limpia la pantalla -->
+            <div class="accordion" id="accordionModulos">
+                {% for modulo in modulos %}
+                    <div class="accordion-item border-0 shadow-sm rounded-4 mb-3 overflow-hidden">
+                        <h2 class="accordion-header" id="heading-{{ modulo.id }}">
+                            <button class="accordion-button collapsed bg-white fw-bold d-flex align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ modulo.id }}">
+                                <i class="bi bi-collection-play-fill text-tenant-primary fs-4 me-3"></i>
+                                {{ modulo.titulo }}
+                                <span class="badge bg-light text-dark border ms-3 fw-medium">
+                                    {{ modulo.videos.count }} Videos
+                                </span>
+                            </button>
+                        </h2>
+                        
+                        <div id="collapse-{{ modulo.id }}" class="accordion-collapse collapse" data-bs-parent="#accordionModulos">
+                            <div class="accordion-body bg-light pt-4">
+                                
+                                <!-- Acciones del Módulo -->
+                                <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                                    <p class="text-muted mb-0 small">{{ modulo.descripcion|default:"Sin descripción detallada." }}</p>
+                                    <div class="btn-group">
+                                        <a href="{% url 'multimedia:editar_clase' request.tenant.slug modulo.id %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i> Editar Módulo</a>
+                                        <!-- Formulario inline para eliminar seguro -->
+                                        <form action="{% url 'multimedia:eliminar_clase' request.tenant.slug modulo.id %}" method="POST" class="d-inline" onsubmit="return confirm('ATENCIÓN: ¿Seguro que deseas eliminar este módulo y TODOS los videos que contiene?');">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                                        </form>
+                                    </div>
+                                </div>
+                                
+                                <!-- Lista de Videos Interna -->
+                                <!-- Lista de Videos Interna con Scroll y Fallback -->
+<div class="list-group shadow-sm lista-videos-scroll">
+    {% for video in modulo.videos.all %}
+        <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center p-3 border-0 border-bottom">
+            <div class="d-flex align-items-center gap-3">
+                
+                {% if video.youtube_id %}
+                    <!-- 🚀 LÓGICA SENIOR: onerror intercepta el 404 de YouTube y pinta el icono por defecto sin romper la UI -->
+                    <!-- 🚀 LÓGICA SENIOR: Etiqueta img con recolector de intentos -->
+<img src="https://img.youtube.com/vi/{{ video.youtube_id }}/hqdefault.jpg" 
+     alt="{{ video.titulo }}" 
+     class="rounded shadow-sm flex-shrink-0" 
+     style="width: 120px; height: 68px; object-fit: cover; background-color: #000;"
+     data-intento="0"
+     onerror="rescatarMiniaturaYoutube(this, '{{ video.youtube_id }}')">
+                {% else %}
+                    <!-- Placeholder estático si no hay ID -->
+                    <div class="rounded shadow-sm bg-light border d-flex align-items-center justify-content-center text-secondary flex-shrink-0" style="width: 120px; height: 68px;">
+                        <i class="bi bi-film fs-3"></i>
+                    </div>
+                {% endif %}
+                
+                <div class="text-truncate ps-2">
+                    <h6 class="mb-1 fw-bold text-dark text-truncate" style="max-width: 250px;">{{ video.titulo }}</h6>
+                    <small class="text-muted"><i class="bi bi-clock"></i> Subido el: {{ video.fecha_subida|date:"d M Y" }}</small>
+                </div>
+            </div>
+            <!-- Acciones del Video -->
+            <div class="btn-group flex-shrink-0 ms-2">
+                <a href="{% url 'multimedia:editar_video' request.tenant.slug video.id %}" class="btn btn-sm btn-light border" title="Editar Video"><i class="bi bi-pencil"></i></a>
+                <form action="{% url 'multimedia:eliminar_video' request.tenant.slug video.id %}" method="POST" class="d-inline" onsubmit="return confirm('¿Seguro que deseas quitar este video de la plataforma?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-light border text-danger" title="Eliminar Video"><i class="bi bi-trash"></i></button>
+                </form>
+            </div>
+        </div>
+    {% empty %}
+        <div class="text-center py-4 text-muted">
+            <i class="bi bi-film fs-1 mb-2"></i>
+            <p class="mb-2">No hay videos en este módulo.</p>
+        </div>
+    {% endfor %}
+</div>
+                                
+                                <!-- Botón inferior para añadir al módulo -->
+                                <div class="mt-3 text-end">
+                                    <a href="{% url 'multimedia:subir_video' request.tenant.slug %}?modulo_id={{ modulo.id }}" class="btn btn-sm btn-tenant-primary rounded-pill px-4 shadow-sm">
+                                        <i class="bi bi-plus-lg me-1"></i> Añadir video a este módulo
+                                    </a>
+                                </div>
                             </div>
-                            <h5 class="fw-bold text-dark m-0">{{ modulo.titulo }}</h5>
-                        </div>
-                        <p class="text-muted small text-truncate-3 mb-4" style="height: 60px;">
-                            {{ modulo.descripcion|default:"Sin descripción detallada." }}
-                        </p>
-                        <div class="border-top pt-3 d-flex justify-content-between align-items-center">
-                            <span class="badge bg-light text-dark border small fw-medium">
-                                <i class="bi bi-play-btn me-1"></i> {{ modulo.videos.count }} Videos subidos
-                            </span>
-                            <a href="{% url 'multimedia:subir_video' request.tenant.slug %}?modulo_id={{ modulo.id }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
-                                <i class="bi bi-plus"></i> Añadir Video
-                            </a>
                         </div>
                     </div>
-                </div>
+                {% empty %}
+                    <!-- Tu Empty State original intacto -->
+                    <div class="col-12 text-center py-5">
+                        <div class="p-5 bg-white rounded-4 shadow-sm d-inline-block">
+                            <i class="bi bi-camera-video-off display-4 text-muted mb-3 d-block"></i>
+                            <h5 class="fw-bold">No has creado ninguna clase aún</h5>
+                            <p class="text-muted">Crea tu primer módulo para empezar a organizar tu academia virtual.</p>
+                            <a href="{% url 'multimedia:crear_clase' request.tenant.slug %}" class="btn btn-tenant-primary rounded-pill px-5 py-2 fw-bold">Crear mi primera Clase</a>
+                        </div>
+                    </div>
+                {% endfor %}
             </div>
-        {% empty %}
-            <div class="col-12 text-center py-5">
-                <div class="p-5 bg-white rounded-4 shadow-sm d-inline-block">
-                    <i class="bi bi-camera-video-off display-4 text-muted mb-3 d-block"></i>
-                    <h5 class="fw-bold">No has creado ninguna clase aún</h5>
-                    <p class="text-muted">Crea tu primer módulo para empezar a organizar tu academia virtual.</p>
-                    <a href="{% url 'multimedia:crear_clase' request.tenant.slug %}" class="btn btn-tenant-primary rounded-pill px-5 py-2 fw-bold">Crear mi primera Clase</a>
-                </div>
-            </div>
-        {% endfor %}
+        </div>
     </div>
 </div>
+
+
+<!-- 🚀 LÓGICA SENIOR: Script de Fallback en Cascada para YouTube -->
+<script>
+    function rescatarMiniaturaYoutube(imgElement, videoId) {
+        // Obtenemos el número de intento actual
+        let intentoActual = parseInt(imgElement.getAttribute('data-intento'));
+        
+        // Array con las rutas de respaldo de YouTube de menor resolución
+        // mqdefault = Medium Quality / 0.jpg = Miniatura base por defecto (siempre existe)
+        const rutasRespaldo = [
+            `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
+            `https://img.youtube.com/vi/${videoId}/0.jpg`
+        ];
+
+        if (intentoActual < rutasRespaldo.length) {
+            // Reintentamos con una calidad más baja
+            imgElement.src = rutasRespaldo[intentoActual];
+            imgElement.setAttribute('data-intento', intentoActual + 1);
+        } else {
+            // Si el video de verdad no existe (ID inválido o borrado), pintamos el bloque gris
+            const placeholder = document.createElement('div');
+            placeholder.className = "rounded shadow-sm bg-light border d-flex align-items-center justify-content-center text-secondary flex-shrink-0";
+            placeholder.style.width = "120px";
+            placeholder.style.height = "68px";
+            placeholder.innerHTML = "<i class='bi bi-film fs-3'></i>";
+            
+            // Reemplazamos la imagen rota por el placeholder
+            imgElement.parentNode.replaceChild(placeholder, imgElement);
+        }
+    }
+</script>
 {% endblock %}

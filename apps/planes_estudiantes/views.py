@@ -1,5 +1,7 @@
 # apps/planes_estudiantes/views.py
-from django.views.generic import ListView, CreateView
+from django.db.models import ProtectedError
+from django.views import View
+from django.views.generic import ListView, CreateView, UpdateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse
 from django.utils import timezone
@@ -308,3 +310,60 @@ def api_detalle_estudiante(request, slug_academia, est_id):
         # Aquí podrías añadir un query para traer asistencias recientes
     }
     return JsonResponse(data)
+
+
+
+# === NUEVAS VISTAS DE GESTIÓN DE PLANES ===
+
+class ListaPlanesView(TenantAdminRequiredMixin, ListView):
+    """Muestra el catálogo de planes de la academia actual."""
+    model = Plan
+    template_name = "planes_estudiantes/lista_planes.html"
+    context_object_name = "planes"
+
+    def get_queryset(self):
+        # 🔒 Aislamiento absoluto por Tenant
+        return Plan.objects.filter(academia=self.request.tenant).order_by('-precio')
+
+
+class EditarPlanView(TenantAdminRequiredMixin, UpdateView):
+    """Permite modificar un plan existente reutilizando el mismo formulario."""
+    model = Plan
+    form_class = PlanForm
+    template_name = "planes_estudiantes/form_plan.html"
+
+    def get_queryset(self):
+        return Plan.objects.filter(academia=self.request.tenant)
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        # 🚀 LÓGICA SENIOR: Protección de integridad SaaS
+        # Si este plan ya ha sido vendido a algún alumno, congelamos el precio.
+        if self.object and self.object.inscripciones.exists():
+            # disabled=True hace que el campo sea de solo lectura en el HTML 
+            # y además ignora cualquier intento de hackeo por POST.
+            form.fields['precio'].disabled = True 
+        return form
+
+    def form_valid(self, form):
+        messages.success(self.request, f"¡El plan '{form.instance.nombre}' fue actualizado correctamente!")
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse('planes_estudiantes:lista_planes', kwargs={'slug_academia': self.request.tenant.slug})
+
+class EliminarPlanView(TenantAdminRequiredMixin, View):
+    """Elimina un plan de forma segura, capturando restricciones de base de datos."""
+    def post(self, request, slug_academia, pk):
+        plan = get_object_or_404(Plan, pk=pk, academia=request.tenant)
+        
+        try:
+            nombre_plan = plan.nombre
+            plan.delete()
+            messages.success(request, f"El plan '{nombre_plan}' fue eliminado de tu catálogo.")
+        except ProtectedError:
+            # 🚀 LÓGICA SENIOR: Si un alumno ya compró este plan, la BD nos impide borrarlo.
+            # Capturamos el error y mostramos un mensaje amigable en vez de romper el sistema.
+            messages.error(request, f"No puedes eliminar el plan '{plan.nombre}' porque hay estudiantes activos usándolo. Te sugerimos editar su nombre agregando '(Inactivo)'.")
+            
+        return redirect('planes_estudiantes:lista_planes', slug_academia=slug_academia)

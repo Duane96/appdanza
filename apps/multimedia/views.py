@@ -133,3 +133,91 @@ class GoogleOAuthCallbackView(LoginRequiredMixin, View):
         # 3. Redirigimos de vuelta al panel de subida de videos de la academia activa
         slug_actual = request.session.get('slug_academia_actual', 'appdanza')
         return redirect('multimedia:subir_video', slug_academia=slug_actual)
+
+
+# apps/multimedia/views.py
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView # 🚀 Añadir UpdateView y DeleteView
+
+# ... (tus vistas existentes)
+
+class ListaModulosAdminView(LoginRequiredMixin, ListView):
+    model = ModuloClase
+    template_name = "multimedia/admin_lista_clases.html"
+    context_object_name = 'modulos'
+
+    def get_queryset(self):
+        # 🚀 OPTIMIZACIÓN SENIOR: Usamos prefetch_related para evitar el problema N+1.
+        # Trae todos los módulos y sus videos en solo 2 consultas a la base de datos.
+        return ModuloClase.objects.filter(academia=self.request.tenant).prefetch_related('videos')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['slug_academia'] = self.request.tenant.slug
+        return context
+
+
+# === NUEVAS VISTAS CRUD PARA EDICIÓN Y ELIMINACIÓN ===
+
+class EditarModuloAdminView(LoginRequiredMixin, UpdateView):
+    model = ModuloClase
+    form_class = ModuloClaseForm
+    template_name = "multimedia/admin_form_clase.html" # Puedes reusar el mismo template de creación
+
+    def get_queryset(self):
+        # 🔒 SEGURIDAD MULTI-TENANT: Un admin solo puede editar módulos de SU academia
+        return ModuloClase.objects.filter(academia=self.request.tenant)
+
+    def form_valid(self, form):
+        messages.success(self.request, "Módulo actualizado con éxito.")
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy('multimedia:lista_clases_admin', kwargs={'slug_academia': self.request.tenant.slug})
+
+
+class EliminarModuloAdminView(LoginRequiredMixin, DeleteView):
+    model = ModuloClase
+    
+    def get_queryset(self):
+        # 🔒 Aislamiento absoluto
+        return ModuloClase.objects.filter(academia=self.request.tenant)
+        
+    def get_success_url(self):
+        messages.success(self.request, "Módulo y su contenido eliminados exitosamente.")
+        return reverse_lazy('multimedia:lista_clases_admin', kwargs={'slug_academia': self.request.tenant.slug})
+
+
+class EditarVideoAdminView(LoginRequiredMixin, UpdateView):
+    model = VideoClase
+    form_class = VideoClaseForm
+    
+    # 🚀 CAMBIAMOS ESTA LÍNEA (Antes apuntaba a admin_form_clase.html)
+    template_name = "multimedia/admin_editar_video.html" 
+
+    def get_queryset(self):
+        # 🔒 SEGURIDAD: Filtramos saltando desde Video -> Modulo -> Academia
+        return VideoClase.objects.filter(modulo__academia=self.request.tenant)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['academia'] = self.request.tenant # Inyectamos tenant para el VideoClaseForm
+        return kwargs
+
+    def form_valid(self, form):
+        messages.success(self.request, "Información del video actualizada.")
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy('multimedia:lista_clases_admin', kwargs={'slug_academia': self.request.tenant.slug})
+
+
+class EliminarVideoAdminView(LoginRequiredMixin, DeleteView):
+    model = VideoClase
+
+    def get_queryset(self):
+        # 🔒 Aislamiento absoluto
+        return VideoClase.objects.filter(modulo__academia=self.request.tenant)
+
+    def get_success_url(self):
+        messages.warning(self.request, "Video desvinculado de la plataforma.")
+        return reverse_lazy('multimedia:lista_clases_admin', kwargs={'slug_academia': self.request.tenant.slug})

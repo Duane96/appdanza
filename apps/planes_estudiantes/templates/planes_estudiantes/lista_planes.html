@@ -1,0 +1,79 @@
+<!-- apps/planes_estudiantes/templates/planes_estudiantes/lista_planes.html -->
+{% extends "base_tenant.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+        <div>
+            <h2 class="fw-bold text-dark m-0">Catálogo de Planes</h2>
+            <p class="text-muted small mb-0">Gestiona las tiqueteras, membresías y precios de tu academia.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'planes_estudiantes:lista_estudiantes' request.tenant.slug %}" class="btn btn-light border rounded-pill px-4 fw-bold shadow-sm">
+                <i class="bi bi-people me-1"></i> Ir a Alumnos
+            </a>
+            <a href="{% url 'planes_estudiantes:crear_plan' request.tenant.slug %}" class="btn btn-tenant-primary rounded-pill px-4 fw-bold shadow-sm">
+                <i class="bi bi-plus-circle me-1"></i> Nuevo Plan
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        {% for plan in planes %}
+            <div class="col-md-6 col-xl-4">
+                <div class="card border-0 shadow-sm rounded-4 h-100 d-flex flex-column">
+                    <div class="card-body p-4 text-center">
+                        <div class="rounded-circle bg-tenant-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                            <i class="bi bi-tags-fill text-tenant-primary fs-3"></i>
+                        </div>
+                        <h4 class="fw-bold text-dark mb-1">{{ plan.nombre }}</h4>
+                        <h2 class="text-tenant-primary fw-black mb-3">
+                            ${{ plan.precio|floatformat:0 }} <small class="fs-6 text-muted fw-normal">COP</small>
+                        </h2>
+                        <p class="text-muted small mb-4" style="min-height: 40px;">
+                            {{ plan.descripcion|default:"Sin descripción adicional." }}
+                        </p>
+
+                        <div class="bg-light rounded-3 p-3 text-start mb-4">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="bi bi-calendar2-check text-success me-2"></i>
+                                <span class="small fw-semibold text-dark">Duración:</span>
+                                <span class="ms-auto small">{{ plan.duracion_dias }} días</span>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-collection-play text-success me-2"></i>
+                                <span class="small fw-semibold text-dark">Clases incluidas:</span>
+                                <span class="ms-auto small">{{ plan.clases_totales }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Botones de Acción fijados abajo -->
+                    <div class="card-footer bg-white border-top-0 px-4 pb-4 pt-0 mt-auto">
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'planes_estudiantes:editar_plan' request.tenant.slug plan.id %}" class="btn btn-light border w-50 fw-bold rounded-pill">
+                                <i class="bi bi-pencil"></i> Editar
+                            </a>
+                            <form action="{% url 'planes_estudiantes:eliminar_plan' request.tenant.slug plan.id %}" method="POST" class="w-50" onsubmit="return confirm('¿Estás seguro de que deseas eliminar este plan del catálogo?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-danger w-100 fw-bold rounded-pill">
+                                    <i class="bi bi-trash"></i> Eliminar
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-12 text-center py-5">
+                <div class="p-5 bg-white rounded-4 shadow-sm d-inline-block">
+                    <i class="bi bi-inboxes display-4 text-muted mb-3 d-block"></i>
+                    <h5 class="fw-bold">Catálogo vacío</h5>
+                    <p class="text-muted">Aún no has configurado ninguna membresía para vender.</p>
+                    <a href="{% url 'planes_estudiantes:crear_plan' request.tenant.slug %}" class="btn btn-tenant-primary rounded-pill px-5 py-2 fw-bold">Crear mi primer Plan</a>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

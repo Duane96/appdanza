@@ -24,9 +24,9 @@
     <a href="{% url 'planes_estudiantes:crear_estudiante' request.tenant.slug %}" class="btn btn-tenant-primary">
         <i class="bi bi-person-plus me-1"></i> Nuevo Estudiante
     </a>
-    <a href="{% url 'planes_estudiantes:crear_plan' request.tenant.slug %}" class="btn btn-outline-dark">
-        <i class="bi bi-tags me-1"></i> Crear Plan
-    </a>
+    <a href="{% url 'planes_estudiantes:lista_planes' request.tenant.slug %}" class="btn btn-outline-dark">
+    <i class="bi bi-tags me-1"></i> Gestionar Planes
+</a>
     <a href="{% url 'planes_estudiantes:asignar_plan' request.tenant.slug %}" class="btn btn-dark">
         <i class="bi bi-ticket-perforated me-1"></i> Asignar Plan
     </a>

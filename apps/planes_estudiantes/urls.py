@@ -9,6 +9,12 @@ urlpatterns = [
     path('<slug:slug_academia>/estudiantes/nuevo/', views.CrearEstudianteView.as_view(), name='crear_estudiante'),
     path('<slug:slug_academia>/estudiantes/asignar-plan/', views.AsignarPlanView.as_view(), name='asignar_plan'),
     path('<slug:slug_academia>/portal/', views.PortalEstudianteView.as_view(), name='portal_estudiante'),
-    path('<slug:slug_academia>/planes/crear/', views.CrearPlanView.as_view(), name='crear_plan'),
+    
     path('<slug:slug_academia>/api/estudiante/<int:est_id>/', views.api_detalle_estudiante, name='api_estudiante'),
+
+    # 🚀 RUTAS DEL CRUD DE PLANES
+    path('<slug:slug_academia>/planes/', views.ListaPlanesView.as_view(), name='lista_planes'),
+    path('<slug:slug_academia>/planes/crear/', views.CrearPlanView.as_view(), name='crear_plan'),
+    path('<slug:slug_academia>/planes/<int:pk>/editar/', views.EditarPlanView.as_view(), name='editar_plan'),
+    path('<slug:slug_academia>/planes/<int:pk>/eliminar/', views.EliminarPlanView.as_view(), name='eliminar_plan'),
 ]

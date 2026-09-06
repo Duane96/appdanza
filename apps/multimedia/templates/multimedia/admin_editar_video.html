@@ -1,0 +1,53 @@
+<!-- apps/multimedia/templates/multimedia/admin_editar_video.html -->
+{% extends "base_tenant.html" %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 700px;">
+    <div class="mb-4">
+        <h2 class="fw-bold text-dark m-0">
+            <i class="bi bi-film text-tenant-primary me-2"></i>Editar Información del Video
+        </h2>
+        <p class="text-muted small">Modifica el título, la descripción o reasigna esta lección a otro módulo diferente.</p>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+        
+        <!-- 🚀 AQUÍ ESTÁ LA MAGIA DE LA MINIATURA DE YOUTUBE -->
+        {% if object.youtube_id %}
+        <div class="text-center mb-4 p-3 bg-light rounded-4 border">
+            <p class="small text-muted fw-bold mb-2"><i class="bi bi-youtube text-danger me-1"></i> Vista previa del video actual</p>
+            <!-- Usamos hqdefault.jpg para tener mejor resolución en la edición -->
+            <img src="https://img.youtube.com/vi/{{ object.youtube_id }}/hqdefault.jpg" alt="Miniatura de YouTube" class="img-fluid rounded shadow-sm" style="max-height: 220px; object-fit: cover;">
+        </div>
+        {% endif %}
+
+        <form method="POST" class="needs-validation" novalidate>
+            {% csrf_token %}
+            
+            <div class="mb-3">
+                <label class="form-label small fw-semibold text-secondary">Módulo al que pertenece</label>
+                {{ form.modulo }}
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label small fw-semibold text-secondary">Título de la Lección</label>
+                {{ form.titulo }}
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label small fw-semibold text-secondary">Descripción / Detalles adicionales</label>
+                {{ form.descripcion }}
+            </div>
+
+            <div class="d-flex justify-content-end gap-2">
+                <a href="{% url 'multimedia:lista_clases_admin' request.tenant.slug %}" class="btn btn-light border rounded-pill px-4 fw-bold">
+                    Cancelar
+                </a>
+                <button type="submit" class="btn btn-tenant-primary rounded-pill px-5 fw-bold shadow-sm">
+                    <i class="bi bi-check-circle-fill me-1"></i> Guardar Cambios
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
