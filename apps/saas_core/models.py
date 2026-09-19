@@ -19,6 +19,8 @@ class PlanSaaS(models.Model):
     permite_eventos = models.BooleanField(default=False, verbose_name="Acceso a Módulo Eventos")
     permite_estudiantes = models.BooleanField(default=True, verbose_name="Acceso a Módulo Estudiantes")
     permite_tienda = models.BooleanField(default=False, verbose_name="Acceso a Módulo Tienda/POS")
+    permite_profesores = models.BooleanField(default=False, verbose_name="Acceso a Módulo Profesores/Nómina")
+    permite_calendario = models.BooleanField(default=False, verbose_name="Acceso a Módulo Calendario")
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     
@@ -31,12 +33,14 @@ class SuscripcionAcademia(models.Model):
     """Vincula una academia con un plan SaaS y controla su estado de activación."""
     ESTADOS = (
         ('ACTIVO', 'Activo / Al Día'),
+        ('MORA', 'En Mora (Período de Gracia)'),
         ('SUSPENDIDO', 'Suspendido por Falta de Pago'),
         ('PRUEBA', 'Período de Prueba'),
     )
     
     academia = models.OneToOneField(Academia, on_delete=models.CASCADE, related_name='suscripcion_saas')
-    plan = models.ForeignKey(PlanSaaS, on_delete=models.PROTECT, related_name='academias_inscritas')
+    # 2. 🚀 MAGIA: null=True, blank=True para que en PRUEBA no exija plan comercial
+    plan = models.ForeignKey(PlanSaaS, on_delete=models.SET_NULL, null=True, blank=True, related_name='academias_inscritas')
     estado = models.CharField(max_length=20, choices=ESTADOS, default='SUSPENDIDO')
     
     # Forzado manual para activar/desactivar módulos sin importar el plan (Tu súper poder)
@@ -46,6 +50,8 @@ class SuscripcionAcademia(models.Model):
     bloqueo_manual_eventos = models.BooleanField(default=False, verbose_name="Bloquear Eventos Manualmente")
     bloqueo_manual_estudiantes = models.BooleanField(default=False, verbose_name="Bloquear Estudiantes Manualmente")
     bloqueo_manual_tienda = models.BooleanField(default=False, verbose_name="Bloquear Tienda Manualmente")
+    bloqueo_manual_profesores = models.BooleanField(default=False, verbose_name="Bloquear Profesores Manualmente")
+    bloqueo_manual_calendario = models.BooleanField(default=False, verbose_name="Bloquear Calendario Manualmente")
 
     # Evita que apliquen al plan gratis más de una vez en la vida de la academia
     ya_uso_prueba_gratis = models.BooleanField(
@@ -69,6 +75,13 @@ class SuscripcionAcademia(models.Model):
         verbose_name="Cuenta Aliada / Gratis Permanente (No cobra plan ni comisiones)"
     )
 
+    comision_por_tiquete = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=0, 
+        verbose_name="Comisión por Ticket (Eventos)"
+    )
+
     def __span__(self):
         return f"{self.academia.nombre} - {self.plan.nombre} ({self.estado})"
     
@@ -84,6 +97,24 @@ class SuscripcionAcademia(models.Model):
         if self.es_cuenta_partner_gratis: return True
         return self.plan.permite_eventos
 
+    # 🚀 ACTUALIZA LA PROPERTY DE EVENTOS PARA QUE NO DEPENDA DEL PLAN:
+    @property
+    def modulo_eventos_activo(self):
+        """
+        NUEVA LÓGICA: Los eventos son un módulo 100% independiente de los planes.
+        Depende exclusivamente del interruptor manual o de si es Partner VIP.
+        (Nota: bloqueo_manual_eventos=False significa que SÍ lo tiene activo)
+        """
+        if self.es_cuenta_partner_gratis: return True
+        return not self.bloqueo_manual_eventos
+
+    @property
+    def modulo_calendario_activo(self):
+        """Lógica de activación para Calendario"""
+        if self.bloqueo_manual_calendario: return False
+        if self.es_cuenta_partner_gratis: return True
+        return self.plan.permite_calendario
+    
     @property
     def modulo_multimedia_activo(self):
         if self.bloqueo_manual_multimedia: return False
@@ -135,10 +166,10 @@ class SuscripcionAcademia(models.Model):
     @property
     def esta_bloqueada(self):
         """
-        Determina si la academia debe ser bloqueada inmediatamente.
-        Condición de bloqueo:
-        1. NO es Partner.
-        2. El estado es explícitamente SUSPENDIDO o ya pasó la medianoche del día de vencimiento.
+        Bloqueo inteligente:
+        - Si es partner, nunca se bloquea.
+        - Si lo pasas a SUSPENDIDO manualmente, se bloquea.
+        - Si tiene más de 5 días de vencido (Mora vencida), se bloquea automáticamente.
         """
         if self.es_cuenta_partner_gratis:
             return False
@@ -146,9 +177,26 @@ class SuscripcionAcademia(models.Model):
         if self.estado == 'SUSPENDIDO':
             return True
             
-        # Bloqueo automático a las 12:00 AM del día siguiente al pago
-        # Si la fecha_vencimiento es hoy, todavía tiene acceso. Si ya es mañana, se bloquea.
-        if self.dias_restantes_licencia < 0:
+        # Si ya pasaron los 5 días de gracia (días restantes es menor a -5)
+        if self.dias_restantes_licencia < -5:
+            return True
+            
+        return False
+
+    @property
+    def esta_en_mora(self):
+        """
+        Detecta si la academia está en los 5 días de gracia.
+        Retorna True si los días restantes están entre -1 y -5.
+        """
+        if self.es_cuenta_partner_gratis or self.estado in ['PRUEBA', 'SUSPENDIDO']:
+            return False
+            
+        # Si está entre el día de vencimiento (0) y el día de corte final (-5)
+        if -5 <= self.dias_restantes_licencia < 0:
+            return True
+            
+        if self.estado == 'MORA':
             return True
             
         return False

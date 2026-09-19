@@ -116,12 +116,14 @@ from .models import TipoPase
 class TipoPaseForm(forms.ModelForm):
     class Meta:
         model = TipoPase
-        fields = ['nombre', 'precio', 'accesos_permitidos', 'qrs_por_pase']
+        fields = ['nombre', 'precio', 'accesos_permitidos', 'qrs_por_pase', 'activo']
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Solo Social (Viernes)'}),
             'precio': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Dejar vacío si hay Fases de Fecha'}),
             'accesos_permitidos': forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'value': 1}),
             'qrs_por_pase': forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'value': 1}),
+            # 🚀 FIX SENIOR: Widget de switch Bootstrap
+            'activo': forms.CheckboxInput(attrs={'class': 'form-check-input', 'role': 'switch'}),
         }
     
     def __init__(self, *args, **kwargs):

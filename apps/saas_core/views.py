@@ -1,4 +1,5 @@
 import csv
+import datetime
 
 from django.views.generic import TemplateView
 from django.contrib.auth.mixins import UserPassesTestMixin
@@ -150,6 +151,7 @@ class PanelMaestroDashboardView(UserPassesTestMixin, TemplateView):
 
         # 📍 NUEVO: Pasamos las opciones de ciudades directamente desde el modelo para el Modal
         context['ciudades_choices'] = Academia.CIUDADES_CHOICES
+        context['reportes_pendientes'] = ReportePagoSaaS.objects.filter(estado='PENDIENTE').select_related('academia')
         
         return context
     
@@ -323,7 +325,7 @@ class CrearPlanSaaSView(UserPassesTestMixin, View):
 class ActualizarLicenciaSaaSView(UserPassesTestMixin, View):
     """
     Controla el modal maestro de configuración de la academia.
-    Genera cobro automático si pasa de SUSPENDIDO a ACTIVO.
+    Soporta fechas personalizadas y comisiones independientes por eventos.
     """
     def test_func(self):
         return self.request.user.is_superuser and self.request.user.is_staff
@@ -332,47 +334,67 @@ class ActualizarLicenciaSaaSView(UserPassesTestMixin, View):
         academia_id = request.POST.get('academia_id')
         suscripcion = get_object_or_404(SuscripcionAcademia, academia_id=academia_id)
         
-        # 1. Guardamos el estado en el que estaba ANTES de guardar
-        estado_anterior = suscripcion.estado
         estado_nuevo = request.POST.get('estado')
         
-        # 2. Actualizamos el Plan si lo cambiaron en el select
-        nuevo_plan_id = request.POST.get('plan_id')
-        if nuevo_plan_id:
-            try:
-                suscripcion.plan = PlanSaaS.objects.get(id=nuevo_plan_id)
-            except PlanSaaS.DoesNotExist:
-                return JsonResponse({'status': 'error', 'message': 'El plan no existe.'}, status=400)
+        # 1. 🚀 LÓGICA DE PLAN INTELIGENTE (Prueba vs Comercial)
+        if estado_nuevo == 'PRUEBA':
+            # En prueba no amarramos a ningún plan comercial
+            suscripcion.plan = None
+        else:
+            nuevo_plan_id = request.POST.get('plan_id')
+            if nuevo_plan_id:
+                try:
+                    suscripcion.plan = PlanSaaS.objects.get(id=nuevo_plan_id)
+                except PlanSaaS.DoesNotExist:
+                    return JsonResponse({'status': 'error', 'message': 'El plan no existe.'}, status=400)
+            elif not suscripcion.plan:
+                return JsonResponse({'status': 'error', 'message': 'Debes seleccionar un plan comercial para estados Activo o Mora.'}, status=400)
 
-        # 3. Validamos si es Partner VIP ANTES de hacer cálculos
+        # 2. Lógica de Fechas Personalizadas (Las que colocaste en los inputs)
+        fecha_inicio_str = request.POST.get('fecha_inicio')
+        fecha_vencimiento_str = request.POST.get('fecha_vencimiento')
+        
+        if fecha_inicio_str and fecha_vencimiento_str:
+            from datetime import datetime
+            suscripcion.fecha_inicio = datetime.strptime(fecha_inicio_str, '%Y-%m-%d').date()
+            suscripcion.fecha_vencimiento = datetime.strptime(fecha_vencimiento_str, '%Y-%m-%d').date()
+
+        # 3. Datos VIP y Comisiones Independientes
         suscripcion.es_cuenta_partner_gratis = request.POST.get('es_cuenta_partner_gratis') in ['on', 'True', 'true', '1']
+        
+        # Si NO es partner y habilitaste el módulo de eventos, guardamos la comisión que elegiste
+        if not suscripcion.es_cuenta_partner_gratis:
+            comision = request.POST.get('comision_por_tiquete', 0)
+            suscripcion.comision_por_tiquete = float(comision) if comision else 0
+        else:
+            suscripcion.comision_por_tiquete = 0 # Partners no pagan comisión
 
-        # 🚀 4. MAGIA FINANCIERA: Si estaba suspendida y la activaste
-        if estado_anterior == 'SUSPENDIDO' and estado_nuevo == 'ACTIVO':
-            hoy_colombia = timezone.localtime(timezone.now()).date()
-            
-            # Le damos sus 30 días de servicio
-            suscripcion.fecha_inicio = hoy_colombia
-            suscripcion.fecha_vencimiento = hoy_colombia + timezone.timedelta(days=30)
+        # 4. 🚀 GENERACIÓN MANUAL DE COBRO (Opcional en el Modal)
+        generar_cobro = request.POST.get('generar_cobro') in ['on', 'True', 'true', '1']
+        
+        if generar_cobro and not suscripcion.es_cuenta_partner_gratis:
+            monto_personalizado = request.POST.get('monto_factura', suscripcion.plan.precio_mensual)
+            ReciboSaaS.objects.create(
+                academia=suscripcion.academia,
+                plan=suscripcion.plan,
+                monto=monto_personalizado,
+                concepto=f"Facturación Manual de Licencia - Plan: {suscripcion.plan.nombre}",
+                medio_pago="ACTUALIZACIÓN MANUAL (MODAL LICENCIA)"
+            )
 
-            # Si NO es gratis, facturamos en tu panel de finanzas maestro
-            if not suscripcion.es_cuenta_partner_gratis:
-                ReciboSaaS.objects.create(
-                    academia=suscripcion.academia,
-                    plan=suscripcion.plan,
-                    monto=suscripcion.plan.precio_mensual,
-                    concepto=f"Asignación/Activación de Licencia (30 días) - Plan: {suscripcion.plan.nombre}",
-                    medio_pago="ASIGNACIÓN MANUAL (MODAL LICENCIA)"
-                )
-
-        # 5. Guardamos el nuevo estado y los superpoderes manuales
         suscripcion.estado = estado_nuevo
+        
+        # 5. Guardamos los bloqueos (invertimos el switch para guardar: Si envías 'on', bloqueo es False)
         suscripcion.bloqueo_manual_estudiantes = not (request.POST.get('modulo_estudiantes_activo') in ['on', 'True', 'true', '1'])
         suscripcion.bloqueo_manual_asistencias = not (request.POST.get('modulo_asistencias_activo') in ['on', 'True', 'true', '1'])
         suscripcion.bloqueo_manual_finanzas = not (request.POST.get('modulo_finanzas_activo') in ['on', 'True', 'true', '1'])
         suscripcion.bloqueo_manual_multimedia = not (request.POST.get('modulo_multimedia_activo') in ['on', 'True', 'true', '1'])
-        suscripcion.bloqueo_manual_eventos = not (request.POST.get('modulo_eventos_activo') in ['on', 'True', 'true', '1'])
         suscripcion.bloqueo_manual_tienda = not (request.POST.get('modulo_tienda_activo') in ['on', 'True', 'true', '1'])
+        suscripcion.bloqueo_manual_profesores = not (request.POST.get('modulo_profesores_activo') in ['on', 'True', 'true', '1'])
+        suscripcion.bloqueo_manual_calendario = not (request.POST.get('modulo_calendario_activo') in ['on', 'True', 'true', '1'])
+        
+        # El módulo de eventos ahora es independiente (Si el switch está ON, el bloqueo es False)
+        suscripcion.bloqueo_manual_eventos = not (request.POST.get('modulo_eventos_activo') in ['on', 'True', 'true', '1'])
         
         suscripcion.save()
 
@@ -762,43 +784,80 @@ class SubirComprobanteSaaSView(View):
 
 
 class RevisarYAprobarPagoView(UserPassesTestMixin, View):
-    """Vista para el Maestro: Muestra el comprobante, renueva la academia y genera ReciboSaaS."""
-    
+    """Vista AJAX para el Maestro: Muestra el comprobante, renueva la academia y genera ReciboSaaS."""
     def test_func(self):
         return self.request.user.is_superuser
-
-    def get(self, request, pk):
-        reporte = get_object_or_404(ReportePagoSaaS, pk=pk)
-        return render(request, 'saas_core/revision_pago.html', {'reporte': reporte})
 
     def post(self, request, pk):
         reporte = get_object_or_404(ReportePagoSaaS, pk=pk)
         suscripcion = reporte.academia.suscripcion_saas
-        hoy = timezone.now().date()
         
-        with transaction.atomic():
-            reporte.estado = 'APROBADO'
-            reporte.save()
-            
-            base_fecha = suscripcion.fecha_vencimiento if suscripcion.fecha_vencimiento > hoy else hoy
-                
-            suscripcion.estado = 'ACTIVO'
-            suscripcion.fecha_inicio = hoy
-            suscripcion.fecha_vencimiento = base_fecha + timezone.timedelta(days=30)
-            suscripcion.save()
+        try:
+            with transaction.atomic():
+                # 1. Marcamos el reporte como Aprobado
+                reporte.estado = 'APROBADO'
+                reporte.save()
 
-            # 🚀 LÓGICA DE RECIBOS: Genera ReciboSaaS SOLO si NO es cuenta partner
-            if not suscripcion.es_cuenta_partner_gratis:
-                ReciboSaaS.objects.create(
-                    academia=reporte.academia,
-                    plan=reporte.plan,
-                    monto=reporte.plan.precio_mensual,
-                    concepto=f"Pago Licencia Mensual - Comprobante de validación #{reporte.id}",
-                    medio_pago="TRANSFERENCIA/COMPROBANTE"
-                )
-        
-        messages.success(request, f"¡Suscripción de {reporte.academia.nombre} renovada hasta el {suscripcion.fecha_vencimiento.strftime('%d/%m/%Y')}!")
-        return redirect('saas_core:panel_maestro_dashboard')
+                # 2. Actualizamos Plan
+                nuevo_plan_id = request.POST.get('plan_id')
+                if nuevo_plan_id:
+                    suscripcion.plan = PlanSaaS.objects.get(id=nuevo_plan_id)
+
+                # 3. Fechas y Estado
+                fecha_inicio_str = request.POST.get('fecha_inicio')
+                fecha_vencimiento_str = request.POST.get('fecha_vencimiento')
+                if fecha_inicio_str and fecha_vencimiento_str:
+                    from datetime import datetime
+                    suscripcion.fecha_inicio = datetime.strptime(fecha_inicio_str, '%Y-%m-%d').date()
+                    suscripcion.fecha_vencimiento = datetime.strptime(fecha_vencimiento_str, '%Y-%m-%d').date()
+
+                suscripcion.estado = request.POST.get('estado', 'ACTIVO')
+
+                # 4. VIP y Comisiones
+                suscripcion.es_cuenta_partner_gratis = request.POST.get('es_cuenta_partner_gratis') in ['on', 'True', 'true', '1']
+                if not suscripcion.es_cuenta_partner_gratis:
+                    comision = request.POST.get('comision_por_tiquete', 0)
+                    suscripcion.comision_por_tiquete = float(comision) if comision else 0
+                else:
+                    suscripcion.comision_por_tiquete = 0
+
+                # 5. Módulos
+                suscripcion.bloqueo_manual_estudiantes = not (request.POST.get('modulo_estudiantes_activo') in ['on', 'True', 'true', '1'])
+                suscripcion.bloqueo_manual_asistencias = not (request.POST.get('modulo_asistencias_activo') in ['on', 'True', 'true', '1'])
+                suscripcion.bloqueo_manual_finanzas = not (request.POST.get('modulo_finanzas_activo') in ['on', 'True', 'true', '1'])
+                suscripcion.bloqueo_manual_multimedia = not (request.POST.get('modulo_multimedia_activo') in ['on', 'True', 'true', '1'])
+                suscripcion.bloqueo_manual_tienda = not (request.POST.get('modulo_tienda_activo') in ['on', 'True', 'true', '1'])
+                suscripcion.bloqueo_manual_profesores = not (request.POST.get('modulo_profesores_activo') in ['on', 'True', 'true', '1'])
+                suscripcion.bloqueo_manual_calendario = not (request.POST.get('modulo_calendario_activo') in ['on', 'True', 'true', '1'])
+                suscripcion.bloqueo_manual_eventos = not (request.POST.get('modulo_eventos_activo') in ['on', 'True', 'true', '1'])
+                
+                suscripcion.save()
+
+                # 6. Generar el Recibo de Ingreso SaaS (Contabilidad)
+                monto_factura = request.POST.get('monto_factura')
+                if monto_factura and not suscripcion.es_cuenta_partner_gratis:
+                    ReciboSaaS.objects.create(
+                        academia=suscripcion.academia,
+                        plan=suscripcion.plan,
+                        monto=monto_factura,
+                        concepto=f"Aprobación de Comprobante #{reporte.id} - Academia {suscripcion.academia.nombre}",
+                        medio_pago="TRANSFERENCIA / COMPROBANTE SUBIDO"
+                    )
+
+                # 7. Despachamos correo confirmando activación (Opcional, no frena el proceso si falla)
+                try:
+                    enviar_correo_transaccional(
+                        asunto=f"¡Pago Aprobado! Tu plataforma ha sido reactivada",
+                        template_name="comunicaciones/pago_confirmado_academia.html",
+                        context={'academia': suscripcion.academia, 'suscripcion': suscripcion},
+                        destinatarios=[suscripcion.academia.usuarios.filter(perfil__rol='ADMIN_ACADEMIA').first().user.email]
+                    )
+                except Exception:
+                    pass
+
+            return JsonResponse({'status': 'success', 'message': 'Comprobante aprobado y academia activada exitosamente.'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
     
 
 class FinanzasMaestroDashboardView(UserPassesTestMixin, TemplateView):
@@ -1043,3 +1102,44 @@ class MasterCrearEventoView(UserPassesTestMixin, View):
 
 
 
+
+
+class EditarAcademiaSaaSView(UserPassesTestMixin, View):
+    """
+    Permite al Súper Admin modificar los datos core de un inquilino.
+    Lanza alertas de seguridad si se cambia el Slug (URL).
+    """
+    def test_func(self):
+        return self.request.user.is_superuser and self.request.user.is_staff
+
+    def post(self, request, academia_id, *args, **kwargs):
+        # Usamos unfiltered_objects para poder editar academias incluso si están suspendidas
+        academia = get_object_or_404(Academia.unfiltered_objects, id=academia_id)
+        
+        nuevo_nombre = request.POST.get('nombre')
+        nuevo_slug = request.POST.get('slug').strip().lower()
+        nueva_ciudad = request.POST.get('ciudad')
+        template_personalizado = request.POST.get('template_landing_personalizado', '').strip() or None
+        
+        with transaction.atomic():
+            # 🚀 PROTECCIÓN SENIOR: Evitar colisión de URLs (Slugs duplicados)
+            if nuevo_slug and nuevo_slug != academia.slug:
+                if Academia.unfiltered_objects.filter(slug=nuevo_slug).exists():
+                    return JsonResponse({
+                        'status': 'error', 
+                        'message': '🚨 Ese sub-URL (slug) ya está en uso por otra academia. Elige otro.'
+                    }, status=400)
+                # Si el slug cambia, los usuarios activos de esa academia podrían experimentar 
+                # cierres de sesión o errores 404 momentáneos. El frontend debe avisar esto.
+                academia.slug = nuevo_slug
+            
+            # Actualizamos el resto de campos
+            academia.nombre = nuevo_nombre
+            academia.ciudad = nueva_ciudad
+            academia.template_landing_personalizado = template_personalizado
+            academia.save()
+
+        # Usamos mensajes de sesión por si la vista recarga en lugar de manejar el JSON
+        messages.success(request, f"¡Datos del inquilino '{academia.nombre}' actualizados al instante!")
+        
+        return JsonResponse({'status': 'success'})

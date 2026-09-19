@@ -1,147 +1,164 @@
 {% extends 'saas_core/base_maestro.html' %}
 
 {% block extra_css %}
-    .card-kpi { border: none; border-radius: 16px; transition: transform 0.2s; }
-    .card-kpi:hover { transform: translateY(-4px); }
+<style>
+    :root {
+        --saas-radius: 1.25rem;
+        --saas-shadow: 0 10px 30px rgba(0,0,0,0.03);
+        --saas-shadow-hover: 0 15px 35px rgba(0,0,0,0.08);
+    }
+    body { background-color: #f8fafc; }
+    .card-kpi { border: none; border-radius: var(--saas-radius); box-shadow: var(--saas-shadow); transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); background: #ffffff; }
+    .card-kpi:hover { transform: translateY(-5px); box-shadow: var(--saas-shadow-hover); }
+    .icon-box { width: 65px; height: 65px; display: flex; align-items: center; justify-content: center; border-radius: 1rem; }
+    .table-wrapper { background: #ffffff; border-radius: var(--saas-radius); box-shadow: var(--saas-shadow); padding: 1.5rem; }
+    .table thead th { border-bottom: 2px solid #f1f5f9; color: #64748b; font-weight: 700; letter-spacing: 0.5px; padding-bottom: 1rem; }
+    .table tbody td { border-bottom: 1px solid #f8fafc; padding: 1.25rem 0.75rem; vertical-align: middle; }
+    .table tbody tr { transition: background-color 0.2s; }
+    .table tbody tr:hover { background-color: #f8fafc; }
+    .badge-soft { padding: 0.5em 0.75em; font-weight: 600; border-radius: 0.5rem; }
+    .modal-content { border-radius: 1.5rem; }
+    .form-control, .form-select { background-color: #f1f5f9; border: 2px solid transparent; border-radius: 0.75rem; padding: 0.75rem 1rem; transition: all 0.2s; }
+    .form-control:focus, .form-select:focus { background-color: #ffffff; border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
+    .form-label { color: #475569; letter-spacing: 0.3px; }
+    .transition-hover { transition: all 0.2s; }
+    .transition-hover:hover { transform: scale(1.02); }
+    
+    /* Animación para el bloque de comisiones */
+    .fade-in { animation: fadeIn 0.3s ease-in-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+
+/* Asegura que la tabla nunca rompa la pantalla, agregando un scroll vertical elegante */
+    .table-responsive {
+        max-height: 500px;
+        overflow-y: auto;
+    }
+    
+    /* Fija los encabezados arriba mientras haces scroll hacia abajo */
+    .table-responsive thead th {
+        position: sticky;
+        top: 0;
+        background-color: #ffffff;
+        z-index: 10;
+    }
+</style>
 {% endblock %}
 
 {% block sidebar_modals %}
-    <li class="nav-item">
-        <a class="nav-link py-2 px-3" href="#" data-bs-toggle="modal" data-bs-target="#crearAcademiaModal"><i class="bi bi-building-add me-2"></i> Alta de Inquilino</a>
+    <li class="nav-item mt-2">
+        <a class="nav-link py-2 px-3 fw-medium" href="#" data-bs-toggle="modal" data-bs-target="#crearAcademiaModal"><div class="d-flex align-items-center"><i class="bi bi-building-add me-3 fs-5 text-primary"></i> Alta de Inquilino</div></a>
     </li>
     <li class="nav-item">
-        <a class="nav-link py-2 px-3" href="#" data-bs-toggle="modal" data-bs-target="#listaPlanesModal">
-            <i class="bi bi-list-check me-2"></i> Ver / Editar Planes
-        </a>
+        <a class="nav-link py-2 px-3 fw-medium" href="#" data-bs-toggle="modal" data-bs-target="#listaPlanesModal"><div class="d-flex align-items-center"><i class="bi bi-list-check me-3 fs-5 text-info"></i> Ver Planes</div></a>
     </li>
     <li class="nav-item">
-        <a class="nav-link py-2 px-3" href="#" data-bs-toggle="modal" data-bs-target="#crearPlanModal"><i class="bi bi-tags-fill me-2"></i> Gestión de Planes</a>
+        <a class="nav-link py-2 px-3 fw-medium" href="#" data-bs-toggle="modal" data-bs-target="#crearPlanModal"><div class="d-flex align-items-center"><i class="bi bi-tags-fill me-3 fs-5 text-success"></i> Crear Plan</div></a>
     </li>
     <li class="nav-item">
-        <a class="nav-link py-2 px-3" href="#" data-bs-toggle="modal" data-bs-target="#configuracionLandingModal"><i class="bi bi-window-desktop me-2"></i> Editor Landing</a>
+        <a class="nav-link py-2 px-3 fw-medium" href="#" data-bs-toggle="modal" data-bs-target="#configuracionLandingModal"><div class="d-flex align-items-center"><i class="bi bi-window-desktop me-3 fs-5 text-secondary"></i> Editor Landing</div></a>
     </li>
-    <li class="nav-item">
-        <a class="nav-link py-2 px-3 text-warning" href="#" data-bs-toggle="modal" data-bs-target="#configPagoGlobalModal">
-            <i class="bi bi-wallet2 me-2"></i> Pasarela de Cobro
-        </a>
+    <li class="nav-item mt-3">
+        <a class="nav-link py-2 px-3 fw-bold text-warning bg-warning bg-opacity-10 rounded-3 mx-2" href="#" data-bs-toggle="modal" data-bs-target="#configPagoGlobalModal"><div class="d-flex align-items-center"><i class="bi bi-wallet2 me-2 fs-5"></i> Pasarela de Cobro</div></a>
     </li>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid p-4 p-md-5">
-    <div class="row g-4 mb-5 row-cols-1 row-cols-md-2 row-cols-xl-3">
-        <div class="col">
-            <div class="card card-kpi bg-white shadow-sm p-4 h-100">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div><span class="text-muted small text-uppercase fw-bold mb-1">Inquilinos Totales</span><h2 class="fw-bold m-0">{{ total_academias }}</h2></div>
-                    <div class="bg-primary bg-opacity-10 rounded-circle p-3 text-primary"><i class="bi bi-building display-6"></i></div>
-                </div>
-            </div>
+
+    <!-- 🚀 ALERTA DE COMPROBANTES PENDIENTES -->
+    {% if reportes_pendientes %}
+    <div class="alert shadow-sm rounded-4 border-0 mb-5 fade-in" style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border-left: 5px solid #f59e0b !important;">
+        <div class="d-flex align-items-center mb-2">
+            <i class="bi bi-bell-fill fs-3 text-warning me-3"></i>
+            <h5 class="fw-bold text-dark m-0">¡Tienes {{ reportes_pendientes|length }} pagos por verificar!</h5>
         </div>
-        <div class="col">
-            <div class="card card-kpi bg-white shadow-sm p-4 h-100">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div><span class="text-muted small text-uppercase fw-bold mb-1">Academias Activas</span><h2 class="fw-bold text-success m-0">{{ academias_activas }}</h2></div>
-                    <div class="bg-success bg-opacity-10 rounded-circle p-3 text-success"><i class="bi bi-check-circle-fill display-6"></i></div>
-                </div>
-            </div>
+        <p class="text-muted small mb-3 ms-5">Las siguientes academias han subido comprobantes y esperan activación:</p>
+        <div class="d-flex flex-wrap gap-2 ms-5">
+            {% for reporte in reportes_pendientes %}
+            <button class="btn btn-white bg-white border rounded-pill shadow-sm text-dark fw-bold hover-shadow" 
+                onclick="abrirModalAprobarPago('{{ reporte.id }}', '{{ reporte.academia.nombre|escapejs }}', '{% if reporte.comprobante %}{{ reporte.comprobante.url }}{% else %}#{% endif %}', '{{ reporte.plan.id|default:'' }}')">
+                <i class="bi bi-receipt-cutoff text-primary me-1"></i> {{ reporte.academia.nombre }}
+            </button>
+            {% endfor %}
         </div>
-        <div class="col">
-            <div class="card card-kpi bg-white shadow-sm p-4 h-100">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div><span class="text-muted small text-uppercase fw-bold mb-1">Total Estudiantes</span><h2 class="fw-bold text-info m-0">{{ total_estudiantes }}</h2></div>
-                    <div class="bg-info bg-opacity-10 rounded-circle p-3 text-info"><i class="bi bi-people-fill display-6"></i></div>
-                </div>
-            </div>
+    </div>
+    {% endif %}
+    
+    <!-- Encabezado -->
+    <div class="d-flex justify-content-between align-items-center mb-5">
+        <div>
+            <h2 class="fw-bold text-dark m-0">Visión Global</h2>
+            <p class="text-muted mb-0">Métricas y control del ecosistema AppDanza SaaS.</p>
         </div>
-        <div class="col">
-            <div class="card card-kpi bg-white shadow-sm p-4 h-100">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div><span class="text-muted small text-uppercase fw-bold mb-1">Eventos Globales</span><h2 class="fw-bold text-warning m-0">{{ total_eventos }}</h2></div>
-                    <div class="bg-warning bg-opacity-10 rounded-circle p-3 text-warning"><i class="bi bi-calendar-event-fill display-6"></i></div>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card card-kpi bg-white shadow-sm p-4 h-100">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div><span class="text-muted small text-uppercase fw-bold mb-1">Ingresos Tienda/POS</span><h2 class="fw-bold text-purple m-0" style="color: #6f42c1;">{{ total_tienda }}</h2></div>
-                    <div class="bg-purple bg-opacity-10 rounded-circle p-3" style="color: #6f42c1; background-color: #f3e8ff;"><i class="bi bi-shop display-6"></i></div>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card card-kpi bg-white shadow-sm p-4 h-100">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div><span class="text-muted small text-uppercase fw-bold mb-1">En Mora</span><h2 class="fw-bold text-danger m-0">{{ academias_suspendidas }}</h2></div>
-                    <div class="bg-danger bg-opacity-10 rounded-circle p-3 text-danger"><i class="bi bi-x-circle-fill display-6"></i></div>
-                </div>
-            </div>
+        <div>
+            <button class="btn btn-primary rounded-pill px-4 shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#crearAcademiaModal"><i class="bi bi-plus-lg me-1"></i> Nuevo Cliente</button>
         </div>
     </div>
 
-    <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-5">
-        <h4 class="fw-bold text-dark mb-4 d-flex align-items-center gap-2">
-            <i class="bi bi-grid-3x3-gap text-primary"></i> Gestión Operativa de Inquilinos
-        </h4>
+    <!-- KPIs -->
+    <div class="row g-4 mb-5 row-cols-1 row-cols-md-2 row-cols-xl-3">
+        <div class="col"><div class="card-kpi p-4"><div class="d-flex align-items-center justify-content-between"><div><span class="text-muted small text-uppercase fw-bold mb-1 d-block">Inquilinos Totales</span><h2 class="fw-bold text-dark m-0">{{ total_academias }}</h2></div><div class="icon-box bg-primary bg-opacity-10 text-primary"><i class="bi bi-building display-6"></i></div></div></div></div>
+        <div class="col"><div class="card-kpi p-4"><div class="d-flex align-items-center justify-content-between"><div><span class="text-muted small text-uppercase fw-bold mb-1 d-block">Academias Activas</span><h2 class="fw-bold text-success m-0">{{ academias_activas }}</h2></div><div class="icon-box bg-success bg-opacity-10 text-success"><i class="bi bi-check-circle-fill display-6"></i></div></div></div></div>
+        <div class="col"><div class="card-kpi p-4"><div class="d-flex align-items-center justify-content-between"><div><span class="text-muted small text-uppercase fw-bold mb-1 d-block">Estudiantes (Red)</span><h2 class="fw-bold text-info m-0">{{ total_estudiantes }}</h2></div><div class="icon-box bg-info bg-opacity-10 text-info"><i class="bi bi-people-fill display-6"></i></div></div></div></div>
+        <div class="col"><div class="card-kpi p-4"><div class="d-flex align-items-center justify-content-between"><div><span class="text-muted small text-uppercase fw-bold mb-1 d-block">Eventos Activos</span><h2 class="fw-bold text-warning m-0">{{ total_eventos }}</h2></div><div class="icon-box bg-warning bg-opacity-10 text-warning"><i class="bi bi-calendar-event-fill display-6"></i></div></div></div></div>
+        <div class="col"><div class="card-kpi p-4"><div class="d-flex align-items-center justify-content-between"><div><span class="text-muted small text-uppercase fw-bold mb-1 d-block">Ingresos Tienda/POS</span><h2 class="fw-bold text-purple m-0" style="color: #8b5cf6;">{{ total_tienda }}</h2></div><div class="icon-box" style="background-color: #f3e8ff; color: #8b5cf6;"><i class="bi bi-shop display-6"></i></div></div></div></div>
+        <div class="col"><div class="card-kpi p-4"><div class="d-flex align-items-center justify-content-between"><div><span class="text-muted small text-uppercase fw-bold mb-1 d-block">En Mora / Suspendidos</span><h2 class="fw-bold text-danger m-0">{{ academias_suspendidas }}</h2></div><div class="icon-box bg-danger bg-opacity-10 text-danger"><i class="bi bi-shield-lock-fill display-6"></i></div></div></div></div>
+    </div>
+
+    <!-- Tabla de Gestión -->
+    <div class="table-wrapper mb-5">
+        <h5 class="fw-bold text-dark mb-4 d-flex align-items-center gap-2">
+            <i class="bi bi-grid-3x3-gap-fill text-primary"></i> Gestión Operativa de Clientes
+        </h5>
         
         <div class="table-responsive">
-            <table id="tablaAcademias" class="table table-hover align-middle m-0">
-                <thead class="table-light text-secondary small text-uppercase">
-                    <tr>
-                        <th>Empresa</th>
-                        <th>Ubicación</th>
-                        <th>Estado</th>
-                        <th>Alum.</th>
-                        <th>Evts.</th>
-                        <th>Acciones</th>
-                    </tr>
+            <table id="tablaAcademias" class="table table-borderless align-middle m-0">
+                <thead class="text-uppercase">
+                    <tr><th>Inquilino / URL</th><th>Operación</th><th>Suscripción</th><th class="text-center">Tráfico</th><th class="text-end">Panel de Control</th></tr>
                 </thead>
                 <tbody class="small">
                     {% for aca in academias %}
                         <tr>
                             <td>
-                                <div class="fw-bold text-dark">{{ aca.nombre }}</div>
-                                <span class="text-muted text-xs">/{{ aca.slug }}</span>
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="bg-light rounded-circle d-flex align-items-center justify-content-center text-primary fw-bold" style="width: 40px; height: 40px;">{{ aca.nombre|make_list|first|upper }}</div>
+                                    <div><div class="fw-bold text-dark fs-6">{{ aca.nombre }}</div><a href="/{{ aca.slug }}/" target="_blank" class="text-muted text-decoration-none text-xs hover-primary"><i class="bi bi-box-arrow-up-right me-1"></i>/{{ aca.slug }}</a></div>
+                                </div>
                             </td>
+                            <td><span class="badge-soft bg-secondary bg-opacity-10 text-secondary"><i class="bi bi-geo-alt-fill text-danger me-1"></i>{{ aca.ciudad|default:"Bogotá" }}</span></td>
                             <td>
-                                <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 rounded-pill px-2 py-1">
-                                    <i class="bi bi-geo-alt-fill text-danger me-1"></i>{{ aca.ciudad|default:"Bogotá" }}
-                                </span>
-                            </td>
-                            <td>
-                                <div class="fw-bold text-dark">{{ aca.suscripcion_saas.plan.nombre }}</div>
+                                <div class="fw-bold text-dark mb-1">{{ aca.suscripcion_saas.plan.nombre }}</div>
                                 {% if aca.suscripcion_saas.estado == 'ACTIVO' %}
-                                    <span class="badge bg-success bg-opacity-10 text-success">Activo</span>
+                                    <span class="badge-soft bg-success bg-opacity-10 text-success"><i class="bi bi-check-circle-fill me-1"></i> Activo</span>
                                 {% else %}
-                                    <span class="badge bg-danger bg-opacity-10 text-danger">{{ aca.suscripcion_saas.estado }}</span>
+                                    <span class="badge-soft bg-danger bg-opacity-10 text-danger"><i class="bi bi-lock-fill me-1"></i> {{ aca.suscripcion_saas.estado }}</span>
                                 {% endif %}
                             </td>
-                            <td class="text-center fw-bold text-info">{{ aca.num_estudiantes }}</td>
-                            <td class="text-center fw-bold text-warning">{{ aca.num_eventos }}</td>
-                            <td class="text-end">
-                                <div class="form-check form-switch d-inline-block me-3 align-middle mb-0" title="Activar / Suspender Inquilino">
-                                    <input class="form-check-input shadow-sm {% if aca.suscripcion_saas.estado == 'SUSPENDIDO' %}bg-danger border-danger{% else %}bg-success border-success{% endif %}"
-                                        type="checkbox" role="switch" id="switchBloqueo_{{ aca.id }}"
-                                        style="cursor: pointer; width: 2.5em; height: 1.25em;"
-                                        {% if aca.suscripcion_saas.estado != 'SUSPENDIDO' %}checked{% endif %}
-                                        onchange="toggleBloqueoGeneral('{{ aca.id }}', '{{ aca.nombre|escapejs }}', this)">
+                            <td class="text-center">
+                                <div class="d-flex justify-content-center gap-2">
+                                    <span class="badge-soft bg-info bg-opacity-10 text-info" title="Estudiantes Activos"><i class="bi bi-people-fill"></i> {{ aca.num_estudiantes }}</span>
+                                    <span class="badge-soft bg-warning bg-opacity-10 text-warning" title="Eventos"><i class="bi bi-calendar-event-fill"></i> {{ aca.num_eventos }}</span>
                                 </div>
-                                <div class="btn-group btn-group-sm">
-                                    <button type="button" class="btn btn-outline-success border" title="Finanzas" 
-                                            onclick="abrirModalFinanzas('{{ aca.id }}', '{{ aca.nombre }}')">
-                                        <i class="bi bi-wallet2"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-outline-primary border" title="Licencia" 
+                            </td>
+                            <td class="text-end">
+                                <div class="form-check form-switch d-inline-block me-3 align-middle m-0" title="Kill Switch">
+                                    <input class="form-check-input shadow-sm {% if aca.suscripcion_saas.estado == 'SUSPENDIDO' %}bg-danger border-danger{% else %}bg-success border-success{% endif %}" type="checkbox" role="switch" id="switchBloqueo_{{ aca.id }}" {% if aca.suscripcion_saas.estado != 'SUSPENDIDO' %}checked{% endif %} onchange="toggleBloqueoGeneral('{{ aca.id }}', '{{ aca.nombre|escapejs }}', this)">
+                                </div>
+                                <div class="btn-group shadow-sm rounded-pill bg-white border">
+                                    <button type="button" class="btn btn-sm btn-white text-dark py-2 px-3 border-end hover-shadow" title="Editar Datos" onclick="abrirModalEditarAcademia('{{ aca.id }}', '{{ aca.nombre|escapejs }}', '{{ aca.slug|escapejs }}', '{{ aca.ciudad|default:'Bogotá'|escapejs }}', '{{ aca.template_landing_personalizado|default:''|escapejs }}')"><i class="bi bi-pencil-fill text-warning"></i></button>
+                                    <button type="button" class="btn btn-sm btn-white text-dark py-2 px-3 border-end hover-shadow" title="Auditoría Financiera" onclick="abrirModalFinanzas('{{ aca.id }}', '{{ aca.nombre|escapejs }}')"><i class="bi bi-bar-chart-fill text-success"></i></button>
+                                    <button type="button" class="btn btn-sm btn-white text-dark py-2 px-3 hover-shadow" title="Control de Licencia" 
                                         onclick="abrirModalGestion(
                                             '{{ aca.id }}', '{{ aca.nombre|escapejs }}', '{{ aca.suscripcion_saas.estado }}', 
                                             '{{ aca.suscripcion_saas.plan.id }}', '{{ aca.suscripcion_saas.bloqueo_manual_estudiantes|yesno:'False,True' }}',
                                             '{{ aca.suscripcion_saas.bloqueo_manual_asistencias|yesno:'False,True' }}', '{{ aca.suscripcion_saas.bloqueo_manual_finanzas|yesno:'False,True' }}',
-                                            '{{ aca.suscripcion_saas.bloqueo_manual_multimedia|yesno:'False,True' }}', '{{ aca.suscripcion_saas.bloqueo_manual_eventos|yesno:'False,True' }}',
-                                            '{{ aca.suscripcion_saas.bloqueo_manual_tienda|yesno:'False,True' }}', '{{ aca.suscripcion_saas.es_cuenta_partner_gratis|yesno:'True,False' }}',
-                                            '{{ aca.es_solo_eventos|yesno:'True,False' }}'
-                                        )">
-                                        <i class="bi bi-sliders"></i>
+                                            '{{ aca.suscripcion_saas.bloqueo_manual_multimedia|yesno:'False,True' }}', '{{ aca.suscripcion_saas.modulo_eventos_activo|yesno:'True,False' }}',
+                                            '{{ aca.suscripcion_saas.bloqueo_manual_tienda|yesno:'False,True' }}', '{{ aca.suscripcion_saas.bloqueo_manual_profesores|yesno:'False,True' }}',
+                                            '{{ aca.suscripcion_saas.bloqueo_manual_calendario|yesno:'False,True' }}', '{{ aca.suscripcion_saas.es_cuenta_partner_gratis|yesno:'True,False' }}',
+                                            '{{ aca.es_solo_eventos|yesno:'True,False' }}', '{{ aca.suscripcion_saas.fecha_inicio|date:"Y-m-d" }}', '{{ aca.suscripcion_saas.fecha_vencimiento|date:"Y-m-d" }}',
+                                            '{{ aca.suscripcion_saas.comision_por_tiquete|floatformat:0 }}'
+                                        )"><i class="bi bi-sliders text-primary"></i>
                                     </button>
                                 </div>
                             </td>
@@ -155,325 +172,530 @@
 {% endblock %}
 
 {% block modals %}
-<!-- TODOS TUS MODALES COPIADOS EXACTAMENTE -->
+<!-- 1. PASARELA DE COBRO GLOBAL -->
 <div class="modal fade" id="configPagoGlobalModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <form method="POST" action="{% url 'saas_core:master_guardar_pago_global' %}" class="modal-content border-0 shadow rounded-4">
+        <form method="POST" action="{% url 'saas_core:master_guardar_pago_global' %}" class="modal-content border-0 shadow-lg">
             {% csrf_token %}
-            <div class="modal-header border-0 pt-4 px-4">
-                <h5 class="modal-title fw-bold text-dark"><i class="bi bi-wallet2 text-primary me-2"></i>Pasarela Manual de Cobro</h5>
+            <div class="modal-header border-0 pt-4 px-4 pb-2 bg-light rounded-top-4">
+                <h5 class="modal-title fw-bold text-dark"><i class="bi bi-wallet2 text-warning me-2"></i>Pasarela de Cobro Global</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body px-4 py-2">
+            <div class="modal-body px-4">
+                <p class="text-muted small mb-4">Configura la cuenta donde las academias te pagarán la mensualidad.</p>
                 <div class="mb-3"><label class="form-label small fw-bold">Canal o Método de Cobro</label>{{ form_pago_global.tipo_metodo }}</div>
                 <div class="mb-3"><label class="form-label small fw-bold">Entidad / Banco / Plataforma</label>{{ form_pago_global.nombre_proveedor }}</div>
                 <div class="mb-3"><label class="form-label small fw-bold">Identificador de Pago</label>{{ form_pago_global.identificador_pago }}</div>
-                <div class="row mb-3">
+                <div class="row g-3 mb-3">
                     <div class="col-6"><label class="form-label small fw-bold">Titular (Opcional)</label>{{ form_pago_global.titular }}</div>
                     <div class="col-6"><label class="form-label small fw-bold">Doc / NIT (Opcional)</label>{{ form_pago_global.documento_titular }}</div>
                 </div>
                 <div class="mb-2"><label class="form-label small fw-bold">Instrucciones Adicionales</label>{{ form_pago_global.instrucciones_adicionales }}</div>
             </div>
-            <div class="modal-footer border-0 pb-4 px-4">
-                <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Cerrar</button>
-                <button type="submit" class="btn btn-primary rounded-3 px-4 fw-bold">Guardar Pasarela</button>
+            <div class="modal-footer border-0 pb-4 px-4 bg-transparent">
+                <button type="button" class="btn btn-white text-muted fw-bold rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-dark rounded-pill px-5 fw-bold shadow-sm">Guardar Pasarela</button>
             </div>
         </form>
     </div>
 </div>
 
-<div class="modal fade" id="gestionLicenciaModal" tabindex="-1" aria-hidden="true">
+<!-- 2. EDITAR ACADEMIA -->
+<div class="modal fade" id="editarAcademiaModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow rounded-4">
-            <div class="modal-header border-0 pt-4 px-4">
-                <h5 class="modal-title fw-bold text-dark" id="modalAcademiaNombre">Gestionar Módulos y Licencia</h5>
+        <form id="form-editar-academia" class="modal-content border-0 shadow-lg rounded-4">
+            {% csrf_token %}
+            <div class="modal-header border-0 pt-4 px-4 bg-light rounded-top-4">
+                <h5 class="modal-title fw-bold text-dark"><i class="bi bi-building-gear text-warning me-2"></i>Editar Inquilino</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form id="form-licencia-saas" class="modal-body px-4 py-2">
-                {% csrf_token %}
-                <input type="hidden" id="modal-academia-id" name="academia_id">
-                <div class="mb-4">
-                    <label class="form-label small fw-bold">Estado de la Suscripción</label>
-                    <select class="form-select rounded-3" id="modal-estado" name="estado">
-                        <option value="ACTIVO">Activo / Al Día</option>
-                        <option value="SUSPENDIDO">Suspendido (Bloqueo Total)</option>
-                        <option value="PRUEBA">Período de Prueba</option>
-                    </select>
+            <div class="modal-body px-4 py-3">
+                <div class="alert bg-warning bg-opacity-10 border-0 rounded-4 small d-flex align-items-center mb-4 text-dark">
+                    <i class="bi bi-exclamation-triangle-fill fs-4 me-3 text-warning"></i>
+                    <div><strong>¡Cuidado!</strong> Cambiar el sub-URL (slug) desconectará a los alumnos que tengan la sesión iniciada en ese momento.</div>
                 </div>
-                <div class="mb-4">
-                    <label class="form-label small fw-bold">Plan Comercial Asignado</label>
-                    <select class="form-select rounded-3" id="modal-plan" name="plan_id" required>
-                        <option value="" disabled>-- Selecciona un Plan --</option>
-                        {% for plan in planes_saas %}
-                            <option value="{{ plan.id }}" data-est="{{ plan.permite_estudiantes|yesno:'true,false' }}"
-                                    data-asi="{{ plan.permite_asistencias_qr|yesno:'true,false' }}" data-fin="{{ plan.permite_finanzas|yesno:'true,false' }}"
-                                    data-mul="{{ plan.permite_multimedia|yesno:'true,false' }}" data-eve="{{ plan.permite_eventos|yesno:'true,false' }}"
-                                    data-tie="{{ plan.permite_tienda|yesno:'true,false' }}">{{ plan.nombre }} (${{ plan.precio_mensual|floatformat:0 }} COP)</option>
-                        {% empty %}
-                            <option value="" disabled>No hay planes creados</option>
+                
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Nombre Comercial</label>
+                    <input type="text" id="edit-aca-nombre" name="nombre" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Sub-URL / Slug (Enlace Único)</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-0 text-muted ps-3 pe-2">/</span>
+                        <input type="text" id="edit-aca-slug" name="slug" class="form-control" style="background-color: #f1f5f9; border: 2px solid transparent;" required>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-primary"><i class="bi bi-geo-alt"></i> Sede / Ciudad Principal</label>
+                    <select id="edit-aca-ciudad" name="ciudad" class="form-select">
+                        {% for valor, etiqueta in ciudades_choices %}
+                            <option value="{{ valor }}">{{ etiqueta }}</option>
                         {% endfor %}
                     </select>
-                    <div class="form-text text-xs text-muted">El cambio de plan no afecta la facturación anterior.</div>
                 </div>
+                <div class="mb-2">
+                    <label class="form-label small fw-bold">Ruta Template Landing (Avanzado)</label>
+                    <input type="text" id="edit-aca-template" name="template_landing_personalizado" class="form-control text-muted" placeholder="Opcional. Ej: academias/landings/mi_landing.html">
+                </div>
+            </div>
+            <div class="modal-footer border-0 pb-4 px-4 bg-transparent">
+                <button type="button" class="btn btn-white text-muted fw-bold rounded-pill px-4" data-bs-dismiss="modal">Descartar</button>
+                <button type="submit" class="btn btn-warning rounded-pill px-5 fw-bold text-dark shadow-sm">Aplicar Cambios</button>
+            </div>
+        </form>
+    </div>
+</div>
 
-                <h6 class="text-uppercase text-xs text-primary fw-bold mb-3">Configuraciones Especiales</h6>
-                <div class="p-3 mb-2 border rounded-3 bg-light">
-                    <div class="form-check form-switch m-0">
-                        <input class="form-check-input" type="checkbox" id="switchProductoraEdit" name="es_solo_eventos" value="True">
-                        <label class="form-check-label small fw-bold text-dark" for="switchProductoraEdit">🎫 Modo Productora de Eventos</label>
+<!-- 3. GESTIÓN DE LICENCIA (FECHAS, COMISIONES, MORA Y PRUEBA) -->
+<div class="modal fade" id="gestionLicenciaModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 pt-4 px-4 pb-2 bg-light rounded-top-4">
+                <h5 class="modal-title fw-bold text-dark" id="modalAcademiaNombre">Control de Licencia</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="form-licencia-saas" class="modal-body px-4 py-3">
+                {% csrf_token %}
+                <input type="hidden" id="modal-academia-id" name="academia_id">
+                
+                <!-- Status y Plan -->
+                <div class="row g-3 mb-4">
+                    <div class="col-6">
+                        <label class="form-label small fw-bold text-muted text-uppercase tracking-wider">Status Service</label>
+                        <select class="form-select fw-bold border-0 bg-light" id="modal-estado" name="estado">
+                            <option value="ACTIVO">🟢 Activo / Al Día</option>
+                            <option value="MORA">🟠 En Mora (5 Días Gracia)</option>
+                            <option value="SUSPENDIDO">🔴 Bloqueado (Corte)</option>
+                            <option value="PRUEBA">🟡 Período de Prueba</option>
+                        </select>
+                    </div>
+                    <!-- 🚀 Contenedor con ID para poder ocultarlo con JS si eligen "PRUEBA" -->
+                    <div class="col-6" id="contenedor-plan-saas">
+                        <label class="form-label small fw-bold text-muted text-uppercase tracking-wider">Plan Contratado</label>
+                        <select class="form-select fw-bold border-0 bg-light" id="modal-plan" name="plan_id" required>
+                            <option value="" disabled>-- Asignar Plan --</option>
+                            {% for plan in planes_saas %}
+                                <option value="{{ plan.id }}" 
+                                    data-est="{{ plan.permite_estudiantes|yesno:'true,false' }}" 
+                                    data-asi="{{ plan.permite_asistencias_qr|yesno:'true,false' }}" 
+                                    data-fin="{{ plan.permite_finanzas|yesno:'true,false' }}" 
+                                    data-mul="{{ plan.permite_multimedia|yesno:'true,false' }}" 
+                                    data-tie="{{ plan.permite_tienda|yesno:'true,false' }}" 
+                                    data-pro="{{ plan.permite_profesores|yesno:'true,false' }}" 
+                                    data-cal="{{ plan.permite_calendario|yesno:'true,false' }}">
+                                    {{ plan.nombre }}
+                                </option>
+                            {% endfor %}
+                        </select>
                     </div>
                 </div>
-                <div class="p-3 bg-light rounded-3 mb-4 border">
-                    <div class="form-check form-switch m-0">
-                        <input class="form-check-input" type="checkbox" id="switchPartnerVIP" name="es_cuenta_partner_gratis" value="True">
-                        <label class="form-check-label small fw-bold" for="switchPartnerVIP" style="color: #4338ca;">🌟 Cuenta Partner VIP (Gratis)</label>
+
+                <!-- 🚀 NUEVO: CONTROL DE FECHAS MANUAL -->
+                <div class="row g-3 mb-4 bg-light p-3 rounded-4 mx-0 border">
+                    <label class="form-label small fw-bold text-muted text-uppercase tracking-wider m-0 p-0 w-100"><i class="bi bi-calendar-range me-2"></i>Período de Facturación</label>
+                    <div class="col-6"><label class="form-label text-xs fw-bold mb-1">Fecha Inicio</label><input type="date" id="modal-fecha-inicio" name="fecha_inicio" class="form-control bg-white" required></div>
+                    <div class="col-6"><label class="form-label text-xs fw-bold mb-1">Fecha Corte</label><input type="date" id="modal-fecha-fin" name="fecha_vencimiento" class="form-control bg-white" required></div>
+                </div>
+
+                <!-- Facturación Rápida Opcional -->
+                <div class="p-3 mb-4 rounded-4" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 1px solid #bbf7d0;">
+                    <div class="form-check form-switch m-0 d-flex align-items-center justify-content-between p-0">
+                        <label class="form-check-label text-success m-0 ps-1" for="switchGenerarCobro">
+                            <span class="fw-bold fs-6"><i class="bi bi-receipt me-2"></i>Emitir Recibo de Cobro</span>
+                            <span class="d-block text-success opacity-75 fw-normal small mt-1 lh-sm">Registrará el ingreso por esta actualización en tus Finanzas.</span>
+                        </label>
+                        <input class="form-check-input ms-3 shadow-sm" type="checkbox" id="switchGenerarCobro" name="generar_cobro" value="True" style="transform: scale(1.4);" onchange="toggleMontoPersonalizado(this)">
+                    </div>
+                    <!-- 🚀 OPCIONAL: Modificar monto al cobrar -->
+                    <div class="mt-3 fade-in" id="cajaMontoFactura" style="display: none;">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white border-0 text-success fw-bold">Valor (COP)</span>
+                            <input type="number" id="modal-monto-factura" name="monto_factura" class="form-control border-0 bg-white" placeholder="Monto personalizado">
+                        </div>
                     </div>
                 </div>
 
-                <label class="form-label small fw-bold d-block border-bottom pb-2 mb-3 text-uppercase tracking-wider text-secondary">Activar / Desactivar Módulos</label>
-                <div class="form-check form-switch mb-2.5"><input class="form-check-input" type="checkbox" id="switchEstudiantes" name="modulo_estudiantes_activo" value="True"><label class="form-check-label small fw-semibold" for="switchEstudiantes">👥 Estudiantes y Planes</label></div>
-                <div class="form-check form-switch mb-2.5"><input class="form-check-input" type="checkbox" id="switchAsistencias" name="modulo_asistencias_activo" value="True"><label class="form-check-label small fw-semibold" for="switchAsistencias">🔍 Asistencias por QR</label></div>
-                <div class="form-check form-switch mb-2.5"><input class="form-check-input" type="checkbox" id="switchFinanzas" name="modulo_finanzas_activo" value="True"><label class="form-check-label small fw-semibold" for="switchFinanzas">💼 Finanzas e Ingresos</label></div>
-                <div class="form-check form-switch mb-2.5"><input class="form-check-input" type="checkbox" id="switchMultimedia" name="modulo_multimedia_activo" value="True"><label class="form-check-label small fw-semibold" for="switchMultimedia">🎬 Aula Virtual</label></div>
-                <div class="form-check form-switch mb-2.5"><input class="form-check-input" type="checkbox" id="switchEventos" name="modulo_eventos_activo" value="True"><label class="form-check-label small fw-semibold" for="switchEventos">📅 Eventos y Tickets</label></div>
-                <div class="form-check form-switch mb-4"><input class="form-check-input" type="checkbox" id="switchTienda" name="modulo_tienda_activo" value="True"><label class="form-check-label small fw-semibold" for="switchTienda">🏪 Tienda POS</label></div>
+                <!-- Configuraciones VIP -->
+                <div class="d-flex gap-3 mb-4">
+                    <div class="p-3 rounded-4 bg-light flex-fill border-0 transition-hover">
+                        <div class="form-check form-switch m-0 d-flex align-items-center justify-content-center p-0">
+                            <label class="form-check-label small fw-bold text-dark me-3" for="switchProductoraEdit">🎫 Modo Productora</label>
+                            <input class="form-check-input m-0" type="checkbox" id="switchProductoraEdit" name="es_solo_eventos" value="True">
+                        </div>
+                    </div>
+                    <div class="p-3 rounded-4 bg-primary bg-opacity-10 flex-fill border-0 transition-hover">
+                        <div class="form-check form-switch m-0 d-flex align-items-center justify-content-center p-0">
+                            <label class="form-check-label small fw-bold text-primary me-3" for="switchPartnerVIP">🌟 Partner VIP</label>
+                            <input class="form-check-input m-0" type="checkbox" id="switchPartnerVIP" name="es_cuenta_partner_gratis" value="True" onchange="verificarComisiones()">
+                        </div>
+                    </div>
+                </div>
 
-                <div class="text-end border-top pt-3 pb-2">
-                    <button type="button" class="btn btn-light rounded-3 px-3 me-2" data-bs-dismiss="modal">Cerrar</button>
-                    <button type="submit" class="btn btn-primary rounded-3 px-4 fw-bold">Actualizar Academia</button>
+                <label class="form-label small fw-bold d-block pb-2 mb-3 text-uppercase text-muted" style="border-bottom: 2px dashed #e2e8f0;">Micro-Gestión de Módulos</label>
+                <div class="row g-3">
+                    <div class="col-6"><div class="form-check form-switch d-flex align-items-center p-2 rounded-3 hover-bg-light"><input class="form-check-input m-0 me-3" type="checkbox" id="switchEstudiantes" name="modulo_estudiantes_activo" value="True"><label class="form-check-label small fw-semibold text-dark">👥 Estudiantes</label></div></div>
+                    <div class="col-6"><div class="form-check form-switch d-flex align-items-center p-2 rounded-3 hover-bg-light"><input class="form-check-input m-0 me-3" type="checkbox" id="switchAsistencias" name="modulo_asistencias_activo" value="True"><label class="form-check-label small fw-semibold text-dark">🔍 Control QR</label></div></div>
+                    <div class="col-6"><div class="form-check form-switch d-flex align-items-center p-2 rounded-3 hover-bg-light"><input class="form-check-input m-0 me-3" type="checkbox" id="switchFinanzas" name="modulo_finanzas_activo" value="True"><label class="form-check-label small fw-semibold text-dark">💼 Finanzas</label></div></div>
+                    <div class="col-6"><div class="form-check form-switch d-flex align-items-center p-2 rounded-3 hover-bg-light"><input class="form-check-input m-0 me-3" type="checkbox" id="switchMultimedia" name="modulo_multimedia_activo" value="True"><label class="form-check-label small fw-semibold text-dark">🎬 Multimedia</label></div></div>
+                    <div class="col-6"><div class="form-check form-switch d-flex align-items-center p-2 rounded-3 hover-bg-light"><input class="form-check-input m-0 me-3" type="checkbox" id="switchTienda" name="modulo_tienda_activo" value="True"><label class="form-check-label small fw-semibold text-dark">🏪 Tienda POS</label></div></div>
+                    <div class="col-6"><div class="form-check form-switch d-flex align-items-center p-2 rounded-3" style="background-color: #eff6ff;"><input class="form-check-input m-0 me-3 border-primary" type="checkbox" id="switchProfesores" name="modulo_profesores_activo" value="True"><label class="form-check-label small fw-bold text-primary">👨‍🏫 Profesores</label></div></div>
+                    <div class="col-6"><div class="form-check form-switch d-flex align-items-center p-2 rounded-3" style="background-color: #eff6ff;"><input class="form-check-input m-0 me-3 border-primary" type="checkbox" id="switchCalendario" name="modulo_calendario_activo" value="True"><label class="form-check-label small fw-bold text-primary">📆 Calendario</label></div></div>
+                    
+                    <!-- 🚀 MÓDULO EVENTOS INDEPENDIENTE -->
+                    <div class="col-12 mt-3">
+                        <div class="form-check form-switch d-flex align-items-center justify-content-between p-3 rounded-4 shadow-sm" style="background-color: #fdf4ff; border: 1px solid #bfdbfe;">
+                            <label class="form-check-label small fw-bold text-primary m-0" for="switchEventos"><i class="bi bi-calendar-star-fill me-2 fs-5"></i> Módulo Organizador de Eventos</label>
+                            <input class="form-check-input m-0" type="checkbox" id="switchEventos" name="modulo_eventos_activo" value="True" style="transform: scale(1.2);" onchange="verificarComisiones()">
+                        </div>
+                        
+                        <!-- 🚀 CAJA DE COMISIONES (Aparece si Eventos = ON y Partner = OFF) -->
+                        <div class="mt-2 p-3 bg-white border rounded-4 fade-in" id="cajaComisionEventos" style="display: none;">
+                            <label class="form-label text-xs fw-bold text-dark d-block">Comisión por Ticket Vendido (COP)</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-light text-muted fw-bold">$</span>
+                                <input type="number" id="modal-comision-ticket" name="comision_por_tiquete" class="form-control fw-bold text-primary" placeholder="Ej: 1000">
+                            </div>
+                            <small class="text-muted text-xs mt-1 d-block">Esta tarifa se cobra en cada registro exitoso de preventa o taquilla.</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-end pt-4 mt-2">
+                    <button type="button" class="btn btn-white text-muted fw-bold rounded-pill px-4 me-2" data-bs-dismiss="modal">Descartar</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-5 fw-bold shadow-sm">Sincronizar Panel</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="crearPlanModal" tabindex="-1" aria-hidden="true">
+<!-- 4. CREAR PLAN (Sin Eventos) -->
+<div class="modal fade" id="crearPlanModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <form method="POST" action="{% url 'saas_core:master_crear_plan' %}" class="modal-content border-0 shadow rounded-4">
+        <form method="POST" action="{% url 'saas_core:master_crear_plan' %}" class="modal-content border-0 shadow-lg rounded-4">
             {% csrf_token %}
-            <div class="modal-header border-0 pt-4 px-4">
-                <h5 class="modal-title fw-bold text-dark">Estructurar Nuevo Plan Comercial</h5>
+            <div class="modal-header border-0 pt-4 px-4 pb-2 bg-light rounded-top-4">
+                <h5 class="modal-title fw-bold text-dark"><i class="bi bi-tag-fill text-success me-2"></i>Estructurar Plan SaaS</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body px-4 py-2">
-                <div class="mb-3"><label class="form-label small fw-bold">Nombre comercial del Plan</label><input type="text" name="nombre" class="form-control rounded-3" placeholder="Ej: Plan Platinum" required></div>
+            <div class="modal-body px-4 py-3">
                 <div class="mb-3">
-                    <label class="form-label small fw-bold">Estrategia de Cobro de Licencia</label>
-                    <select name="tipo_cobro" class="form-select rounded-3">
-                        <option value="MENSUAL" selected>Suscripción Mensual / Días Fijos</option>
-                        <option value="POR_EVENTO">Plan Transaccional Pure Event</option>
+                    <label class="form-label small fw-bold">Nombre Comercial</label>
+                    <input type="text" name="nombre" class="form-control" placeholder="Ej: Plan Pro" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Modelo de Cobro</label>
+                    <select name="tipo_cobro" class="form-select">
+                        <option value="MENSUAL" selected>Suscripción Mensual Recurrente</option>
+                        <option value="POR_EVENTO">Transaccional (Sin mensualidad)</option>
                     </select>
                 </div>
-                <div class="row mb-3">
-                    <div class="col-6"><label class="form-label small fw-bold">Precio Mensual / Fijo</label><input type="number" name="precio" class="form-control rounded-3" required></div>
-                    <div class="col-6"><label class="form-label small fw-bold">Límite de Alumnos</label><input type="number" name="max_estudiantes" class="form-control rounded-3" required></div>
+                <div class="row g-3 mb-2">
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Precio Fijo ($)</label>
+                        <input type="number" name="precio" class="form-control" placeholder="0" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Límite Alumnos</label>
+                        <input type="number" name="max_estudiantes" class="form-control" placeholder="Ej: 100" required>
+                    </div>
                 </div>
-                <label class="form-label small fw-bold d-block mb-2">Módulos Permitidos</label>
-                <div class="form-check form-switch mb-1"><input class="form-check-input" type="checkbox" id="p_estudiantes" name="estudiantes" value="True" checked><label class="form-check-label small" for="p_estudiantes">Módulo Estudiantes</label></div>
-                <div class="form-check form-switch mb-1"><input class="form-check-input" type="checkbox" id="p_multimedia" name="multimedia" value="True" checked><label class="form-check-label small" for="p_multimedia">Multimedia</label></div>
-                <div class="form-check form-switch mb-1"><input class="form-check-input" type="checkbox" id="p_finanzas" name="finanzas" value="True" checked><label class="form-check-label small" for="p_finanzas">Finanzas</label></div>
-                <div class="form-check form-switch mb-1"><input class="form-check-input" type="checkbox" id="p_asistencias" name="asistencias" value="True" checked><label class="form-check-label small" for="p_asistencias">Asistencias QR</label></div>
-                <div class="form-check form-switch mb-1"><input class="form-check-input" type="checkbox" id="p_eventos" name="eventos" value="True" checked><label class="form-check-label small" for="p_eventos">Gestión de Eventos</label></div>
-                <div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" id="p_tienda" name="tienda" value="True"><label class="form-check-label small" for="p_tienda">Tienda POS</label></div>
+
+                <div class="bg-light p-4 rounded-4 mt-4 border border-light">
+                    <label class="form-label small fw-bold text-muted text-uppercase tracking-wider mb-3">Módulos Base Incluidos</label>
+                    <div class="row g-3">
+                        <div class="col-6"><div class="form-check form-switch"><input class="form-check-input shadow-sm" type="checkbox" name="estudiantes" checked><label class="form-check-label text-sm fw-medium ms-1">Estudiantes</label></div></div>
+                        <div class="col-6"><div class="form-check form-switch"><input class="form-check-input shadow-sm" type="checkbox" name="multimedia" checked><label class="form-check-label text-sm fw-medium ms-1">Multimedia</label></div></div>
+                        <div class="col-6"><div class="form-check form-switch"><input class="form-check-input shadow-sm" type="checkbox" name="finanzas" checked><label class="form-check-label text-sm fw-medium ms-1">Finanzas</label></div></div>
+                        <div class="col-6"><div class="form-check form-switch"><input class="form-check-input shadow-sm" type="checkbox" name="asistencias" checked><label class="form-check-label text-sm fw-medium ms-1">Asistencias QR</label></div></div>
+                        <div class="col-6"><div class="form-check form-switch"><input class="form-check-input shadow-sm" type="checkbox" name="tienda"><label class="form-check-label text-sm fw-medium ms-1">Tienda POS</label></div></div>
+                        <div class="col-6"><div class="form-check form-switch"><input class="form-check-input border-primary shadow-sm" type="checkbox" name="profesores"><label class="form-check-label text-sm fw-bold text-primary ms-1">Profesores</label></div></div>
+                        <div class="col-6"><div class="form-check form-switch"><input class="form-check-input border-primary shadow-sm" type="checkbox" name="calendario"><label class="form-check-label text-sm fw-bold text-primary ms-1">Calendario</label></div></div>
+                        <!-- EVENTOS ELIMINADO COMO CHECKBOX DE PLAN, AHORA ES INDEPENDIENTE -->
+                    </div>
+                </div>
             </div>
-            <div class="modal-footer border-0 pb-4 px-4">
-                <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Cancelar</button>
-                <button type="submit" class="btn btn-primary rounded-3 px-4">Guardar Plan</button>
+            <div class="modal-footer border-0 pb-4 px-4 bg-transparent">
+                <button type="button" class="btn btn-white text-muted fw-bold rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-success rounded-pill px-5 fw-bold shadow-sm">Crear Plan</button>
             </div>
         </form>
     </div>
 </div>
 
-<div class="modal fade" id="crearAcademiaModal" tabindex="-1" aria-hidden="true">
+<!-- 5. EDITAR PLAN (Sin Eventos) -->
+<div class="modal fade" id="editarPlanModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <form method="POST" action="{% url 'saas_core:master_crear_academia' %}" class="modal-content border-0 shadow rounded-4">
+        <form id="formEditarPlan" class="modal-content border-0 shadow-lg rounded-4">
             {% csrf_token %}
-            <div class="modal-header border-0 pt-4 px-4">
-                <h5 class="modal-title fw-bold text-dark">Dar de Alta Nuevo Inquilino</h5>
+            <input type="hidden" id="edit-plan-id" name="plan_id">
+            <div class="modal-header border-0 pt-4 px-4 pb-2 bg-light rounded-top-4">
+                <h5 class="modal-title fw-bold text-dark"><i class="bi bi-pencil-square text-info me-2"></i>Ajustar: <span id="spanNombrePlan" class="text-primary"></span></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body px-4 py-2">
-                <div class="p-3 mb-3 border rounded-3 text-center" style="background-color: #fffbeb; border-color: #fde68a !important;">
+            <div class="modal-body px-4 py-3">
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Nombre del Plan</label>
+                    <input type="text" name="nombre" id="edit-nombre" class="form-control" required>
+                </div>
+                <div class="row g-3 mb-2">
+                    <div class="col-6"><label class="form-label small fw-bold">Precio Mensual ($)</label><input type="number" name="precio" id="edit-precio" class="form-control" required></div>
+                    <div class="col-6"><label class="form-label small fw-bold">Límite Estudiantes</label><input type="number" name="max_estudiantes" id="edit-max-est" class="form-control" required></div>
+                </div>
+                
+                <div class="bg-light p-4 rounded-4 mt-4 border border-light">
+                    <label class="form-label small fw-bold text-muted text-uppercase tracking-wider mb-3">Módulos del Plan</label>
+                    <div class="row g-3">
+                        <div class="col-6"><div class="form-check form-switch"><input class="form-check-input shadow-sm" type="checkbox" id="edit-est" name="estudiantes"><label class="form-check-label text-sm fw-medium ms-1">Estudiantes</label></div></div>
+                        <div class="col-6"><div class="form-check form-switch"><input class="form-check-input shadow-sm" type="checkbox" id="edit-mult" name="multimedia"><label class="form-check-label text-sm fw-medium ms-1">Multimedia</label></div></div>
+                        <div class="col-6"><div class="form-check form-switch"><input class="form-check-input shadow-sm" type="checkbox" id="edit-fin" name="finanzas"><label class="form-check-label text-sm fw-medium ms-1">Finanzas</label></div></div>
+                        <div class="col-6"><div class="form-check form-switch"><input class="form-check-input shadow-sm" type="checkbox" id="edit-asist" name="asistencias"><label class="form-check-label text-sm fw-medium ms-1">Asistencias QR</label></div></div>
+                        <div class="col-6"><div class="form-check form-switch"><input class="form-check-input shadow-sm" type="checkbox" id="edit-tie" name="tienda"><label class="form-check-label text-sm fw-medium ms-1">Tienda POS</label></div></div>
+                        <div class="col-6"><div class="form-check form-switch"><input class="form-check-input border-primary shadow-sm" type="checkbox" id="edit-prof" name="profesores"><label class="form-check-label text-sm fw-bold text-primary ms-1">Profesores</label></div></div>
+                        <div class="col-6"><div class="form-check form-switch"><input class="form-check-input border-primary shadow-sm" type="checkbox" id="edit-cal" name="calendario"><label class="form-check-label text-sm fw-bold text-primary ms-1">Calendario</label></div></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pb-4 px-4 bg-transparent">
+                <button type="button" class="btn btn-white text-muted fw-bold rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-info rounded-pill px-5 fw-bold text-white shadow-sm">Sobrescribir Plan</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 6. CREAR ACADEMIA -->
+<div class="modal fade" id="crearAcademiaModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" action="{% url 'saas_core:master_crear_academia' %}" class="modal-content border-0 shadow-lg rounded-4">
+            {% csrf_token %}
+            <div class="modal-header border-0 pt-4 px-4 bg-light rounded-top-4">
+                <h5 class="modal-title fw-bold text-dark"><i class="bi bi-building-add text-primary me-2"></i>Dar de Alta Inquilino</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body px-4 py-3">
+                <div class="p-3 mb-4 rounded-4 text-center border-warning border border-opacity-50" style="background-color: #fffbeb;">
                     <div class="form-check form-switch d-inline-block m-0">
-                        <input class="form-check-input" type="checkbox" id="switchCrearProductora" name="es_solo_eventos" value="True">
+                        <input class="form-check-input shadow-sm" type="checkbox" id="switchCrearProductora" name="es_solo_eventos" value="True">
                         <label class="form-check-label small fw-bold text-dark ms-2" for="switchCrearProductora">🎫 Empresa Productora (Solo Eventos)</label>
                     </div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label small fw-bold">Nombre del Cliente / Empresa</label>
-                    <input type="text" name="nombre" class="form-control rounded-3" required>
+                    <input type="text" name="nombre" class="form-control" required>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label small fw-bold">País de Operación Fiscal</label>
-                    <select name="pais" class="form-select rounded-3">
-                        <option value="CO" selected>Colombia 🇨🇴 (COP)</option>
-                        <option value="US">Estados Unidos 🇺🇸 (USD)</option>
-                        <option value="ES">España 🇪🇸 (EUR)</option>
-                        <option value="MX">México 🇲🇽 (MXN)</option>
-                        <option value="CL">Chile 🇨🇱 (CLP)</option>
-                        <option value="BR">Brasil 🇧🇷 (BRL)</option>
-                        <option value="PE">Perú 🇵🇪 (PEN)</option>
-                        <option value="OT">Otro País (USD)</option>
-                    </select>
-                </div>
-                <!-- 📍 NUEVA Columna Ciudad -->
-                <div class="col-md-6 mt-3 mt-md-0">
-                    <label class="form-label small fw-bold text-primary"><i class="bi bi-geo-alt"></i> Ciudad Principal</label>
-                    <select name="ciudad" class="form-select rounded-3 border-primary border-opacity-50">
-                        {% for valor, etiqueta in ciudades_choices %}
-                            <!-- Mantenemos Bogotá preseleccionado para agilizar -->
-                            <option value="{{ valor }}" {% if valor == 'Bogotá' %}selected{% endif %}>{{ etiqueta }}</option>
-                        {% endfor %}
-                    </select>
+                <div class="row g-3 mb-3">
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">País de Operación Fiscal</label>
+                        <select name="pais" class="form-select">
+                            <option value="CO" selected>Colombia 🇨🇴 (COP)</option>
+                            <option value="US">Estados Unidos 🇺🇸 (USD)</option>
+                            <option value="ES">España 🇪🇸 (EUR)</option>
+                            <option value="MX">México 🇲🇽 (MXN)</option>
+                            <option value="CL">Chile 🇨🇱 (CLP)</option>
+                            <option value="BR">Brasil 🇧🇷 (BRL)</option>
+                            <option value="PE">Perú 🇵🇪 (PEN)</option>
+                            <option value="OT">Otro País (USD)</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold text-primary"><i class="bi bi-geo-alt"></i> Ciudad Principal</label>
+                        <select name="ciudad" class="form-select border-primary border-opacity-50">
+                            {% for valor, etiqueta in ciudades_choices %}
+                                <option value="{{ valor }}" {% if valor == 'Bogotá' %}selected{% endif %}>{{ etiqueta }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label small fw-bold">Sub-URL / Slug del Sistema</label>
                     <div class="input-group">
-                        <span class="input-group-text rounded-start-3 bg-light text-muted small">/</span>
-                        <input type="text" name="slug" class="form-control rounded-end-3" required>
+                        <span class="input-group-text bg-light border-0 text-muted small ps-3">/</span>
+                        <input type="text" name="slug" class="form-control" style="background-color: #f1f5f9; border: 2px solid transparent;" required>
                     </div>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label small fw-bold">Ruta Landing Personalizada</label>
-                    <input type="text" name="template_landing_personalizado" class="form-control rounded-3">
+                <div class="mb-4">
+                    <label class="form-label small fw-bold">Ruta Landing Personalizada (Opcional)</label>
+                    <input type="text" name="template_landing_personalizado" class="form-control text-muted">
                 </div>
                 
-                <h6 class="text-uppercase text-xs text-warning fw-bold mt-4 mb-3"><i class="bi bi-person-badge-fill"></i> Cuenta Administrador</h6>
-                <div class="mb-2">
+                <h6 class="text-uppercase text-xs text-primary fw-bold mb-3 border-top pt-3"><i class="bi bi-person-badge-fill me-1"></i> Cuenta Administrador Principal</h6>
+                <div class="mb-3">
                     <label class="form-label small fw-bold">Correo Electrónico</label>
-                    <input type="email" name="admin_email" class="form-control rounded-3" required>
+                    <input type="email" name="admin_email" class="form-control" required>
                 </div>
                 <div class="mb-3">
                     <label class="form-label small fw-bold">Contraseña Inicial</label>
-                    <input type="password" name="admin_password" class="form-control rounded-3" required>
+                    <input type="password" name="admin_password" class="form-control" required>
                 </div>
             </div>
-            <div class="modal-footer border-0 pb-4 px-4 bg-light rounded-bottom-4">
-                <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Cancelar</button>
-                <button type="submit" class="btn btn-primary rounded-3 px-4">Crear Empresa (Suspendida)</button>
+            <div class="modal-footer border-0 pb-4 px-4 bg-transparent">
+                <button type="button" class="btn btn-white text-muted fw-bold rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">Crear Empresa (Suspendida)</button>
             </div>
         </form>
     </div>
 </div>
 
+<!-- 7. VISOR DE ESTUDIANTES -->
 <div class="modal fade" id="visorEstudiantesSoporteModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 shadow rounded-4">
-            <div class="modal-header border-0 pt-4 px-4">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 pt-4 px-4 bg-light rounded-top-4">
                 <h5 class="modal-title fw-bold text-dark" id="visorEstudiantesTitulo">Auditoría Externa de Alumnos</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body px-4 py-2">
-                <div class="table-responsive" style="max-height: 400px;">
-                    <table class="table table-sm align-middle"><thead class="table-light small"><tr><th>Nombre Completo</th><th>Identificación</th><th>Estado Interno</th><th>Registro</th></tr></thead><tbody id="tabla-soporte-estudiantes-cuerpo" class="small"></tbody></table>
+            <div class="modal-body px-4 py-3">
+                <div class="table-responsive rounded-4 border" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-sm table-borderless align-middle m-0">
+                        <thead class="table-light small text-secondary text-uppercase tracking-wider">
+                            <tr><th class="py-3 px-3">Nombre Completo</th><th>Identificación</th><th>Estado Interno</th><th>Registro</th></tr>
+                        </thead>
+                        <tbody id="tabla-soporte-estudiantes-cuerpo" class="small bg-white"></tbody>
+                    </table>
                 </div>
+            </div>
+            <div class="modal-footer border-0 pb-4 px-4 bg-transparent">
+                <button type="button" class="btn btn-dark rounded-pill px-4 fw-bold shadow-sm" data-bs-dismiss="modal">Entendido</button>
             </div>
         </div>
     </div>
 </div>
 
+<!-- 8. CONFIGURACIÓN LANDING -->
 <div class="modal fade" id="configuracionLandingModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content border-0 shadow rounded-4">
-            <div class="modal-header border-0 pt-4 px-4"><h5 class="modal-title fw-bold">Centro de Control de Landing</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-            <div class="px-4">
-                <ul class="nav nav-tabs" id="masterTabs" role="tablist">
-                    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-general">General</button></li>
-                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-capturas">Capturas</button></li>
-                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-testimonios">Testimonios</button></li>
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 pt-4 px-4 bg-light rounded-top-4">
+                <h5 class="modal-title fw-bold text-dark"><i class="bi bi-window-desktop text-secondary me-2"></i>Centro de Control de Landing</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="px-4 bg-light border-bottom">
+                <ul class="nav nav-tabs border-0" id="masterTabs" role="tablist">
+                    <li class="nav-item"><button class="nav-link active fw-bold text-dark border-0 bg-transparent" data-bs-toggle="tab" data-bs-target="#tab-general">General</button></li>
+                    <li class="nav-item"><button class="nav-link fw-bold text-secondary border-0 bg-transparent" data-bs-toggle="tab" data-bs-target="#tab-capturas">Capturas</button></li>
+                    <li class="nav-item"><button class="nav-link fw-bold text-secondary border-0 bg-transparent" data-bs-toggle="tab" data-bs-target="#tab-testimonios">Testimonios</button></li>
                 </ul>
             </div>
-            <div class="tab-content px-4 py-3">
+            <div class="tab-content px-4 py-4">
                 <div class="tab-pane fade show active" id="tab-general">
-                    <form class="landing-action-form"><input type="hidden" name="action" value="general"><div class="mb-3"><label>Título Principal</label><input type="text" name="titulo_principal" class="form-control" value="{{ config.titulo_principal }}"></div><button type="submit" class="btn btn-primary">Guardar</button></form>
+                    <form class="landing-action-form">
+                        <input type="hidden" name="action" value="general">
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold">Título Principal</label>
+                            <input type="text" name="titulo_principal" class="form-control" value="{{ config.titulo_principal }}">
+                        </div>
+                        <button type="submit" class="btn btn-secondary rounded-pill px-5 fw-bold shadow-sm w-100">Guardar Textos</button>
+                    </form>
                 </div>
                 <div class="tab-pane fade" id="tab-capturas">
-                    <form class="landing-action-form" enctype="multipart/form-data"><input type="hidden" name="action" value="captura_add"><div class="mb-3"><input type="text" name="titulo" class="form-control mb-2" required><input type="file" name="imagen" class="form-control" required></div><button type="submit" class="btn btn-primary">Subir</button></form>
+                    <form class="landing-action-form" enctype="multipart/form-data">
+                        <input type="hidden" name="action" value="captura_add">
+                        <div class="mb-3">
+                            <input type="text" name="titulo" class="form-control mb-3" placeholder="Título de la imagen" required>
+                            <input type="file" name="imagen" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn btn-secondary rounded-pill px-5 fw-bold shadow-sm w-100">Subir Captura</button>
+                    </form>
                 </div>
                 <div class="tab-pane fade" id="tab-testimonios">
-                    <form class="landing-action-form" enctype="multipart/form-data"><input type="hidden" name="action" value="testimonio_add"><div class="mb-3"><input type="text" name="nombre" class="form-control mb-2" required><textarea name="comentario" class="form-control mb-2"></textarea><input type="file" name="foto" class="form-control"></div><button type="submit" class="btn btn-primary">Añadir</button></form>
+                    <form class="landing-action-form" enctype="multipart/form-data">
+                        <input type="hidden" name="action" value="testimonio_add">
+                        <div class="mb-3">
+                            <input type="text" name="nombre" class="form-control mb-3" placeholder="Nombre de quien opina" required>
+                            <textarea name="comentario" class="form-control mb-3" placeholder="El testimonio..."></textarea>
+                            <input type="file" name="foto" class="form-control">
+                        </div>
+                        <button type="submit" class="btn btn-secondary rounded-pill px-5 fw-bold shadow-sm w-100">Añadir Testimonio</button>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
+<!-- 9. MODAL FINANZAS -->
 <div class="modal fade" id="modalFinanzas" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content rounded-4 border-0">
-            <div class="modal-header border-0 px-4 pt-4"><h5 class="modal-title fw-bold" id="modalFinanzasNombre"></h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-            <div class="modal-body px-4">
-                <ul class="nav nav-tabs mb-3"><li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabResumen">Resumen</button></li><li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabEventos">Eventos</button></li></ul>
-                <div class="tab-content" style="max-height: 350px; overflow-y: auto;">
-                    <div class="tab-pane fade show active" id="tabResumen"><p>Gráficos o tablas de ingresos vs gastos van aquí.</p></div>
-                    <div class="tab-pane fade" id="tabEventos"><p>Lista detallada de eventos con scroll interno.</p></div>
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 pt-4 px-4 bg-light rounded-top-4">
+                <h5 class="modal-title fw-bold text-dark" id="modalFinanzasNombre"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="px-4 bg-light border-bottom">
+                <ul class="nav nav-tabs border-0 mb-0">
+                    <li class="nav-item"><button class="nav-link active fw-bold border-0 bg-transparent" data-bs-toggle="tab" data-bs-target="#tabResumen">Resumen General</button></li>
+                    <li class="nav-item"><button class="nav-link fw-bold border-0 bg-transparent text-secondary" data-bs-toggle="tab" data-bs-target="#tabEventos">Desglose Eventos</button></li>
+                </ul>
+            </div>
+            <div class="modal-body px-4 py-4">
+                <div class="tab-content" style="max-height: 450px; overflow-y: auto;">
+                    <div class="tab-pane fade show active" id="tabResumen"><p class="text-center text-muted"><span class="spinner-border spinner-border-sm me-2"></span> Cargando datos financieros...</p></div>
+                    <div class="tab-pane fade" id="tabEventos"><p class="text-center text-muted"><span class="spinner-border spinner-border-sm me-2"></span> Cargando eventos...</p></div>
                 </div>
+            </div>
+            <div class="modal-footer border-0 pb-4 px-4 bg-transparent">
+                <button type="button" class="btn btn-dark rounded-pill px-5 fw-bold shadow-sm w-100" data-bs-dismiss="modal">Cerrar Auditoría</button>
             </div>
         </div>
     </div>
 </div>
 
+<!-- 10. LISTA DE PLANES -->
 <div class="modal fade" id="listaPlanesModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content border-0 shadow rounded-4">
-            <div class="modal-header border-0 pt-4 px-4"><h5 class="modal-title fw-bold">Gestión de Planes Comerciales</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-            <div class="modal-body px-4">
-                <div class="table-responsive">
-                    <table class="table align-middle">
-                        <thead><tr class="text-uppercase small text-secondary"><th>Plan</th><th>Precio</th><th>Límite</th><th>Acciones</th></tr></thead>
-                        <tbody>
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 pt-4 px-4 bg-light rounded-top-4">
+                <h5 class="modal-title fw-bold text-dark"><i class="bi bi-list-check text-info me-2"></i>Gestión de Planes Comerciales</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body px-4 py-3">
+                <div class="table-responsive rounded-4 border">
+                    <table class="table table-borderless align-middle m-0">
+                        <thead class="table-light text-uppercase small text-secondary tracking-wider">
+                            <tr><th class="py-3 px-3">Plan</th><th>Precio</th><th>Límite</th><th class="text-end pe-4">Acciones</th></tr>
+                        </thead>
+                        <tbody class="bg-white">
                             {% for p in planes_saas %}
-                            <tr>
-                                <td><button class="btn btn-link text-decoration-none fw-bold p-0" onclick="abrirEditorPlan('{{ p.id }}', '{{ p.nombre|escapejs }}', {{ p.precio_mensual|floatformat:0 }}, {{ p.max_estudiantes }}, {{ p.permite_estudiantes|yesno:'true,false' }}, {{ p.permite_asistencias_qr|yesno:'true,false' }}, {{ p.permite_finanzas|yesno:'true,false' }}, {{ p.permite_multimedia|yesno:'true,false' }}, {{ p.permite_eventos|yesno:'true,false' }}, {{ p.permite_tienda|yesno:'true,false' }})">{{ p.nombre }}</button></td>
-                                <td>${{ p.precio_mensual|floatformat:0 }}</td><td>{{ p.max_estudiantes }} alu.</td>
-                                <td><button class="btn btn-sm btn-outline-danger" onclick="eliminarPlan('{{ p.id }}')"><i class="bi bi-trash"></i></button></td>
+                            <tr class="border-bottom">
+                                <td class="px-3">
+                                    <button class="btn btn-link text-decoration-none fw-bold text-dark p-0 text-start hover-primary" 
+                                            onclick="abrirEditorPlan('{{ p.id }}', '{{ p.nombre|escapejs }}', {{ p.precio_mensual|floatformat:0 }}, {{ p.max_estudiantes }}, {{ p.permite_estudiantes|yesno:'true,false' }}, {{ p.permite_asistencias_qr|yesno:'true,false' }}, {{ p.permite_finanzas|yesno:'true,false' }}, {{ p.permite_multimedia|yesno:'true,false' }}, false, {{ p.permite_tienda|yesno:'true,false' }}, {{ p.permite_profesores|yesno:'true,false' }}, {{ p.permite_calendario|yesno:'true,false' }})">
+                                        {{ p.nombre }}
+                                    </button>
+                                </td>
+                                <td class="text-success fw-bold">${{ p.precio_mensual|floatformat:0 }}</td>
+                                <td class="text-muted"><i class="bi bi-people-fill me-1"></i>{{ p.max_estudiantes }}</td>
+                                <td class="text-end pe-3">
+                                    <button class="btn btn-sm btn-light text-danger rounded-pill px-3 shadow-sm hover-shadow" onclick="eliminarPlan('{{ p.id }}')"><i class="bi bi-trash-fill"></i></button>
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
             </div>
+            <div class="modal-footer border-0 pb-4 px-4 bg-transparent">
+                <button type="button" class="btn btn-dark rounded-pill px-4 fw-bold shadow-sm w-100" data-bs-dismiss="modal">Listo</button>
+            </div>
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="editarPlanModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <form id="formEditarPlan" class="modal-content border-0 shadow rounded-4">
-            {% csrf_token %}
-            <input type="hidden" id="edit-plan-id" name="plan_id">
-            <div class="modal-header border-0 pt-4 px-4"><h5 class="modal-title fw-bold">Editando: <span id="spanNombrePlan"></span></h5></div>
-            <div class="modal-body px-4">
-                <div class="mb-3"><label class="form-label small fw-bold">Nombre del Plan</label><input type="text" name="nombre" id="edit-nombre" class="form-control" required></div>
-                <div class="row">
-                    <div class="col-6 mb-3"><label class="form-label small fw-bold">Precio Mensual ($)</label><input type="number" name="precio" id="edit-precio" class="form-control" required></div>
-                    <div class="col-6 mb-3"><label class="form-label small fw-bold">Límite Estudiantes</label><input type="number" name="max_estudiantes" id="edit-max-est" class="form-control" required></div>
-                </div>
-                <hr class="my-3"><label class="form-label small fw-bold text-muted mb-3">Permisos de Módulos</label>
-                <div class="d-flex justify-content-between mb-2"><span>Estudiantes</span><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="edit-est" name="estudiantes"></div></div>
-                <div class="d-flex justify-content-between mb-2"><span>Asistencias QR</span><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="edit-asist" name="asistencias"></div></div>
-                <div class="d-flex justify-content-between mb-2"><span>Finanzas</span><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="edit-fin" name="finanzas"></div></div>
-                <div class="d-flex justify-content-between mb-2"><span>Multimedia</span><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="edit-mult" name="multimedia"></div></div>
-                <div class="d-flex justify-content-between mb-2"><span>Eventos</span><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="edit-eve" name="eventos"></div></div>
-                <div class="d-flex justify-content-between"><span>Tienda POS</span><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="edit-tie" name="tienda"></div></div>
-            </div>
-            <div class="modal-footer border-0"><button type="submit" class="btn btn-primary">Guardar Cambios</button></div>
-        </form>
-    </div>
-</div>
-
+<!-- 11. CREAR EVENTO MASTER -->
 <div class="modal fade" id="crearEventoMasterModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <form method="POST" action="{% url 'saas_core:master_crear_evento' %}" enctype="multipart/form-data" class="modal-content border-0 shadow rounded-4">
+        <form method="POST" action="{% url 'saas_core:master_crear_evento' %}" enctype="multipart/form-data" class="modal-content border-0 shadow-lg rounded-4">
             {% csrf_token %}
-            <div class="modal-header border-0 pt-4 px-4">
+            <div class="modal-header border-0 pt-4 px-4 bg-light rounded-top-4">
                 <h5 class="modal-title fw-bold text-dark"><i class="bi bi-lightning-charge-fill text-warning me-2"></i>Inyección Rápida de Evento</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body px-4 py-2">
+            <div class="modal-body px-4 py-3">
                 <div class="mb-3">
                     <label class="form-label small fw-bold">Asignar a Academia / Productora</label>
-                    <select name="academia_id" class="form-select rounded-3" required>
+                    <select name="academia_id" class="form-select" required>
                         <option value="" disabled selected>-- Selecciona la organizadora --</option>
                         {% for aca in academias %}
                             <option value="{{ aca.id }}">{{ aca.nombre }}</option>
@@ -482,176 +704,124 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label small fw-bold">Nombre del Evento</label>
-                    <input type="text" name="nombre" class="form-control rounded-3" required>
+                    <input type="text" name="nombre" class="form-control" required>
                 </div>
-                <div class="row mb-3">
+                <div class="row g-3 mb-3">
                     <div class="col-6">
                         <label class="form-label small fw-bold">Fecha y Hora</label>
-                        <input type="datetime-local" name="fecha" class="form-control rounded-3" required>
+                        <input type="datetime-local" name="fecha" class="form-control" required>
                     </div>
                     <div class="col-6">
-                        <label class="form-label small fw-bold">Precio Mostrar (COP)</label>
-                        <input type="number" name="precio_preventa" class="form-control rounded-3" placeholder="Ej: 50000">
+                        <label class="form-label small fw-bold">Precio (COP)</label>
+                        <input type="number" name="precio_preventa" class="form-control" placeholder="Ej: 50000">
                     </div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label small fw-bold">Ubicación</label>
-                    <input type="text" name="ubicacion" class="form-control rounded-3" required>
+                    <input type="text" name="ubicacion" class="form-control" required>
                 </div>
-                <div class="mb-3 p-3 bg-light border border-info border-opacity-25 rounded-3">
+                <div class="mb-3 p-3 bg-info bg-opacity-10 border-0 rounded-4">
                     <label class="form-label small fw-bold text-info"><i class="bi bi-link-45deg"></i> Enlace Externo (Opcional)</label>
-                    <input type="url" name="enlace_externo" class="form-control rounded-3" placeholder="https://www.otra-web.com/registro">
-                    <div class="form-text text-xs">Si dejas esto vacío, el botón llevará al panel interno de AppDanza.</div>
+                    <input type="url" name="enlace_externo" class="form-control bg-white" placeholder="https://www.otra-web.com/registro">
+                    <div class="form-text text-xs text-muted mt-2">Si dejas esto vacío, el botón llevará al panel interno de AppDanza.</div>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label small fw-bold">Afiche / Banner (Recomendado vertical 4:5)</label>
-                    <input type="file" name="imagen" class="form-control rounded-3" accept="image/*" required>
+                    <label class="form-label small fw-bold">Afiche / Banner (4:5)</label>
+                    <input type="file" name="imagen" class="form-control bg-white" accept="image/*" required>
                 </div>
             </div>
-            <div class="modal-footer border-0 pb-4 px-4 bg-light rounded-bottom-4">
-                <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Cancelar</button>
-                <button type="submit" class="btn btn-primary rounded-3 px-4">Publicar Evento</button>
+            <div class="modal-footer border-0 pb-4 px-4 bg-transparent">
+                <button type="button" class="btn btn-white text-muted fw-bold rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary rounded-pill px-5 fw-bold shadow-sm">Publicar Evento</button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- 🚀 NUEVO MODAL: REVISAR COMPROBANTE Y APROBAR -->
+<div class="modal fade" id="revisionPagoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 pt-4 px-4 pb-2 bg-light rounded-top-4">
+                <h5 class="modal-title fw-bold text-dark" id="rev-titulo"><i class="bi bi-shield-check text-success me-2"></i>Auditoría de Pago</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="row g-0 h-100">
+                    
+                    <!-- Lado Izquierdo: El Comprobante -->
+                    <div class="col-lg-5 p-4 bg-dark text-center d-flex flex-column justify-content-center" style="min-height: 400px;">
+                        <h6 class="text-white opacity-75 mb-3 fw-bold text-uppercase tracking-wider">Soporte Enviado</h6>
+                        <div id="visor-comprobante-pago" class="w-100 rounded-4 overflow-hidden shadow-lg bg-black d-flex align-items-center justify-content-center h-100">
+                            <!-- Inyectado por JS -->
+                        </div>
+                    </div>
+                    
+                    <!-- Lado Derecho: Formulario de Activación -->
+                    <div class="col-lg-7 p-4 p-md-5">
+                        <form id="form-revisar-pago">
+                            {% csrf_token %}
+                            <p class="text-muted small mb-4">Si el comprobante es válido, configura el nuevo período y actívalos.</p>
+                            
+                            <div class="row g-3 mb-4">
+                                <div class="col-6">
+                                    <label class="form-label small fw-bold text-dark">Cambiar Estado</label>
+                                    <select class="form-select fw-bold bg-success bg-opacity-10 text-success border-0" id="rev-estado" name="estado">
+                                        <option value="ACTIVO" selected>🟢 Activo / Al Día</option>
+                                        <option value="MORA">🟠 En Mora (Gracia)</option>
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small fw-bold text-dark">Plan Asignado</label>
+                                    <select class="form-select fw-bold bg-light border-0" id="rev-plan" name="plan_id" required>
+                                        <option value="" disabled>-- Asignar Plan --</option>
+                                        {% for plan in planes_saas %}
+                                            <option value="{{ plan.id }}">{{ plan.nombre }} (${{ plan.precio_mensual|floatformat:0 }})</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mb-4 bg-light p-3 rounded-4 mx-0 border">
+                                <label class="form-label small fw-bold text-muted text-uppercase tracking-wider m-0 p-0 w-100"><i class="bi bi-calendar-range me-2"></i>Período Aprobado (30 Días)</label>
+                                <div class="col-6"><label class="form-label text-xs fw-bold mb-1">Fecha Inicio</label><input type="date" id="rev-fecha-inicio" name="fecha_inicio" class="form-control bg-white" required></div>
+                                <div class="col-6"><label class="form-label text-xs fw-bold mb-1">Nueva Fecha Corte</label><input type="date" id="rev-fecha-fin" name="fecha_vencimiento" class="form-control bg-white" required></div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label class="form-label small fw-bold text-dark">Monto Pagado a Ingresar a Caja (COP)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light text-success fw-bold border-0">$</span>
+                                    <input type="number" id="rev-monto" name="monto_factura" class="form-control bg-light border-0 fw-bold text-dark" placeholder="Ej: 80000" required>
+                                </div>
+                            </div>
+
+                            <!-- Campos ocultos para mantener los módulos activos por defecto -->
+                            <input type="hidden" name="modulo_estudiantes_activo" value="True">
+                            <input type="hidden" name="modulo_asistencias_activo" value="True">
+                            <input type="hidden" name="modulo_finanzas_activo" value="True">
+                            <input type="hidden" name="modulo_multimedia_activo" value="True">
+                            <input type="hidden" name="modulo_eventos_activo" value="True">
+                            <input type="hidden" name="modulo_tienda_activo" value="True">
+                            <input type="hidden" name="modulo_profesores_activo" value="True">
+                            <input type="hidden" name="modulo_calendario_activo" value="True">
+                            <input type="hidden" name="es_cuenta_partner_gratis" value="False">
+
+                            <div class="text-end pt-3">
+                                <button type="button" class="btn btn-white text-muted fw-bold rounded-pill px-4 me-2" data-bs-dismiss="modal">Cerrar</button>
+                                <button type="submit" class="btn btn-success rounded-pill px-5 fw-bold shadow-sm"><i class="bi bi-check-circle-fill me-2"></i>Aprobar y Activar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
-<script>
-    let modalLicencia = null;
-    let modalFinanzasEl = document.getElementById('modalFinanzas');
-
-    $(document).ready(function() {
-        $('#tablaAcademias').DataTable({
-            "language": { "paginate": { "next": "Sig", "previous": "Ant" }, "search": "Buscar:", "info": "Mostrando _START_ a _END_ de _TOTAL_" }
-        });
-    });
-
-    function formatMoney(val) { return (parseFloat(val) || 0).toLocaleString(); }
-
-    function abrirModalGestion(id, nombre, estado, planId, actEstudiantes, actAsistencias, actFinanzas, actMultimedia, actEventos, actTienda, esPartnerVIP, esProductora) {
-        document.getElementById('modalAcademiaNombre').innerText = "Panel de Licencia: " + nombre;
-        document.getElementById('modal-academia-id').value = id;
-        document.getElementById('modal-estado').value = estado;
-        if (planId) { document.getElementById('modal-plan').value = planId; } else { document.getElementById('modal-plan').selectedIndex = 0; }
-        
-        document.getElementById('switchEstudiantes').checked = actEstudiantes === 'True';
-        document.getElementById('switchAsistencias').checked = actAsistencias === 'True';
-        document.getElementById('switchFinanzas').checked = actFinanzas === 'True';
-        document.getElementById('switchMultimedia').checked = actMultimedia === 'True';
-        document.getElementById('switchEventos').checked = actEventos === 'True';
-        document.getElementById('switchTienda').checked = actTienda === 'True';
-        document.getElementById('switchPartnerVIP').checked = esPartnerVIP === 'True';
-        document.getElementById('switchProductoraEdit').checked = esProductora === 'True';
-
-        modalLicencia = new bootstrap.Modal(document.getElementById('gestionLicenciaModal'));
-        modalLicencia.show();
-    }
-
-    if (document.getElementById('form-licencia-saas')) {
-        document.getElementById('form-licencia-saas').addEventListener('submit', function(e) {
-            e.preventDefault();
-            fetch("{% url 'saas_core:actualizar_licencia' %}", {
-                method: "POST", body: new FormData(this),
-                headers: { "X-Requested-With": "XMLHttpRequest", "X-CSRFToken": this.querySelector('[name=csrfmiddlewaretoken]').value }
-            }).then(res => res.json()).then(data => {
-                if(data.status === 'success') { window.location.reload(); } else { alert("Error al actualizar."); }
-            }).catch(() => alert("Error en conexión."));
-        });
-    }
-
-    document.getElementById('modal-plan').addEventListener('change', function() {
-        const opt = this.options[this.selectedIndex];
-        if (!opt.value) return; 
-        document.getElementById('switchEstudiantes').checked = opt.getAttribute('data-est') === 'true';
-        document.getElementById('switchAsistencias').checked = opt.getAttribute('data-asi') === 'true';
-        document.getElementById('switchFinanzas').checked = opt.getAttribute('data-fin') === 'true';
-        document.getElementById('switchMultimedia').checked = opt.getAttribute('data-mul') === 'true';
-        document.getElementById('switchEventos').checked = opt.getAttribute('data-eve') === 'true';
-        document.getElementById('switchTienda').checked = opt.getAttribute('data-tie') === 'true'; 
-    });
-
-    function cargarSoporteEstudiantes(academiaId, academiaNombre) {
-        document.getElementById('visorEstudiantesTitulo').innerText = "Alumnos: " + academiaNombre;
-        const tbody = document.getElementById('tabla-soporte-estudiantes-cuerpo');
-        tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4">Cargando...</td></tr>`;
-        new bootstrap.Modal(document.getElementById('visorEstudiantesSoporteModal')).show();
-
-        fetch(`{% url 'saas_core:api_estudiantes_academia' %}?academia_id=${academiaId}`)
-        .then(res => res.json()).then(data => {
-            if(data.status === 'success') {
-                tbody.innerHTML = "";
-                if(data.estudiantes.length === 0) { tbody.innerHTML = `<tr><td colspan="4" class="text-center">Sin estudiantes.</td></tr>`; return; }
-                data.estudiantes.forEach(est => {
-                    let badge = est.estado === 'ACTIVO' ? `<span class="badge bg-success bg-opacity-10 text-success">Activo</span>` : `<span class="badge bg-danger bg-opacity-10 text-danger">Inactivo</span>`;
-                    tbody.insertAdjacentHTML('beforeend', `<tr><td>${est.nombres} ${est.apellidos || ''}</td><td>${est.identificacion || '--'}</td><td>${badge}</td><td>${new Date(est.fecha_registro).toLocaleDateString('es-CO')}</td></tr>`);
-                });
-            }
-        });
-    }
-
-    function abrirModalFinanzas(id, nombre) {
-        document.getElementById('modalFinanzasNombre').innerText = "Finanzas: " + nombre;
-        document.getElementById('tabResumen').innerHTML = '<div class="text-center p-3">Cargando métricas...</div>';
-        new bootstrap.Modal(modalFinanzasEl).show();
-        fetch(`/master/api/finanzas/?academia_id=${id}`).then(res => res.json()).then(data => {
-            if (data.status === 'success') {
-                document.getElementById('tabResumen').innerHTML = `<h4 class="mt-3">Ingresos Totales: $${data.resumen.ingresos_totales.toLocaleString('es-CO')}</h4>`;
-            }
-        });
-    }
-
-    function eliminarPlan(planId) {
-        if (confirm('¿Eliminar plan?')) {
-            fetch(`/master/plan/eliminar/${planId}/`, { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token }}' } })
-            .then(res => res.json()).then(data => { if (data.status === 'success') window.location.reload(); });
-        }
-    }
-
-    function abrirEditorPlan(id, nombre, precio, maxEst, permEst, permAsist, permFin, permMult, permEve, permTie) {
-        bootstrap.Modal.getInstance(document.getElementById('listaPlanesModal')).hide();
-        document.getElementById('edit-plan-id').value = id; document.getElementById('edit-nombre').value = nombre;
-        document.getElementById('edit-precio').value = precio; document.getElementById('edit-max-est').value = maxEst;
-        document.getElementById('spanNombrePlan').innerText = nombre;
-        document.getElementById('edit-est').checked = permEst; document.getElementById('edit-asist').checked = permAsist;
-        document.getElementById('edit-fin').checked = permFin; document.getElementById('edit-mult').checked = permMult;
-        document.getElementById('edit-eve').checked = permEve; document.getElementById('edit-tie').checked = permTie;
-        setTimeout(() => { new bootstrap.Modal(document.getElementById('editarPlanModal')).show(); }, 300);
-    }
-
-    document.getElementById('formEditarPlan').addEventListener('submit', function(e) {
-        e.preventDefault();
-        fetch(`/master/plan/editar/${new FormData(this).get('plan_id')}/`, { method: 'POST', body: new FormData(this), headers: { 'X-CSRFToken': '{{ csrf_token }}' } })
-        .then(res => res.json()).then(data => { if (data.status === 'success') window.location.reload(); });
-    });
-
-    document.addEventListener('submit', function(e) {
-        if (e.target.classList.contains('landing-action-form')) {
-            e.preventDefault();
-            fetch("{% url 'saas_core:master_actualizar_landing' %}", { method: "POST", body: new FormData(e.target), headers: { "X-CSRFToken": "{{ csrf_token }}" } })
-            .then(res => res.json()).then(data => { if(data.status === 'success') window.location.reload(); });
-        }
-    });
-
-    function toggleBloqueoGeneral(academiaId, nombre, switchElement) {
-        const nuevoEstado = switchElement.checked ? 'ACTIVO' : 'SUSPENDIDO';
-        if(!confirm(`¿Seguro de cambiar estado a "${nombre}"?`)) { switchElement.checked = !switchElement.checked; return; }
-        switchElement.classList.add('opacity-50');
-        fetch("{% url 'saas_core:api_toggle_bloqueo' %}", {
-            method: "POST", headers: { "Content-Type": "application/json", "X-CSRFToken": "{{ csrf_token }}" },
-            body: JSON.stringify({ academia_id: academiaId, estado: nuevoEstado })
-        }).then(res => res.json()).then(data => {
-            if (data.status === 'success') { window.location.reload(); } else { switchElement.checked = !switchElement.checked; switchElement.classList.remove('opacity-50'); }
-        });
-    }
-</script>
-{% endblock %}
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<!-- Dependencias Externas -->
 <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
 
@@ -665,8 +835,8 @@
         const sidebarCollapse = document.getElementById('sidebarCollapse');
         const closeSidebar = document.getElementById('closeSidebar');
 
-        sidebarCollapse.addEventListener('click', () => { sidebar.classList.add('active'); });
-        closeSidebar.addEventListener('click', () => { sidebar.classList.remove('active'); });
+        if (sidebarCollapse) sidebarCollapse.addEventListener('click', () => { sidebar.classList.add('active'); });
+        if (closeSidebar) closeSidebar.addEventListener('click', () => { sidebar.classList.remove('active'); });
     });
 
     $(document).ready(function() {
@@ -684,11 +854,42 @@
         return val.toLocaleString();
     }
 
-    // ================== FUNCIONES DE LICENCIA / ACADEMIAS ==================
-    function abrirModalGestion(id, nombre, estado, planId, actEstudiantes, actAsistencias, actFinanzas, actMultimedia, actEventos, actTienda, esPartnerVIP, esProductora) {
-        document.getElementById('modalAcademiaNombre').innerText = "Panel de Licencia: " + nombre;
+    // ================== FUNCIONES DE LICENCIA (FECHAS Y COMISIONES) ==================
+    
+    // Función para mostrar/ocultar input de monto manual al cobrar
+    function toggleMontoPersonalizado(switchEl) {
+        const cajaMonto = document.getElementById('cajaMontoFactura');
+        if(switchEl.checked) {
+            cajaMonto.style.display = 'block';
+            document.getElementById('modal-monto-factura').required = true;
+        } else {
+            cajaMonto.style.display = 'none';
+            document.getElementById('modal-monto-factura').required = false;
+        }
+    }
+
+    // Función para calcular si se debe mostrar la comisión por eventos
+    function verificarComisiones() {
+        const esPartner = document.getElementById('switchPartnerVIP').checked;
+        const eventosActivos = document.getElementById('switchEventos').checked;
+        const cajaComision = document.getElementById('cajaComisionEventos');
+        const inputComision = document.getElementById('modal-comision-ticket');
+        
+        // Solo mostramos comisiones si TIENE el módulo de eventos Y NO es partner VIP
+        if(eventosActivos && !esPartner) {
+            cajaComision.style.display = 'block';
+        } else {
+            cajaComision.style.display = 'none';
+            inputComision.value = 0; // Se resetea si no aplica
+        }
+    }
+
+    function abrirModalGestion(id, nombre, estado, planId, actEstudiantes, actAsistencias, actFinanzas, actMultimedia, actEventos, actTienda, actProfesores, actCalendario, esPartnerVIP, esProductora, fechaInicio, fechaFin, comisionTiquete) {
+        document.getElementById('modalAcademiaNombre').innerText = "Licencia: " + nombre;
         document.getElementById('modal-academia-id').value = id;
         document.getElementById('modal-estado').value = estado;
+        // Disparamos el evento manualmente para ocultar el plan si viene en modo PRUEBA
+        document.getElementById('modal-estado').dispatchEvent(new Event('change'));
         
         if (planId) {
             document.getElementById('modal-plan').value = planId;
@@ -696,15 +897,35 @@
             document.getElementById('modal-plan').selectedIndex = 0;
         }
         
+        // Módulos
         document.getElementById('switchEstudiantes').checked = actEstudiantes === 'True';
         document.getElementById('switchAsistencias').checked = actAsistencias === 'True';
         document.getElementById('switchFinanzas').checked = actFinanzas === 'True';
         document.getElementById('switchMultimedia').checked = actMultimedia === 'True';
-        document.getElementById('switchEventos').checked = actEventos === 'True';
         document.getElementById('switchTienda').checked = actTienda === 'True';
+        document.getElementById('switchProfesores').checked = actProfesores === 'True'; 
+        document.getElementById('switchCalendario').checked = actCalendario === 'True'; 
         
+        // El módulo de eventos es independiente
+        document.getElementById('switchEventos').checked = actEventos === 'True';
+        
+        // Fechas y Comisiones
+        document.getElementById('modal-fecha-inicio').value = fechaInicio;
+        document.getElementById('modal-fecha-fin').value = fechaFin;
+        document.getElementById('modal-comision-ticket').value = comisionTiquete;
+        
+        // Configuraciones Especiales
         document.getElementById('switchPartnerVIP').checked = esPartnerVIP === 'True';
         document.getElementById('switchProductoraEdit').checked = esProductora === 'True';
+        
+        // Apagado por defecto para evitar cobros accidentales
+        if(document.getElementById('switchGenerarCobro')) {
+            document.getElementById('switchGenerarCobro').checked = false;
+            toggleMontoPersonalizado(document.getElementById('switchGenerarCobro'));
+        }
+
+        // Ejecutar visualización dinámica de la caja de comisiones
+        verificarComisiones();
 
         modalLicencia = new bootstrap.Modal(document.getElementById('gestionLicenciaModal'));
         modalLicencia.show();
@@ -716,6 +937,11 @@
             const formData = new FormData(this);
             const csrfToken = this.querySelector('[name=csrfmiddlewaretoken]').value;
             
+            const btn = this.querySelector('button[type="submit"]');
+            const btnOriginalText = btn.innerHTML;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sincronizando...';
+            btn.disabled = true;
+
             fetch("{% url 'saas_core:actualizar_licencia' %}", {
                 method: "POST",
                 body: formData,
@@ -732,30 +958,49 @@
                 if(data.status === 'success') {
                     window.location.reload(); 
                 } else {
-                    alert("Error al actualizar.");
+                    alert("Error al actualizar: " + (data.message || ""));
+                    btn.innerHTML = btnOriginalText;
+                    btn.disabled = false;
                 }
             })
-            .catch(error => alert("Ocurrió un error. Asegúrate de estar autenticado."));
+            .catch(error => {
+                alert("Ocurrió un error. Asegúrate de estar autenticado.");
+                btn.innerHTML = btnOriginalText;
+                btn.disabled = false;
+            });
         });
     }
 
-    document.getElementById('modal-plan').addEventListener('change', function() {
-        const selectedOption = this.options[this.selectedIndex];
-        if (!selectedOption.value) return; 
+    const modalPlanEl = document.getElementById('modal-plan');
+    if (modalPlanEl) {
+        modalPlanEl.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            if (!selectedOption.value) return; 
 
-        document.getElementById('switchEstudiantes').checked = selectedOption.getAttribute('data-est') === 'true';
-        document.getElementById('switchAsistencias').checked = selectedOption.getAttribute('data-asi') === 'true';
-        document.getElementById('switchFinanzas').checked = selectedOption.getAttribute('data-fin') === 'true';
-        document.getElementById('switchMultimedia').checked = selectedOption.getAttribute('data-mul') === 'true';
-        document.getElementById('switchEventos').checked = selectedOption.getAttribute('data-eve') === 'true';
-        document.getElementById('switchTienda').checked = selectedOption.getAttribute('data-tie') === 'true'; 
-        
-        document.getElementById('switchEstudiantes').parentElement.classList.add('bg-warning', 'bg-opacity-10', 'rounded', 'px-2');
-        setTimeout(() => {
-            document.querySelectorAll('.form-check').forEach(el => el.classList.remove('bg-warning', 'bg-opacity-10', 'rounded', 'px-2'));
-        }, 800);
-    });
+            document.getElementById('switchEstudiantes').checked = selectedOption.getAttribute('data-est') === 'true';
+            document.getElementById('switchAsistencias').checked = selectedOption.getAttribute('data-asi') === 'true';
+            document.getElementById('switchFinanzas').checked = selectedOption.getAttribute('data-fin') === 'true';
+            document.getElementById('switchMultimedia').checked = selectedOption.getAttribute('data-mul') === 'true';
+            document.getElementById('switchTienda').checked = selectedOption.getAttribute('data-tie') === 'true'; 
+            document.getElementById('switchProfesores').checked = selectedOption.getAttribute('data-pro') === 'true'; 
+            document.getElementById('switchCalendario').checked = selectedOption.getAttribute('data-cal') === 'true'; 
+            
+            // Sugerir monto de factura basado en el plan seleccionado
+            const textoPlan = selectedOption.innerText;
+            const preMonto = textoPlan.match(/\$(\d+)/);
+            if(preMonto && document.getElementById('modal-monto-factura')) {
+                document.getElementById('modal-monto-factura').value = preMonto[1];
+            }
+            
+            // Iluminación
+            document.getElementById('switchEstudiantes').parentElement.classList.add('bg-warning', 'bg-opacity-10', 'rounded', 'px-2');
+            setTimeout(() => {
+                document.querySelectorAll('.form-check').forEach(el => el.classList.remove('bg-warning', 'bg-opacity-10', 'rounded', 'px-2'));
+            }, 800);
+        });
+    }
 
+    // ================== FUNCIONALIDAD: AUDITORÍA ESTUDIANTES ==================
     function cargarSoporteEstudiantes(academiaId, academiaNombre) {
         document.getElementById('visorEstudiantesTitulo').innerText = "Alumnos en Sistema: " + academiaNombre;
         const tablaCuerpo = document.getElementById('tabla-soporte-estudiantes-cuerpo');
@@ -803,8 +1048,8 @@
         const tabResumen = document.getElementById('tabResumen');
         const tabEventos = document.getElementById('tabEventos');
         
-        tabResumen.innerHTML = '<div class="text-center p-3">Cargando métricas...</div>';
-        tabEventos.innerHTML = '<div class="text-center p-3">Cargando eventos...</div>';
+        tabResumen.innerHTML = '<div class="text-center p-3"><div class="spinner-border text-primary"></div><p class="mt-2">Cargando métricas...</p></div>';
+        tabEventos.innerHTML = '<div class="text-center p-3"><div class="spinner-border text-primary"></div><p class="mt-2">Cargando eventos...</p></div>';
         
         let myModal = new bootstrap.Modal(modalFinanzasEl);
         myModal.show();
@@ -816,71 +1061,47 @@
                 const r = data.resumen;
                 tabResumen.innerHTML = `
                     <div class="row g-3 mt-2">
-                        <div class="col-6">
-                            <div class="card p-3 border-0 bg-success bg-opacity-10 shadow-sm">
-                                <h6 class="text-success small fw-bold mb-1">Total Ingresos</h6>
-                                <h4 class="m-0">$${r.ingresos_totales.toLocaleString('es-CO')}</h4>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="card p-3 border-0 bg-danger bg-opacity-10 shadow-sm">
-                                <h6 class="text-danger small fw-bold mb-1">Total Gastos</h6>
-                                <h4 class="m-0">$${r.gastos.toLocaleString('es-CO')}</h4>
-                            </div>
-                        </div>
-                        <div class="col-12">
-                            <div class="card p-3 border-0 bg-dark bg-opacity-10 shadow-sm">
-                                <h6 class="text-dark small fw-bold mb-1">Facturación Tienda POS</h6>
-                                <h4 class="m-0">$${r.ingresos_tienda.toLocaleString('es-CO')}</h4>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="card p-3 border-0 bg-info bg-opacity-10 shadow-sm">
-                                <h6 class="text-info small fw-bold mb-1">Margen Neto</h6>
-                                <h4 class="m-0">${r.margen.toFixed(1)}%</h4>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="card p-3 border-0 bg-warning bg-opacity-10 shadow-sm">
-                                <h6 class="text-warning small fw-bold mb-1">Valor Prom. Alumno</h6>
-                                <h4 class="m-0">$${r.ticket_promedio.toLocaleString('es-CO', {maximumFractionDigits:0})}</h4>
-                            </div>
-                        </div>
+                        <div class="col-6"><div class="card p-3 border-0 bg-success bg-opacity-10 shadow-sm rounded-4"><h6 class="text-success small fw-bold mb-1">Total Ingresos</h6><h4 class="m-0 text-success fw-bold">$${r.ingresos_totales.toLocaleString('es-CO')}</h4></div></div>
+                        <div class="col-6"><div class="card p-3 border-0 bg-danger bg-opacity-10 shadow-sm rounded-4"><h6 class="text-danger small fw-bold mb-1">Total Gastos</h6><h4 class="m-0 text-danger fw-bold">$${r.gastos.toLocaleString('es-CO')}</h4></div></div>
+                        <div class="col-12"><div class="card p-3 border-0 bg-dark bg-opacity-10 shadow-sm rounded-4"><h6 class="text-dark small fw-bold mb-1">Facturación Tienda POS</h6><h4 class="m-0 text-dark fw-bold">$${r.ingresos_tienda.toLocaleString('es-CO')}</h4></div></div>
+                        <div class="col-6"><div class="card p-3 border-0 bg-info bg-opacity-10 shadow-sm rounded-4"><h6 class="text-info small fw-bold mb-1">Margen Neto</h6><h4 class="m-0 text-info fw-bold">${r.margen.toFixed(1)}%</h4></div></div>
+                        <div class="col-6"><div class="card p-3 border-0 bg-warning bg-opacity-10 shadow-sm rounded-4"><h6 class="text-warning small fw-bold mb-1 text-dark">Valor Prom. Alumno</h6><h4 class="m-0 text-dark fw-bold">$${r.ticket_promedio.toLocaleString('es-CO', {maximumFractionDigits:0})}</h4></div></div>
                     </div>
                 `;
                 
                 tabEventos.innerHTML = data.eventos.length > 0 ? 
                     `<div class="accordion" id="accordionEventos">
                         ${data.eventos.map((e, index) => `
-                            <div class="accordion-item">
+                            <div class="accordion-item border-0 mb-2 shadow-sm rounded-4 overflow-hidden">
                                 <h2 class="accordion-header">
-                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse${index}">
+                                    <button class="accordion-button collapsed bg-light text-dark fw-bold border-0" type="button" data-bs-toggle="collapse" data-bs-target="#collapse${index}">
                                         <div class="d-flex justify-content-between w-100 me-3">
-                                            <span>${e.nombre}</span>
-                                            <span class="fw-bold">$${e.total_ingreso.toLocaleString('es-CO')}</span>
+                                            <span><i class="bi bi-calendar-event text-primary me-2"></i>${e.nombre}</span>
+                                            <span class="text-success">$${e.total_ingreso.toLocaleString('es-CO')}</span>
                                         </div>
                                     </button>
                                 </h2>
                                 <div id="collapse${index}" class="accordion-collapse collapse" data-bs-parent="#accordionEventos">
-                                    <div class="accordion-body small">
-                                        <div class="row text-center mb-2">
-                                            <div class="col-4">Regs: <b>${e.cant_recibos}</b></div>
-                                            <div class="col-4">Online: <b>$${e.ingresos_online.toLocaleString('es-CO')}</b></div>
-                                            <div class="col-4">Taquilla: <b>$${e.ingresos_taquilla.toLocaleString('es-CO')}</b></div>
+                                    <div class="accordion-body small bg-white border-top">
+                                        <div class="row text-center mb-3">
+                                            <div class="col-4">Regs: <br><b class="fs-6">${e.cant_recibos}</b></div>
+                                            <div class="col-4 text-primary">Online: <br><b class="fs-6">$${e.ingresos_online.toLocaleString('es-CO')}</b></div>
+                                            <div class="col-4 text-warning">Taquilla: <br><b class="fs-6 text-dark">$${e.ingresos_taquilla.toLocaleString('es-CO')}</b></div>
                                         </div>
-                                        <div class="d-flex justify-content-between border-top pt-2">
+                                        <div class="d-flex justify-content-between border-top pt-2 bg-light p-2 rounded-3">
                                             <span>Gastos: <b class="text-danger">-$${e.gastos.toLocaleString('es-CO')}</b></span>
-                                            <span>Neto: <b class="text-primary">$${e.neto.toLocaleString('es-CO')}</b></span>
+                                            <span>Neto: <b class="text-success fs-6">$${e.neto.toLocaleString('es-CO')}</b></span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         `).join('')}
-                    </div>` : '<p class="text-muted p-3">No hay eventos registrados.</p>';
+                    </div>` : '<p class="text-muted p-4 text-center bg-light rounded-4">No hay eventos registrados en esta academia.</p>';
             }
         })
         .catch(err => {
             tabResumen.innerHTML = '<div class="text-center text-danger p-3">Error al obtener datos.</div>';
+            tabEventos.innerHTML = '<div class="text-center text-danger p-3">Error al obtener datos.</div>';
         });
     }
 
@@ -893,20 +1114,19 @@
             })
             .then(res => res.json())
             .then(data => {
-                if (data.status === 'success') {
-                    window.location.reload();
-                } else {
-                    alert(data.message);
-                }
+                if (data.status === 'success') window.location.reload();
+                else alert(data.message);
             });
         }
     }
 
-    function abrirEditorPlan(id, nombre, precio, maxEst, permEst, permAsist, permFin, permMult, permEve, permTie) {
+    function abrirEditorPlan(id, nombre, precio, maxEst, permEst, permAsist, permFin, permMult, permEve, permTie, permProf, permCal) {
         const listaModalEl = document.getElementById('listaPlanesModal');
-        const listaModal = bootstrap.Modal.getInstance(listaModalEl);
+        if(listaModalEl) {
+            const listaModal = bootstrap.Modal.getInstance(listaModalEl);
+            if(listaModal) listaModal.hide();
+        }
         
-        listaModal.hide();
         document.getElementById('edit-plan-id').value = id;
         document.getElementById('edit-nombre').value = nombre;
         document.getElementById('edit-precio').value = precio;
@@ -917,44 +1137,210 @@
         document.getElementById('edit-asist').checked = permAsist;
         document.getElementById('edit-fin').checked = permFin;
         document.getElementById('edit-mult').checked = permMult;
-        document.getElementById('edit-eve').checked = permEve;
         document.getElementById('edit-tie').checked = permTie;
+        if(document.getElementById('edit-prof')) document.getElementById('edit-prof').checked = permProf;
+        if(document.getElementById('edit-cal')) document.getElementById('edit-cal').checked = permCal;
         
-        setTimeout(() => {
-            new bootstrap.Modal(document.getElementById('editarPlanModal')).show();
-        }, 300);
+        setTimeout(() => { new bootstrap.Modal(document.getElementById('editarPlanModal')).show(); }, 300);
     }
 
-    document.getElementById('formEditarPlan').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const formData = new FormData(this);
-        const planId = formData.get('plan_id');
+    const formEditarPlan = document.getElementById('formEditarPlan');
+    if (formEditarPlan) {
+        formEditarPlan.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const planId = formData.get('plan_id');
 
-        fetch(`/master/plan/editar/${planId}/`, {
-            method: 'POST',
-            body: formData,
-            headers: { 'X-CSRFToken': '{{ csrf_token }}' }
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.status === 'success') {
-                window.location.reload();
-            } else {
-                alert("Error al guardar: " + data.message);
-            }
+            const btn = this.querySelector('button[type="submit"]');
+            const btnOriginalText = btn.innerHTML;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Guardando...';
+            btn.disabled = true;
+
+            fetch(`/master/plan/editar/${planId}/`, {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') window.location.reload();
+                else { alert("Error al guardar: " + data.message); btn.innerHTML = btnOriginalText; btn.disabled = false; }
+            });
         });
-    });
+    }
 
     document.addEventListener('submit', function(e) {
         if (e.target.classList.contains('landing-action-form')) {
             e.preventDefault();
             const form = e.target;
-            const formData = new FormData(form);
-            
+            const btn = form.querySelector('button[type="submit"]');
+            const btnOriginalText = btn.innerHTML;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+            btn.disabled = true;
+
             fetch("{% url 'saas_core:master_actualizar_landing' %}", {
                 method: "POST",
-                body: formData,
+                body: new FormData(form),
                 headers: { "X-CSRFToken": "{{ csrf_token }}" }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === 'success') window.location.reload();
+                else { alert("Error: " + data.message); btn.innerHTML = btnOriginalText; btn.disabled = false; }
+            })
+            .catch(err => {
+                console.error("Error:", err);
+                btn.innerHTML = btnOriginalText;
+                btn.disabled = false;
+            });
+        }
+    });
+
+    // ================== KILL SWITCH DE BLOQUEO GENERAL ==================
+    function toggleBloqueoGeneral(academiaId, nombre, switchElement) {
+        const nuevoEstado = switchElement.checked ? 'ACTIVO' : 'SUSPENDIDO';
+        const accionTexto = switchElement.checked ? 'DESBLOQUEAR' : 'BLOQUEAR y CORTAR EL SERVICIO a';
+
+        if(!confirm(`¿Estás completamente seguro de ${accionTexto} la academia "${nombre}"?`)) {
+            switchElement.checked = !switchElement.checked;
+            return;
+        }
+
+        switchElement.classList.add('opacity-50');
+
+        fetch("{% url 'saas_core:api_toggle_bloqueo' %}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": "{{ csrf_token }}"
+            },
+            body: JSON.stringify({ academia_id: academiaId, estado: nuevoEstado })
+        })
+        .then(res => res.json())
+        .then(data => {
+            switchElement.classList.remove('opacity-50');
+            if (data.status === 'success') window.location.reload();
+            else { alert("Error al cambiar el estado: " + data.message); switchElement.checked = !switchElement.checked; }
+        })
+        .catch(err => {
+            alert("Fallo de conexión con el servidor.");
+            switchElement.checked = !switchElement.checked; 
+            switchElement.classList.remove('opacity-50');
+        });
+    }
+
+    // ================== NUEVA FUNCIONALIDAD: EDITOR DE INQUILINO ==================
+    function abrirModalEditarAcademia(id, nombre, slug, ciudad, template) {
+        document.getElementById('edit-aca-nombre').value = nombre;
+        document.getElementById('edit-aca-slug').value = slug;
+        
+        const selectCiudad = document.getElementById('edit-aca-ciudad');
+        for(let i=0; i < selectCiudad.options.length; i++) {
+            if(selectCiudad.options[i].value === ciudad) {
+                selectCiudad.selectedIndex = i;
+                break;
+            }
+        }
+        
+        document.getElementById('edit-aca-template').value = template;
+        document.getElementById('form-editar-academia').action = `/master/control-panel/editar-academia/${id}/`;
+        
+        new bootstrap.Modal(document.getElementById('editarAcademiaModal')).show();
+    }
+
+    const formEditarAcademia = document.getElementById('form-editar-academia');
+    if (formEditarAcademia) {
+        formEditarAcademia.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const btn = this.querySelector('button[type="submit"]');
+            const originalBtnText = btn.innerHTML;
+            
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Guardando...';
+            btn.disabled = true;
+
+            fetch(this.action, {
+                method: "POST",
+                body: new FormData(this),
+                headers: { "X-Requested-With": "XMLHttpRequest", "X-CSRFToken": this.querySelector('[name=csrfmiddlewaretoken]').value }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === 'success') window.location.reload(); 
+                else { alert(data.message); btn.innerHTML = originalBtnText; btn.disabled = false; }
+            }).catch(err => {
+                alert("Error de conexión. Revisa tu consola.");
+                btn.innerHTML = originalBtnText;
+                btn.disabled = false;
+            });
+        });
+    }
+
+    // 🚀 Lógica para ocultar el Plan si seleccionamos "PRUEBA"
+    document.getElementById('modal-estado').addEventListener('change', function() {
+        const contenedorPlan = document.getElementById('contenedor-plan-saas');
+        const selectPlan = document.getElementById('modal-plan');
+        
+        if (this.value === 'PRUEBA') {
+            contenedorPlan.style.display = 'none';
+            selectPlan.required = false; // Ya no exigimos plan al enviar
+        } else {
+            contenedorPlan.style.display = 'block';
+            selectPlan.required = true;
+        }
+    });
+
+    // ================== FUNCIONALIDAD: APROBAR PAGOS ==================
+    function abrirModalAprobarPago(reporteId, academiaNombre, urlArchivo, planId) {
+        document.getElementById('rev-titulo').innerHTML = `<i class="bi bi-shield-check text-success me-2"></i>Auditoría Pago: ${academiaNombre}`;
+        
+        // 1. Mostrar la imagen o PDF
+        const visor = document.getElementById('visor-comprobante-pago');
+        if(urlArchivo.toLowerCase().endsWith('.pdf')) {
+            visor.innerHTML = `<iframe src="${urlArchivo}" class="w-100 border-0" style="height: 500px;"></iframe>`;
+        } else {
+            visor.innerHTML = `<img src="${urlArchivo}" class="img-fluid w-100" style="object-fit: contain; max-height: 500px;">`;
+        }
+
+        // 2. Pre-seleccionar el Plan que tenían
+        if (planId) document.getElementById('rev-plan').value = planId;
+
+        // 3. Pre-calcular las fechas (Sugerir hoy y corte en 30 días)
+        const hoy = new Date();
+        const en30dias = new Date();
+        en30dias.setDate(hoy.getDate() + 30);
+        
+        document.getElementById('rev-fecha-inicio').value = hoy.toISOString().split('T')[0];
+        document.getElementById('rev-fecha-fin').value = en30dias.toISOString().split('T')[0];
+
+        // 4. Asignar la ruta dinámica al formulario
+        document.getElementById('form-revisar-pago').action = `/pago/revision/${reporteId}/`;
+        
+        new bootstrap.Modal(document.getElementById('revisionPagoModal')).show();
+    }
+
+    // Auto-completar el monto cuando seleccionas un plan en el modal de revisión
+    document.getElementById('rev-plan').addEventListener('change', function() {
+        const textoPlan = this.options[this.selectedIndex].innerText;
+        const preMonto = textoPlan.match(/\$(\d+)/);
+        if(preMonto) {
+            document.getElementById('rev-monto').value = preMonto[1];
+        }
+    });
+
+    // Fetch para enviar la aprobación
+    const formRevisarPago = document.getElementById('form-revisar-pago');
+    if(formRevisarPago) {
+        formRevisarPago.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const btn = this.querySelector('button[type="submit"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Aprobando...';
+            btn.disabled = true;
+
+            fetch(this.action, {
+                method: "POST",
+                body: new FormData(this),
+                headers: { "X-Requested-With": "XMLHttpRequest", "X-CSRFToken": this.querySelector('[name=csrfmiddlewaretoken]').value }
             })
             .then(res => res.json())
             .then(data => {
@@ -962,62 +1348,15 @@
                     window.location.reload();
                 } else {
                     alert("Error: " + data.message);
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
                 }
-            })
-            .catch(err => console.error("Error:", err));
-        }
-    });
-
-    // ================== KILL SWITCH DE BLOQUEO GENERAL ==================
-    function toggleBloqueoGeneral(academiaId, nombre, switchElement) {
-        // Determinar qué estado queremos aplicar según si encendió o apagó el switch
-        const nuevoEstado = switchElement.checked ? 'ACTIVO' : 'SUSPENDIDO';
-        const accionTexto = switchElement.checked ? 'DESBLOQUEAR' : 'BLOQUEAR y CORTAR EL SERVICIO a';
-
-        // 1. Confirmación de seguridad (¡Nunca bloquees una empresa por un click accidental!)
-        if(!confirm(`¿Estás completamente seguro de ${accionTexto} la academia "${nombre}"?`)) {
-            // Si cancela, devolvemos el switch a su posición original
-            switchElement.checked = !switchElement.checked;
-            return;
-        }
-
-        // 2. Efecto visual de "Cargando..."
-        switchElement.classList.add('opacity-50');
-
-        // 3. Petición Fetch AJAX a Django
-        fetch("{% url 'saas_core:api_toggle_bloqueo' %}", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRFToken": "{{ csrf_token }}"
-            },
-            body: JSON.stringify({
-                academia_id: academiaId,
-                estado: nuevoEstado
-            })
-        })
-        .then(res => res.json())
-        .then(data => {
-            switchElement.classList.remove('opacity-50');
-        
-            if (data.status === 'success') {
-                // Opcional: Podríamos cambiar los colores con JS, pero la forma más limpia
-                // para que también se actualicen tus "KPIs de Mora" y las etiquetas de estado 
-                // de la tabla es recargar la página suavemente.
-                window.location.reload();
-            } else {
-                alert("Error al cambiar el estado: " + data.message);
-                switchElement.checked = !switchElement.checked; // Revertimos visualmente
-            }
-        })
-        .catch(err => {
-            console.error("Error Fetch:", err);
-            alert("Fallo de conexión con el servidor.");
-            switchElement.checked = !switchElement.checked; // Revertimos visualmente
-            switchElement.classList.remove('opacity-50');
+            }).catch(err => {
+                alert("Error de red.");
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            });
         });
     }
-
 </script>
-</body>
-</html>
+{% endblock %}

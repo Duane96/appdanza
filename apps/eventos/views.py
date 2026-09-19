@@ -485,9 +485,13 @@ class EventoDetailAdminView(LoginRequiredMixin, DetailView):
 
         if evento.tiene_pases_personalizados:
             context['metricas_pases'] = TipoPase.objects.filter(evento=evento).annotate(
-                # 🚀 FIX SENIOR: La tarjeta de detalles de pases también multiplica
-                total_vendidos=Coalesce(Sum(F('recibos__cantidad_entradas') * F('qrs_por_pase'), filter=Q(recibos__anulado=False)), 0),
+                # 🚀 FIX SENIOR: Extraemos la suma base SIN cruzar multiplicaciones dentro del Sum
+                # Esto soluciona el bug de SQLite y garantiza que los anulados NO se cuenten.
+                ventas_reales=Coalesce(Sum('recibos__cantidad_entradas', filter=Q(recibos__anulado=False)), 0),
                 total_recaudado=Coalesce(Sum('recibos__monto_total', filter=Q(recibos__anulado=False)), 0, output_field=DecimalField())
+            ).annotate(
+                # En un segundo paso, multiplicamos por las personas (ej: Pareja x2)
+                total_vendidos=F('ventas_reales') * F('qrs_por_pase')
             )
 
         # 🚀 OPTIMIZACIÓN SENIOR: Calculamos cantidad y recaudo de las "Entradas Generales"
@@ -514,14 +518,14 @@ class EventoDetailAdminView(LoginRequiredMixin, DetailView):
 
         pases_taquilla = []
         if evento.tiene_pases_personalizados:
-            for pase in evento.pases_personalizados.all():
+            # 🚀 FIX SENIOR: Filtramos para que SOLO salgan en taquilla los pases activos
+            for pase in evento.pases_personalizados.filter(activo=True):
                 precio_final = pase.precio
                 if fase_activa: 
                     pivote = fase_activa.precios_pases.filter(pase=pase).first()
                     if pivote and pivote.precio is not None:
                         precio_final = pivote.precio
                 
-                # 🚀 FILTRO EN TAQUILLA: Ocultamos los pases de $0
                 if precio_final and float(precio_final) > 0:
                     pases_taquilla.append({
                         'id': pase.id, 
@@ -675,7 +679,8 @@ class RegistroEventoPublicoView(FormView):
 
         # 🎟️ 2. PREPARAR MATRIZ DE PRECIOS DE LOS PASES (ESTRUCTURA PLANA ANTI-FALLOS)
         pases_data = []
-        for pase in self.evento_obj.pases_personalizados.all():
+        # 🚀 FIX SENIOR: Ocultamos pases inactivos de la vista pública
+        for pase in self.evento_obj.pases_personalizados.filter(activo=True):
             precio_final = pase.precio
             
             if fase_activa: 

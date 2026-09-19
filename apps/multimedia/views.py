@@ -13,10 +13,20 @@ from .forms import VideoClaseForm, ModuloClaseForm
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 
+from apps.planes_estudiantes.models import Estudiante
+
 
 class VisorClaseView(View):
     """Vista para el estudiante: Muestra el reproductor y las lecciones."""
     def get(self, request, slug_academia, modulo_id):
+
+        # 🔒 CAPA DE SEGURIDAD SENIOR: Bloquear acceso directo por URL a inactivos
+        if request.user.perfil.rol == 'ESTUDIANTE':
+            estudiante = Estudiante.objects.filter(
+                nombres=request.user.first_name, 
+                apellidos=request.user.last_name, 
+                academia=request.tenant
+            ).first()
         # Aseguramos el aislamiento Multi-Tenant interceptando el request.tenant
         # Traemos el módulo evaluando de forma estricta que pertenezca a la academia actual.
         modulo = get_object_or_404(ModuloClase, id=modulo_id, academia=request.tenant)

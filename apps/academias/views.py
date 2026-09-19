@@ -30,6 +30,9 @@ from apps.saas_core.models import ConfigPagoGlobalSaaS
 
 from .mixins import *
 
+from itertools import chain
+from operator import attrgetter
+
 # apps/academias/views.py
 
 class LandingAcademiaView(TemplateView):
@@ -296,6 +299,41 @@ class DashboardAdminView(TenantAdminRequiredMixin, TemplateView):
         
         context['cuentas_por_pagar'] = cuentas_por_pagar
         context['total_cuentas_pendientes'] = cuentas_por_pagar.count()
+
+        context['cuentas_por_pagar'] = cuentas_por_pagar
+        context['total_cuentas_pendientes'] = cuentas_por_pagar.count()
+
+        # =========================================================
+        # 🚀 NUEVO: CARTERA PENDIENTE (ALUMNOS CON DEUDA)
+        # =========================================================
+        # Buscamos inscripciones activas cuyo saldo sea mayor a 0, ordenadas por la fecha límite de pago
+        context['alumnos_con_deuda'] = InscripcionPlan.objects.filter(
+            academia=academia, 
+            saldo_pendiente__gt=0, 
+            estudiante__estado='ACTIVO'
+        ).select_related('estudiante', 'plan').order_by('fecha_fin')[:6] # Traemos los 6 más urgentes
+        
+        # =========================================================
+        # 🚀 NUEVO: ÚLTIMAS TRANSACCIONES (INGRESOS Y GASTOS)
+        # =========================================================
+        ultimos_ingresos = ReciboIngreso.objects.filter(academia=academia).order_by('-creado_en')[:5]
+        ultimos_gastos = Gasto.objects.filter(academia=academia).order_by('-creado_en')[:5]
+        
+        # Evaluamos los querysets en listas para inyectarles una bandera visual para el HTML
+        lista_ingresos = list(ultimos_ingresos)
+        for i in lista_ingresos: 
+            i.tipo_tx = 'ingreso'
+            
+        lista_gastos = list(ultimos_gastos)
+        for g in lista_gastos: 
+            g.tipo_tx = 'gasto'
+            
+        # Mezclamos ambas listas y las ordenamos cronológicamente (las más recientes primero)
+        context['transacciones_recientes'] = sorted(
+            chain(lista_ingresos, lista_gastos),
+            key=attrgetter('creado_en'),
+            reverse=True
+        )[:6] # Mandamos solo las 6 más recientes al dashboard
 
         return context
 

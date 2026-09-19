@@ -18,6 +18,67 @@
         </div>
     </div>
 
+    <!-- 🚀 TOP BANNER DE LICENCIA SAAS -->
+<div class="card border-0 shadow-sm rounded-4 mb-4" style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); color: white;">
+    <div class="card-body p-4 d-flex flex-column flex-md-row align-items-center justify-content-between gap-3">
+        
+        <div class="d-flex align-items-center gap-3">
+            <div class="bg-white bg-opacity-10 p-3 rounded-circle d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                <i class="bi bi-shield-check fs-3 text-warning"></i>
+            </div>
+            <div>
+                <h6 class="mb-1 text-uppercase tracking-wider fw-bold text-white-50" style="font-size: 0.75rem;">Licencia AppDanza Actual</h6>
+                <h4 class="mb-0 fw-bold text-white d-flex align-items-center gap-2">
+                    <!-- Evalúa si tiene plan, si no (porque está en Prueba), muestra texto genérico -->
+                    {{ academia.suscripcion_saas.plan.nombre|default:"Plan de Prueba Personalizado" }}
+                    
+                    <!-- Badges dinámicos de Estado -->
+                    {% if academia.suscripcion_saas.estado == 'ACTIVO' %}
+                        <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-50 fs-6 rounded-pill px-3 ms-2 align-middle">Activo</span>
+                    {% elif academia.suscripcion_saas.estado == 'PRUEBA' %}
+                        <span class="badge bg-info bg-opacity-25 text-info border border-info border-opacity-50 fs-6 rounded-pill px-3 ms-2 align-middle">Modo Prueba</span>
+                    {% elif academia.suscripcion_saas.esta_en_mora %}
+                        <span class="badge bg-warning bg-opacity-25 text-warning border border-warning border-opacity-50 fs-6 rounded-pill px-3 ms-2 align-middle">En Mora</span>
+                    {% endif %}
+                </h4>
+            </div>
+        </div>
+
+        <!-- Alerta de Días Restantes -->
+        <div class="text-center text-md-end bg-white bg-opacity-10 px-4 py-2 rounded-4 border border-white border-opacity-10">
+            <span class="d-block text-white-50 small fw-bold text-uppercase" style="font-size: 0.7rem;">Corte de Servicio en</span>
+            <span class="fs-4 fw-bold {% if academia.suscripcion_saas.dias_restantes_licencia <= 5 %}text-danger{% else %}text-white{% endif %}">
+                {{ academia.suscripcion_saas.dias_restantes_licencia }} días
+            </span>
+        </div>
+        
+    </div>
+</div>
+
+<!-- Tus alertas de mora/prueba que ya configuramos en el paso anterior irían justo debajo de esto -->
+
+    <!-- 🟠 ALERTA DE MORA / PERÍODO DE GRACIA -->
+{% if academia.suscripcion_saas.esta_en_mora %}
+<div class="alert alert-warning border-warning border-2 shadow-sm rounded-4 d-flex align-items-center mb-4">
+    <i class="bi bi-exclamation-triangle-fill fs-3 text-warning me-3"></i>
+    <div>
+        <strong class="text-dark">¡Atención! Tu mensualidad presenta retrasos.</strong><br>
+        <span class="text-muted small">Tu fecha de corte ha pasado. Tienes un período de gracia activo. Para evitar el bloqueo de tu sistema y la taquilla, por favor regulariza tu pago o contacta a soporte.</span>
+    </div>
+</div>
+{% endif %}
+
+<!-- 🟡 ALERTA DE PERÍODO DE PRUEBA -->
+{% if academia.suscripcion_saas.estado == 'PRUEBA' %}
+<div class="alert alert-info border-info border-2 shadow-sm rounded-4 d-flex align-items-center mb-4">
+    <i class="bi bi-rocket-takeoff-fill fs-3 text-info me-3"></i>
+    <div>
+        <strong class="text-dark">¡Estás en Período de Prueba Premium!</strong><br>
+        <span class="text-muted small">Disfruta de tus módulos habilitados. Te quedan <strong>{{ academia.suscripcion_saas.dias_restantes_licencia }} días</strong> para activar tu licencia comercial definitiva.</span>
+    </div>
+</div>
+{% endif %}
+
     {% if request.tenant.suscripcion_saas.mostrar_alerta_vencimiento %}
         <div class="row mb-4 animate__animated animate__fadeIn">
             <div class="col-12">
@@ -65,6 +126,111 @@
             </div>
         </div>
     {% endif %}
+
+    <!-- 🚀 NUEVA FILA: CARTERA Y TRANSACCIONES RECIENTES -->
+    <div class="row g-4 mb-4">
+        
+        <!-- 💰 TARJETA DE CARTERA (DEUDAS) -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold text-dark m-0"><i class="bi bi-exclamation-octagon text-danger me-2"></i>Cartera por Cobrar</h5>
+                    <a href="{% url 'planes_estudiantes:lista_estudiantes' request.tenant.slug %}" class="btn btn-sm btn-outline-danger rounded-pill px-3">Ver Alumnos</a>
+                </div>
+                
+                <!-- Con scroll integrado para no desarmar el layout -->
+                <div class="list-group list-group-flush pe-2" style="max-height: 320px; overflow-y: auto;">
+                    {% for insc in alumnos_con_deuda %}
+                    <div class="list-group-item px-0 py-3 border-bottom bg-transparent">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong class="text-dark d-block">{{ insc.estudiante.nombres }} {{ insc.estudiante.apellidos }}</strong>
+                                <small class="text-muted"><i class="bi bi-calendar-x me-1"></i>Pagar antes de: <strong class="text-dark">{{ insc.fecha_fin|date:"d M Y" }}</strong></small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle rounded-pill px-3 py-2 fw-bold shadow-sm">
+                                    Debe: ${{ insc.saldo_pendiente|floatformat:0 }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-5 text-muted small">
+                        <i class="bi bi-check-circle-fill text-success opacity-75 fs-1 d-block mb-2"></i>
+                        ¡Excelente! No tienes alumnos con deudas activas.
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 🔄 TARJETA DE ÚLTIMAS TRANSACCIONES -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold text-dark m-0"><i class="bi bi-arrow-left-right text-primary me-2"></i>Últimos Movimientos</h5>
+                    <a href="{% url 'finanzas:panel_finanzas' request.tenant.slug %}" class="btn btn-sm btn-outline-primary rounded-pill px-3">Ir a Finanzas</a>
+                </div>
+                
+                <div class="list-group list-group-flush pe-2" style="max-height: 320px; overflow-y: auto;">
+                    {% for tx in transacciones_recientes %}
+                        
+                        {% if tx.tipo_tx == 'ingreso' %}
+                        <!-- RENDERIZADO DE INGRESO -->
+                        <div class="list-group-item px-0 py-3 border-bottom bg-transparent">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="bg-success bg-opacity-10 text-success p-2 rounded-circle">
+                                        <i class="bi bi-arrow-down-left fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <strong class="text-dark d-block text-truncate" style="max-width: 170px;">{{ tx.cliente_nombre }}</strong>
+                                        <small class="text-muted">{{ tx.creado_en|date:"d M - h:i a" }}</small>
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <span class="text-success fw-bold d-block">+${{ tx.monto|floatformat:0 }}</span>
+                                    <span class="badge {% if tx.estado == 'ACTIVO' %}bg-light text-secondary{% else %}bg-danger text-white{% endif %} border border-secondary-subtle small font-monospace" style="font-size: 0.65rem;">
+                                        {{ tx.numero_recibo }} {% if tx.estado == 'ANULADO' %}(ANULADO){% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {% else %}
+                        <!-- RENDERIZADO DE GASTO -->
+                        <div class="list-group-item px-0 py-3 border-bottom bg-transparent">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="bg-danger bg-opacity-10 text-danger p-2 rounded-circle">
+                                        <i class="bi bi-arrow-up-right fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <strong class="text-dark d-block text-truncate" style="max-width: 170px;">{{ tx.proveedor_nombre }}</strong>
+                                        <small class="text-muted">{{ tx.creado_en|date:"d M - h:i a" }}</small>
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <span class="text-danger fw-bold d-block">-${{ tx.monto|floatformat:0 }}</span>
+                                    <span class="badge {% if tx.estado == 'ACTIVO' %}bg-light text-secondary{% else %}bg-danger text-white{% endif %} border border-secondary-subtle small font-monospace" style="font-size: 0.65rem;">
+                                        {{ tx.numero_egreso }} {% if tx.estado == 'ANULADO' %}(ANULADO){% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                    {% empty %}
+                    <div class="text-center py-5 text-muted small">
+                        <i class="bi bi-receipt-cutoff opacity-50 fs-1 d-block mb-2"></i>
+                        Aún no hay movimientos registrados.
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+    </div>
 
     <div class="row g-4 mb-4">
         {% if request.tenant.suscripcion_saas.modulo_estudiantes_activo %}

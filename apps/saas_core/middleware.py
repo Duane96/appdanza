@@ -79,9 +79,22 @@ class TenantLicensingMiddleware:
                         messages.error(request, "El módulo de Tienda e Inventarios no está habilitado en su licencia actual.")
                         return redirect('academias:dashboard', slug_academia=request.tenant.slug)
                     
-                    # Filtro Anti-Fraude de tu autoría (Tarjeta de Respaldo)
-                    if not request.tenant.tarjeta_respaldo_configurada and not 'configuracion' in request.path:
-                        messages.warning(request, "Atención: Debes vincular una tarjeta de respaldo activa en tu Panel de Configuración antes de poder gestionar o aperturar tus Eventos.")
+                # Filtro Anti-Fraude de tu autoría (Tarjeta de Respaldo)
+                if not request.tenant.tarjeta_respaldo_configurada and not 'configuracion' in request.path:
+                    messages.warning(request, "Atención: Debes vincular una tarjeta de respaldo activa en tu Panel de Configuración antes de poder gestionar o aperturar tus Eventos.")
+
+                # 🚫 CONTROL MODULAR PROFESORES Y NÓMINA
+                if 'profesores' in request.path:
+                    # Validamos primero si el plan lo permite y luego si NO lo has bloqueado a mano
+                    if not suscripcion.plan.permite_profesores or suscripcion.bloqueo_manual_profesores:
+                        messages.error(request, "El módulo de Gestión de Profesores no está habilitado en su licencia actual.")
+                        return redirect('academias:dashboard', slug_academia=request.tenant.slug)
+
+                # 🚫 CONTROL MODULAR CALENDARIO INTERACTIVO
+                if 'calendario' in request.path:
+                    if not suscripcion.plan.permite_calendario or suscripcion.bloqueo_manual_calendario:
+                        messages.error(request, "El módulo de Calendario no está disponible en tu plan contratado.")
+                        return redirect('academias:dashboard', slug_academia=request.tenant.slug)
 
             except Exception:
                 # Si ocurre una desalineación de llaves foráneas o datos huérfanos

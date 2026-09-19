@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+{% load estudiante_extras %}
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -236,8 +237,11 @@
                         <i class="bi bi-calendar-check me-2"></i> Reservar Clases
                     </a>
                 </li>
-                
                 {% if request.tenant.suscripcion_saas.modulo_multimedia_activo %}
+                <!-- 🚀 LÓGICA SENIOR: Preguntamos silenciosamente si el alumno está activo -->
+        {% verificar_estado_estudiante request.user request.tenant as estado_alumno %}
+        
+        {% if estado_alumno == 'ACTIVO' %}
                 <li class="nav-item">
                     <a class="nav-link text-white-50 d-flex align-items-center justify-content-between" data-bs-toggle="collapse" href="#menuMultimedia" role="button" aria-expanded="false">
                         <span><i class="bi bi-play-btn me-2"></i> Mis Clases Virtuales</span>
@@ -257,6 +261,7 @@
                         </ul>
                     </div>
                 </li>
+                {% endif %}
                 {% endif %}
 
             <!-- ============================================== -->

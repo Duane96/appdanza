@@ -305,6 +305,9 @@ class TipoPase(models.Model):
         help_text="1 = Individual, 2 = Pareja. Define cuántos QRs se generan al comprar 1 unidad."
     )
 
+    # 🚀 FIX SENIOR: Control para mostrar u ocultar pases al público
+    activo = models.BooleanField(default=True, verbose_name="¿Pase Activo?")
+
     class Meta:
         ordering = ['precio'] # Ordena del más barato al más caro en el select
 

@@ -148,10 +148,18 @@
 
 <!-- 🚀 NUEVO SENIOR: Campo para indicar si es Pareja/Grupo -->
                             <div class="mb-3 p-3 bg-light rounded border border-secondary-subtle">
-                                <label class="small fw-bold text-dark"><i class="bi bi-people-fill me-1"></i> Personas por Pase</label>
-                                {{ form_pase.qrs_por_pase }}
-                                <small class="text-muted extra-small d-block mt-1">1 = Individual, 2 = Pareja. Define cuántos QRs únicos se generan al comprar 1 unidad de este pase.</small>
-                            </div>
+    <label class="small fw-bold text-dark"><i class="bi bi-people-fill me-1"></i> Personas por Pase</label>
+    {{ form_pase.qrs_por_pase }}
+    <small class="text-muted extra-small d-block mt-1">1 = Individual, 2 = Pareja. Define cuántos QRs únicos se generan al comprar 1 unidad de este pase.</small>
+</div>
+
+<!-- 🚀 NUEVO SENIOR: Switch Crear Pase -->
+<div class="mb-3 form-check form-switch bg-light p-3 rounded border border-secondary-subtle d-flex align-items-center gap-2">
+    {{ form_pase.activo }}
+    <label class="form-check-label small fw-bold text-dark mb-0 mt-1" style="cursor: pointer;">
+        Pase Activo <span class="text-muted fw-normal">(Visible al público)</span>
+    </label>
+</div>
                             
                             {% if not object.tiene_fases_fechas %}
                                 <div class="mb-4" id="div_precio_pase">
@@ -191,10 +199,17 @@
             
             <!-- 🚀 NUEVO: Badge visual del multiplicador -->
             <td class="text-center">
-                <span class="badge {% if pase.qrs_por_pase > 1 %}bg-warning text-dark{% else %}bg-light text-secondary border{% endif %}">
-                    <i class="bi bi-person{% if pase.qrs_por_pase > 1 %}s{% endif %}-fill me-1"></i> {{ pase.qrs_por_pase }}
-                </span>
-            </td>
+    <span class="badge {% if pase.qrs_por_pase > 1 %}bg-warning text-dark{% else %}bg-light text-secondary border{% endif %} shadow-sm">
+        <i class="bi bi-person{% if pase.qrs_por_pase > 1 %}s{% endif %}-fill me-1"></i> {{ pase.qrs_por_pase }}
+    </span>
+    
+    <!-- 🚀 NUEVO SENIOR: Etiqueta de aviso visual para el admin -->
+    {% if not pase.activo %}
+        <span class="badge bg-danger ms-1 shadow-sm" title="Oculto en taquilla y pasarela web">
+            <i class="bi bi-eye-slash-fill"></i> Oculto
+        </span>
+    {% endif %}
+</td>
 
             
             {% if object.es_multidias %}
@@ -211,6 +226,7 @@
                     <i class="bi bi-trash"></i>
                 </button>
             </td>
+            
         </tr>
         {% endfor %}
     </tbody>
@@ -330,9 +346,18 @@
 
     <!-- 🚀 NUEVO SENIOR: Editar el multiplicador -->
     <div class="mb-3 p-2 bg-light rounded border border-secondary-subtle">
-        <label class="small fw-bold text-dark">Personas amparadas por este Pase (QRs)</label>
-        <input type="number" name="qrs_por_pase" class="form-control form-control-sm border-dark" value="{{ pase.qrs_por_pase|default:1 }}" min="1" required>
-    </div>
+    <label class="small fw-bold text-dark">Personas amparadas por este Pase (QRs)</label>
+    <input type="number" name="qrs_por_pase" class="form-control form-control-sm border-dark" value="{{ pase.qrs_por_pase|default:1 }}" min="1" required>
+</div>
+
+<!-- 🚀 NUEVO SENIOR: Switch Editar Pase -->
+<div class="mb-3 form-check form-switch bg-light p-3 rounded border border-secondary-subtle d-flex align-items-center gap-2">
+    <!-- El input manual requiere el atributo checked si pase.activo es True -->
+    <input class="form-check-input mt-0" type="checkbox" role="switch" name="activo" id="activo_{{ pase.id }}" {% if pase.activo %}checked{% endif %}>
+    <label class="form-check-label small fw-bold text-dark mb-0" for="activo_{{ pase.id }}" style="cursor: pointer;">
+        Pase Activo <span class="text-muted fw-normal">(Visible al público)</span>
+    </label>
+</div>
                         
                         {% if not object.tiene_fases_fechas %}
                             <div class="mb-2">
