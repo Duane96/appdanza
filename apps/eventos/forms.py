@@ -9,7 +9,7 @@ class EventoForm(forms.ModelForm):
     class Meta:
         model = Evento
         fields = [
-            'nombre', 'imagen', 'fecha', 'fecha_fin', 'ubicacion', 'ciudad', 
+            'nombre', 'imagen', 'fecha', 'fecha_fin', 'ubicacion', 'ciudad', 'connect_dya_finances',
             'es_multidias', 'cantidad_dias', 'tiene_fases_fechas',
             'acepta_nequi_daviplata', 'numero_nequi_daviplata', 
             'acepta_banco_manual', 'datos_banco_manual', 
@@ -31,6 +31,13 @@ class EventoForm(forms.ModelForm):
             'datos_banco_manual': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
             'acepta_tarjetas_online': forms.CheckboxInput(attrs={'class': 'form-check-input', 'role': 'switch'}),
         }
+
+    def __init__(self, *args, tenant=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        from .dya_api import is_dya_tenant
+        tenant = tenant or (self.instance.academia if self.instance.academia_id else None)
+        if not is_dya_tenant(tenant):
+            self.fields.pop('connect_dya_finances', None)
 
     # 🧠 LÓGICA DE VALIDACIÓN INTELIGENTE
     def clean(self):

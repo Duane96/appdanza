@@ -192,6 +192,14 @@
             
             <form action="{% url 'eventos:admin_crear' request.tenant.slug %}" method="POST" enctype="multipart/form-data">
                 {% csrf_token %}
+                    {% if form.connect_dya_finances %}
+                    <div class="form-check mb-3">
+                        {{ form.connect_dya_finances }}
+                        <label for="{{ form.connect_dya_finances.id_for_label }}">Conectar con finanzas Duane y Aleja</label>
+                        <p class="small">Comparte los datos financieros del evento para reportes en DyA.</p>
+                        {{ form.connect_dya_finances.errors }}
+                    </div>
+                    {% endif %}
                 
                 <div class="modal-header bg-dark text-white border-0">
                     <h5 class="modal-title fw-bold"><i class="bi bi-calendar-plus me-2 text-tenant-primary"></i>Configuración de Evento</h5>

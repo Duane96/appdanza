@@ -50,6 +50,14 @@
                 {% endif %}
                 <form method="POST" action="{% url 'eventos:admin_editar' request.tenant.slug object.slug %}" enctype="multipart/form-data">
                     {% csrf_token %}
+                    {% if form.connect_dya_finances %}
+                    <div class="form-check mb-3">
+                        {{ form.connect_dya_finances }}
+                        <label for="{{ form.connect_dya_finances.id_for_label }}">Conectar con finanzas Duane y Aleja</label>
+                        <p class="small">Comparte los datos financieros del evento para reportes en DyA.</p>
+                        {{ form.connect_dya_finances.errors }}
+                    </div>
+                    {% endif %}
                     
                     <div class="mb-4">
                         <label class="form-label fw-semibold text-secondary small">Banner / Afiche</label>

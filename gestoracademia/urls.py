@@ -20,7 +20,11 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 
+from apps.eventos.dya_api import events as dya_events
+
 urlpatterns = [
+    path('api/integrations/dya/events/', dya_events, name='dya_events'),
+    path('api/integrations/dya/events/<int:external_id>/', dya_events, name='dya_event'),
     
     
     

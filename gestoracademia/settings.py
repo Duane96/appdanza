@@ -292,3 +292,5 @@ LOGIN_REDIRECT_URL = '/'
 
 # A dónde va el usuario al cerrar sesión
 LOGOUT_REDIRECT_URL = 'login'
+# Private read-only Bachatamania integration. Empty token disables access.
+DYA_INTEGRATION_API_TOKEN = os.getenv('DYA_INTEGRATION_API_TOKEN', '').strip()

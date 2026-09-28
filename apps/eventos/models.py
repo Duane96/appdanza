@@ -27,6 +27,9 @@ def ruta_banners_academia(instance, filename):
     return os.path.join('logos_academias', slug_academia, 'banners', filename)
 
 class Evento(TenantModel):
+    connect_dya_finances = models.BooleanField(default=False, verbose_name='Conectar con finanzas Duane y Aleja')
+    updated_at = models.DateTimeField(auto_now=True)
+
     ESTADOS = (
         ('REGISTRO_ONLINE', 'Registro Online Abierto'),
         ('REGISTRO_PUERTA', 'Solo Registro en Puerta'),

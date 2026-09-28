@@ -51,7 +51,7 @@ class EventoListView(LoginRequiredMixin, ListView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['form'] = EventoForm() 
+        context['form'] = EventoForm(tenant=self.request.tenant)
         
         todos_los_eventos = self.get_queryset()
         context['eventos_activos'] = todos_los_eventos.exclude(estado='FINALIZADO')
@@ -77,6 +77,10 @@ class EventoListView(LoginRequiredMixin, ListView):
 class EventoCreateView(LoginRequiredMixin, CreateView):
     model = Evento
     form_class = EventoForm
+
+    def get_form_kwargs(self):
+        return {**super().get_form_kwargs(), 'tenant': self.request.tenant}
+
     template_name = "eventos/admin_list.html" 
 
     def dispatch(self, request, *args, **kwargs):
@@ -136,6 +140,10 @@ class EventoUpdateView(LoginRequiredMixin, UpdateView):
     """Vista para editar un evento existente garantizando aislamiento estricto y configuración de Pases."""
     model = Evento
     form_class = EventoForm
+
+    def get_form_kwargs(self):
+        return {**super().get_form_kwargs(), 'tenant': self.request.tenant}
+
     template_name = "eventos/admin_form.html" 
 
     def get_object(self):

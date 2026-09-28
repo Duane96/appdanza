@@ -5,6 +5,10 @@ from .models import Evento, ColaboradorEvento
 # 🚀 1. Registramos Evento PRIMERO y definimos dónde debe buscar
 @admin.register(Evento)
 class EventoAdmin(admin.ModelAdmin):
+    def get_exclude(self, request, obj=None):
+        from .dya_api import is_dya_tenant
+        return () if obj and is_dya_tenant(obj.academia) else ('connect_dya_finances',)
+
     list_display = ('nombre', 'academia', 'fecha', 'estado')
     
     # ESTA ES LA LÍNEA MÁGICA QUE SOLUCIONA TU ERROR:

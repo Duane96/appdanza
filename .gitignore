@@ -26,3 +26,10 @@ client_secrets.json
 seed.py
 
 .env
+# Integration audit sources, local secrets and test output must stay local.
+*.sqlite3
+*.sqlite3-*
+*.log
+.env.*
+!.env.example
+backups/
