@@ -468,13 +468,13 @@
             let row = `
                 <li class="list-group-item d-flex justify-content-between align-items-center py-2">
                     <div class="me-auto lh-sm" style="max-width: 60%;">
-                        <span class="d-block fw-semibold text-dark fs-7">${item.nombre}</span>
+                        <span class="d-block fw-semibold text-dark fs-7">${AppDanzaUI.text(item.nombre)}</span>
                         <small class="text-muted fs-8">${formatoCOP.format(item.precio)}</small>
                     </div>
                     <div class="d-flex align-items-center bg-light border rounded px-1">
                         <button class="btn btn-sm btn-link text-danger p-1 text-decoration-none" onclick="restarDelCarrito(${id})"><i class="bi bi-dash"></i></button>
                         <span class="fw-bold px-2 fs-7">${item.cantidad}</span>
-                        <button class="btn btn-sm btn-link text-success p-1 text-decoration-none" onclick="agregarAlCarrito(${id}, '${item.nombre}', ${item.precio}, ${item.stockMax})"><i class="bi bi-plus"></i></button>
+                        <button class="btn btn-sm btn-link text-success p-1 text-decoration-none" onclick="agregarAlCarrito(${Number(id)}, carrito[${Number(id)}].nombre, carrito[${Number(id)}].precio, carrito[${Number(id)}].stockMax)"><i class="bi bi-plus"></i></button>
                     </div>
                     <div class="text-end fw-bold text-dark ps-2 style-font-monospace fs-7">${formatoCOP.format(sub)}</div>
                 </li>`;
@@ -485,12 +485,17 @@
         totalSpan.innerText = formatoCOP.format(total);
     }
 
+    let saleRequestKey = crypto.randomUUID();
+    let paymentSubmitting = false;
     function procesarPago() {
+        if (paymentSubmitting) return;
+        paymentSubmitting = true;
         const btnPagar = document.getElementById('btn-pagar');
         btnPagar.disabled = true;
         btnPagar.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Despachando...';
 
         const payload = {
+            request_key: saleRequestKey,
             carrito: Object.keys(carrito).map(id => ({ id: parseInt(id), cantidad: carrito[id].cantidad })),
             medio_pago: document.getElementById('medio-pago').value,
             cliente_nombre: 'Cliente General (POS)',
@@ -515,7 +520,7 @@
                 // Éxito: Toast Verde
                 toastEl.classList.remove('bg-danger');
                 toastEl.classList.add('bg-success');
-                toastBody.innerHTML = `<i class="bi bi-check-circle me-2"></i>Venta procesada. Recibo: ${res.body.numero_recibo}`;
+                toastBody.innerHTML = `<i class="bi bi-check-circle me-2"></i>Venta procesada. Recibo: ${AppDanzaUI.text(res.body.numero_recibo)}`;
                 toast.show();
 
                 // Limpiamos el carrito instantáneamente para dar sensación de fluidez
@@ -532,14 +537,16 @@
                 // Error: Toast Rojo
                 toastEl.classList.remove('bg-success');
                 toastEl.classList.add('bg-danger');
-                toastBody.innerHTML = `<i class="bi bi-exclamation-triangle me-2"></i>Error: ${res.body.error}`;
+                toastBody.innerHTML = `<i class="bi bi-exclamation-triangle me-2"></i>Error: ${AppDanzaUI.text(res.body.error)}`;
                 toast.show();
 
                 // Restauramos el botón
+                paymentSubmitting = false;
                 btnPagar.disabled = false;
                 btnPagar.innerHTML = 'Cobrar Ya';
             }
         }).catch(() => {
+            paymentSubmitting = false;
             // Error Crítico (Caída de red o servidor)
             const toastEl = document.getElementById('posToast');
             toastEl.classList.remove('bg-success');
@@ -568,7 +575,7 @@
             data.detalles.forEach(item => {
                 lista.innerHTML += `
                     <tr>
-                        <td>${item.producto__nombre}</td>
+                        <td>${AppDanzaUI.text(item.producto__nombre)}</td>
                         <td class="text-center">${item.total_qty}</td>
                         <td class="text-end">${formatoCOP.format(item.total_sub)}</td>
                         <td class="text-end text-success fw-bold">${formatoCOP.format(item.total_gan)}</td>

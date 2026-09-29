@@ -1,11 +1,18 @@
+from apps.academias.platform_admin import PlatformModelAdmin
 # apps/academias/admin.py
 from django.contrib import admin
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from .models import Academia, PerfilUsuario
+from .models import TenantMembership
+
+@admin.register(TenantMembership)
+class MembershipAdmin(PlatformModelAdmin):
+    list_display = ('academia', 'user', 'role', 'active', 'source')
+    list_filter = ('academia', 'role', 'active')
 
 @admin.register(Academia)
-class AcademiaAdmin(admin.ModelAdmin):
+class AcademiaAdmin(PlatformModelAdmin):
     list_display = ('nombre', 'ciudad', 'slug', 'es_solo_eventos', 'activo', 'fecha_creacion')
     search_fields = ('nombre', 'slug', 'nit', 'ciudad')
     list_filter = ('activo', 'es_solo_eventos', 'pais', 'ciudad', 'fecha_creacion')

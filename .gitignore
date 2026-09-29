@@ -33,3 +33,6 @@ seed.py
 .env.*
 !.env.example
 backups/
+
+private_media/
+.test_media/

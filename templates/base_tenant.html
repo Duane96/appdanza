@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 {% load estudiante_extras %}
+{% load static %}
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <script src="{% static 'academias/safe-ui.js' %}"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ request.tenant.nombre }} | Panel Administrativo</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -73,9 +75,9 @@
         <!-- 🏷️ Badge Dinámico según el Rol -->
         {% if request.user.is_superuser %}
             <span class="badge bg-dark text-white border border-secondary text-uppercase small">🚀 Soporte Maestro</span>
-        {% elif request.user.perfil.rol == 'ESTUDIANTE' %}
+        {% elif request.membership_role == 'STUDENT' %}
             <span class="badge bg-success text-white text-uppercase small">Estudiante</span>
-        {% elif request.user.perfil.rol == 'PROFESOR' %}
+        {% elif request.membership_role == 'TEACHER' %}
             <span class="badge bg-primary text-white text-uppercase small">Instructor</span>
         {% else %}
             <span class="badge bg-light text-dark text-uppercase small">Admin / Staff</span>
@@ -90,7 +92,7 @@
             <!-- ============================================== -->
             <!-- 👑 MENÚ GLOBAL (ADMINISTRADORES Y SUPERUSER SAAS) -->
             <!-- ============================================== -->
-            {% if request.user.is_superuser or request.user.perfil.academia == request.tenant and request.user.perfil.rol == 'ADMIN_ACADEMIA' %}
+            {% if request.user.is_superuser or request.membership_role == 'OWNER' or request.membership_role == 'ADMIN' %}
                 
                 <li class="nav-item">
                     <a class="nav-link text-white-50 {% if 'dashboard' in request.path %}active-menu{% endif %}" href="{% url 'academias:dashboard' request.tenant.slug %}">
@@ -206,7 +208,7 @@
             <!-- ============================================== -->
             <!-- 👨‍🏫 MENÚ EXCLUSIVO PROFESOR -->
             <!-- ============================================== -->
-            {% elif request.user.perfil.rol == 'PROFESOR' %}
+            {% elif request.membership_role == 'TEACHER' %}
                 <li class="nav-item">
                     <a class="nav-link text-white-50 {% if 'mi-panel' in request.path %}active-menu{% endif %}" href="{% url 'profesores:dashboard_profesor' request.tenant.slug %}">
                         <i class="bi bi-speedometer2 me-2"></i> Mi Panel
@@ -226,7 +228,7 @@
             <!-- ============================================== -->
             <!-- 🎓 MENÚ EXCLUSIVO ESTUDIANTE -->
             <!-- ============================================== -->
-            {% elif request.user.perfil.rol == 'ESTUDIANTE' %}
+            {% elif request.membership_role == 'STUDENT' %}
                 <li class="nav-item">
                     <a class="nav-link text-white-50 {% if 'portal' in request.path %}active-menu{% endif %}" href="{% url 'planes_estudiantes:portal_estudiante' request.tenant.slug %}">
                         <i class="bi bi-person-workspace me-2"></i> Mi Portal
@@ -297,6 +299,7 @@
 </nav>
 
             <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                {% if request.user.is_superuser or request.membership_role == 'OWNER' or request.membership_role == 'BILLING' %}<a class="btn btn-outline-primary my-2" href="{% url 'saas_core:billing_portal' request.tenant.slug %}">Mi plan y facturación</a>{% endif %}
                 <header class="navbar navbar-expand-md navbar-light bg-white navbar-tenant shadow-sm p-3 my-3 rounded">
                     <button class="navbar-toggler d-md-none collapsed me-2" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
                         <span class="navbar-toggler-icon"></span>

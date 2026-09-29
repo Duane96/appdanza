@@ -1,0 +1,78 @@
+{% extends "base_tenant.html" %}
+{% block content %}
+<main class="container py-4">
+<h1>Mi plan y facturación</h1>
+<p>Servicios de AppDanza para {{ academia.nombre }}. Los ingresos de tus alumnos y eventos se administran por separado.</p>
+{% for message in messages %}<div class="alert alert-info">{{ message }}</div>{% endfor %}
+<section class="card p-3 mb-3">
+  <h2 class="h4">Acceso actual</h2>
+  {% if policy.account %}<p>{{ policy.account.get_mode_display }}</p><p>{{ policy.account.grant_reason }}</p>{% endif %}
+  {% if policy.exempt %}<p><strong>Sin cobros de suscripción ni cargos por registros de eventos.</strong></p>
+    {% if policy.account.grant_until %}<p>Acceso concedido hasta {{ policy.account.grant_until|date:"d M Y" }}. No se cobrará automáticamente al terminar.</p>{% endif %}
+  {% endif %}
+  {% if policy.subscription %}
+    <p>{{ policy.subscription.plan_version.name }} · {{ policy.subscription.get_state_display }}</p>
+    <p>{{ policy.subscription.plan_version.amount }} {{ policy.subscription.plan_version.currency }} cada {{ policy.subscription.plan_version.interval_months }} mes(es).</p>
+    <p>Período: {{ policy.subscription.period_start|date:"d M Y" }} → {{ policy.subscription.period_end|date:"d M Y" }}</p>
+    {% if policy.subscription.pending_plan_version %}<p>Próximo período: {{ policy.subscription.pending_plan_version.name }}.</p>{% endif %}
+    {% if policy.subscription.cancel_at_period_end %}<p>Cancelación solicitada al finalizar el período.</p>
+    {% else %}<form method="post" action="{% url 'saas_core:billing_cancel' academia.slug %}">{% csrf_token %}<button class="btn btn-outline-danger" type="submit">Cancelar al finalizar el período</button></form>{% endif %}
+  {% endif %}
+</section>
+<section class="card p-3 mb-3"><h2 class="h4">Uso y límites</h2>
+<div class="table-responsive"><table class="table"><thead><tr><th>Recurso</th><th>Uso</th><th>Límite</th></tr></thead><tbody>
+{% for name, item in usage.items %}<tr><td>{% if name == 'max_students' %}Alumnos{% elif name == 'max_teachers' %}Profesores{% else %}Eventos abiertos{% endif %}</td><td>{{ item.used }}</td><td>{{ item.limit|default_if_none:"Sin límite" }}</td></tr>{% endfor %}
+</tbody></table></div><p>Un cambio de plan nunca elimina los datos existentes.</p></section>
+{% if policy.account.mode != 'INTERNAL' %}<section class="card p-3 mb-3"><h2 class="h4">Elegir o cambiar plan</h2>
+{% if versions %}<form method="post" action="{% url 'saas_core:billing_select_plan' academia.slug %}">{% csrf_token %}
+<label for="version">Planes publicados</label><select name="version" id="version" class="form-select" required><option value="">Selecciona un plan</option>
+{% for version in versions %}<option value="{{ version.pk }}">{{ version.name }} · {{ version.amount }} {{ version.currency }} / {{ version.interval_months }} mes(es)</option>{% endfor %}</select>
+<label class="d-block my-3"><input type="checkbox" name="accept_terms" value="yes" required> Acepto el importe y período del plan elegido. El cambio de un contrato activo se aplica en el próximo período.</label>
+<button class="btn btn-primary" type="submit">Confirmar selección</button></form>{% else %}<p>El catálogo de nuevos planes aún no está publicado. Tu acceso actual se conserva.</p>{% endif %}</section>{% endif %}
+<section class="card p-3 mb-3"><h2 class="h4">Pago automático</h2>
+{% if policy.account.automatic_charges_authorized %}<p>Autorización de pago registrada. Los cargos se limitan al contrato aceptado.</p><form method="post" action="{% url 'saas_core:billing_mandate' academia.slug %}">{% csrf_token %}<input type="hidden" name="action" value="revoke"><button class="btn btn-outline-danger" type="submit">Revocar autorización de pago automático</button></form>{% endif %}
+{% if epayco_ready %}
+<p>Los datos de tarjeta se envían directamente a ePayco. AppDanza sólo recibe un token.</p>
+<form id="mandate-form" action="{% url 'saas_core:billing_mandate' academia.slug %}" method="post">{% csrf_token %}
+<div id="mandate-error" role="alert"></div>
+<label class="d-block">Titular <input data-epayco="card[name]" autocomplete="cc-name" required class="form-control"></label>
+<label class="d-block">Correo <input data-epayco="card[email]" type="email" autocomplete="email" required class="form-control"></label>
+<label class="d-block">Tarjeta <input data-epayco="card[number]" inputmode="numeric" autocomplete="cc-number" required class="form-control"></label>
+<div class="row"><label class="col">Mes <input data-epayco="card[exp_month]" inputmode="numeric" autocomplete="cc-exp-month" required class="form-control"></label><label class="col">Año <input data-epayco="card[exp_year]" inputmode="numeric" autocomplete="cc-exp-year" required class="form-control"></label><label class="col">CVC <input data-epayco="card[cvc]" inputmode="numeric" autocomplete="cc-csc" required class="form-control"></label></div>
+<label class="d-block">Tipo de documento <select name="document_type" class="form-select"><option>CC</option><option>CE</option><option>NIT</option><option>PP</option><option>DNI</option></select></label><label class="d-block">Documento del titular <input name="document_number" required maxlength="50" class="form-control"></label>
+<label class="d-block my-3"><input type="checkbox" name="consent" value="yes" required> Autorizo cargos recurrentes según el plan contratado y los consumos facturables acordados.</label>
+<button class="btn btn-primary" type="submit">Guardar autorización</button></form>
+{{ epayco_public_key|json_script:"epayco-public-key" }}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script><script src="https://checkout.epayco.co/epayco.min.js"></script>
+<script>
+(function(){
+ const form=document.getElementById('mandate-form');
+ ePayco.setPublicKey(JSON.parse(document.getElementById('epayco-public-key').textContent));
+ form.addEventListener('submit', function(event){
+  event.preventDefault(); if(form.dataset.submitting==='true') return;
+  form.dataset.submitting='true'; const button=form.querySelector('button'); button.disabled=true;
+  ePayco.token.create($(form), function(error,result){
+   if(error){document.getElementById('mandate-error').textContent='No se pudo registrar la tarjeta. Revisa los datos.';form.dataset.submitting='false';button.disabled=false;return;}
+   const token=typeof result==='string'?result:result.id;
+   if(!token){document.getElementById('mandate-error').textContent='El proveedor no devolvió un token válido.';form.dataset.submitting='false';button.disabled=false;return;}
+   const input=document.createElement('input');input.type='hidden';input.name='token';input.value=token;form.appendChild(input);
+   // Sensitive inputs never have a name and are cleared before the backend POST.
+   form.querySelectorAll('[data-epayco]').forEach(function(input){input.value='';input.disabled=true;});
+   HTMLFormElement.prototype.submit.call(form);
+  });
+ });
+})();
+</script>{% else %}<p>El alta de medios de pago automáticos no está habilitada para este acceso. Las cuentas emitidas pueden pagarse mediante el canal manual indicado.</p>{% endif %}
+</section>
+<section class="card p-3"><h2 class="h4">Cuentas de cobro AppDanza</h2><p>Estos documentos comerciales no sustituyen una factura electrónica tributaria.</p>
+{% if payment_instructions %}<p>{{ payment_instructions.nombre_proveedor }} · {{ payment_instructions.titular }}<br>{{ payment_instructions.identificador_pago }}<br>{{ payment_instructions.instrucciones_adicionales }}</p>{% endif %}
+{% for invoice in invoices %}<article class="border-top py-3"><strong>{{ invoice.reference }}</strong><p>{{ invoice.amount }} {{ invoice.currency }} · Créditos: {{ invoice.credited_amount }} · Neto: {{ invoice.payable_amount }} · {{ invoice.state }} · vence {{ invoice.due_at|date:"d M Y" }}</p>
+{% if invoice.state == 'OPEN' %}<form method="post" enctype="multipart/form-data" action="{% url 'saas_core:billing_proof' academia.slug invoice.pk %}">{% csrf_token %}<label>Comprobante de pago <input type="file" name="comprobante" accept="image/png,image/jpeg,image/webp,application/pdf" required></label><button class="btn btn-outline-primary" type="submit">Enviar para revisión</button></form>{% endif %}
+</article>{% empty %}<p>No hay cuentas de cobro.</p>{% endfor %}</section>
+<section class="card p-3 mt-3"><h2 class="h4">Pagos confirmados</h2>
+{% for payment in payments %}<p>{{ payment.received_at|date:"d M Y" }} · {{ payment.amount }} {{ payment.currency }} · {{ payment.invoice.reference }} · {{ payment.provider_reference }}</p>{% empty %}<p>No hay pagos confirmados.</p>{% endfor %}
+<h3 class="h5">Créditos comerciales</h3>{% for credit in credits %}<p>{{ credit.created_at|date:"d M Y" }} · {{ credit.amount }} {{ credit.currency }} · {{ credit.reason }}</p>{% empty %}<p>No hay créditos.</p>{% endfor %}
+<h3 class="h5">Reembolsos verificados</h3>{% for refund in refunds %}<p>{{ refund.created_at|date:"d M Y" }} · {{ refund.amount }} {{ refund.payment.currency }} · {{ refund.reason }}</p>{% empty %}<p>No hay reembolsos registrados.</p>{% endfor %}
+<p>Un crédito reduce la cuenta comercial. Un reembolso registra una devolución de dinero ya verificada.</p></section>
+</main>
+{% endblock %}

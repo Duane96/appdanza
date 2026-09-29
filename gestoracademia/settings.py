@@ -22,6 +22,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
 load_dotenv(os.path.join(BASE_DIR, '.env'))
 
+# Credentials belong to AppDanza's own merchant. No fallback to DyA settings.
+APPDANZA_PUBLIC_URL = os.getenv('APPDANZA_PUBLIC_URL', 'https://appdanza.com')
+APPDANZA_EPAYCO_PUBLIC_KEY = os.getenv('APPDANZA_EPAYCO_PUBLIC_KEY', '')
+APPDANZA_EPAYCO_PRIVATE_KEY = os.getenv('APPDANZA_EPAYCO_PRIVATE_KEY', '')
+APPDANZA_EPAYCO_CUSTOMER_ID = os.getenv('APPDANZA_EPAYCO_CUSTOMER_ID', '')
+APPDANZA_EPAYCO_P_KEY = os.getenv('APPDANZA_EPAYCO_P_KEY', '')
+APPDANZA_EPAYCO_TEST = os.getenv('APPDANZA_EPAYCO_TEST', 'true').lower() == 'true'
+APPDANZA_EPAYCO_LIVE_ENABLED = os.getenv('APPDANZA_EPAYCO_LIVE_ENABLED', 'false').lower() == 'true'
+APPDANZA_AUTOMATIC_BILLING_ENABLED = os.getenv('APPDANZA_AUTOMATIC_BILLING_ENABLED', 'false').lower() == 'true'
+APPDANZA_TOKEN_ENCRYPTION_KEY = os.getenv('APPDANZA_TOKEN_ENCRYPTION_KEY', '')
+APPDANZA_PILOT_TRIAL_DAYS = int(os.getenv('APPDANZA_PILOT_TRIAL_DAYS', '14'))
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
@@ -63,18 +75,18 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    'academias',
-    'planes_estudiantes',
-    'asistencias',
-    'finanzas',
-    'eventos',
-    'multimedia',
+    'apps.academias',
+    'apps.planes_estudiantes',
+    'apps.asistencias',
+    'apps.finanzas',
+    'apps.eventos',
+    'apps.multimedia',
     "csp",
-    'saas_core',
-    'tienda',
-    'comunicaciones',
-    'profesores',
-    'calendario',
+    'apps.saas_core',
+    'apps.tienda',
+    'apps.comunicaciones',
+    'apps.profesores',
+    'apps.calendario',
 ]
 
 MIDDLEWARE = [
@@ -87,6 +99,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'gestoracademia.middleware.TenantMiddleware',
+    'apps.academias.access_middleware.TenantAuthorizationMiddleware',
     
 ]
 
@@ -116,9 +129,24 @@ WSGI_APPLICATION = 'gestoracademia.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': os.getenv('APPDANZA_SQLITE_PATH', str(BASE_DIR / 'db.sqlite3')),
+        # Serialize short write transactions before their first read. No
+        # ATOMIC_REQUESTS: provider I/O remains outside database transactions.
+        'OPTIONS': {'timeout': 20, 'transaction_mode': 'IMMEDIATE'},
+        'TEST': {'NAME': os.getenv('APPDANZA_TEST_DB') or None},
     }
 }
+if os.getenv('APPDANZA_DB_ENGINE', 'sqlite') == 'postgresql':
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ['APPDANZA_DB_NAME'],
+        'USER': os.environ['APPDANZA_DB_USER'],
+        'PASSWORD': os.environ['APPDANZA_DB_PASSWORD'],
+        'HOST': os.environ['APPDANZA_DB_HOST'],
+        'PORT': os.getenv('APPDANZA_DB_PORT', '5432'),
+        'CONN_MAX_AGE': 0,
+        'OPTIONS': {'sslmode': os.getenv('APPDANZA_DB_SSLMODE', 'require'), 'connect_timeout': 10},
+    }
 
 
 # Password validation
@@ -191,6 +219,7 @@ CONTENT_SECURITY_POLICY = {
             "https://cdn.jsdelivr.net",
             "https://static.cloudflareinsights.com",
             "https://code.jquery.com",
+            "https://checkout.epayco.co",
             "https://cdn.datatables.net",
             "https://unpkg.com",
 
@@ -221,6 +250,7 @@ CONTENT_SECURITY_POLICY = {
         # CONEXIONES
         ####################################################
         "connect-src": (
+            "https://api.secure.payco.co",
             "'self'",
             "https://accounts.google.com",
             "https://www.googleapis.com",

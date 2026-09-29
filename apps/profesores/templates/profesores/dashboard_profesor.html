@@ -2,6 +2,7 @@
 {% extends "base_tenant.html" %}
 
 {% block content %}
+{% if profesor.tipo_pago == 'MENSUAL' %}<form method="post" class="container pt-3">{% csrf_token %}<button class="btn btn-outline-primary" type="submit">Preparar / actualizar mi cuenta de cobro</button><p class="small">Agrupa las clases dictadas pendientes para que puedas revisarlas antes de enviarlas.</p></form>{% endif %}
 <div class="row mb-4">
     <div class="col-12">
         <h2 class="fw-bold text-dark">Hola, {{ request.user.first_name }} 👋</h2>

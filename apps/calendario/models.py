@@ -1,3 +1,4 @@
+from apps.academias.scoped_model import ScopedModel
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -77,6 +78,9 @@ class ReservaEstudiante(TenantModel):
     estudiante = models.ForeignKey(User, on_delete=models.CASCADE, related_name='mis_reservas')
     
     asistio = models.BooleanField(default=False, verbose_name="¿Asistió realmente a la clase?")
+    active = models.BooleanField(default=True)
+    charged_enrollment = models.ForeignKey('planes_estudiantes.InscripcionPlan', null=True, blank=True,
+        on_delete=models.PROTECT, related_name='charged_reservations')
     fecha_reserva = models.DateTimeField(auto_now_add=True)
 
     class Meta:

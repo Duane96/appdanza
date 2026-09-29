@@ -1,10 +1,11 @@
+from apps.academias.platform_admin import PlatformModelAdmin
 # apps/eventos/admin.py
 from django.contrib import admin
 from .models import Evento, ColaboradorEvento
 
 # 🚀 1. Registramos Evento PRIMERO y definimos dónde debe buscar
 @admin.register(Evento)
-class EventoAdmin(admin.ModelAdmin):
+class EventoAdmin(PlatformModelAdmin):
     def get_exclude(self, request, obj=None):
         from .dya_api import is_dya_tenant
         return () if obj and is_dya_tenant(obj.academia) else ('connect_dya_finances',)
@@ -21,7 +22,7 @@ class EventoAdmin(admin.ModelAdmin):
 
 # 🚀 2. Ahora sí registramos el ColaboradorEvento (Ya no dará error)
 @admin.register(ColaboradorEvento)
-class ColaboradorEventoAdmin(admin.ModelAdmin):
+class ColaboradorEventoAdmin(PlatformModelAdmin):
     list_display = ('usuario', 'evento', 'rol', 'fecha_asignacion')
     list_filter = ('rol',)
     search_fields = ('usuario__email', 'usuario__username', 'evento__nombre')

@@ -102,7 +102,6 @@
         <div class="col"><div class="card-kpi p-4"><div class="d-flex align-items-center justify-content-between"><div><span class="text-muted small text-uppercase fw-bold mb-1 d-block">Academias Activas</span><h2 class="fw-bold text-success m-0">{{ academias_activas }}</h2></div><div class="icon-box bg-success bg-opacity-10 text-success"><i class="bi bi-check-circle-fill display-6"></i></div></div></div></div>
         <div class="col"><div class="card-kpi p-4"><div class="d-flex align-items-center justify-content-between"><div><span class="text-muted small text-uppercase fw-bold mb-1 d-block">Estudiantes (Red)</span><h2 class="fw-bold text-info m-0">{{ total_estudiantes }}</h2></div><div class="icon-box bg-info bg-opacity-10 text-info"><i class="bi bi-people-fill display-6"></i></div></div></div></div>
         <div class="col"><div class="card-kpi p-4"><div class="d-flex align-items-center justify-content-between"><div><span class="text-muted small text-uppercase fw-bold mb-1 d-block">Eventos Activos</span><h2 class="fw-bold text-warning m-0">{{ total_eventos }}</h2></div><div class="icon-box bg-warning bg-opacity-10 text-warning"><i class="bi bi-calendar-event-fill display-6"></i></div></div></div></div>
-        <div class="col"><div class="card-kpi p-4"><div class="d-flex align-items-center justify-content-between"><div><span class="text-muted small text-uppercase fw-bold mb-1 d-block">Ingresos Tienda/POS</span><h2 class="fw-bold text-purple m-0" style="color: #8b5cf6;">{{ total_tienda }}</h2></div><div class="icon-box" style="background-color: #f3e8ff; color: #8b5cf6;"><i class="bi bi-shop display-6"></i></div></div></div></div>
         <div class="col"><div class="card-kpi p-4"><div class="d-flex align-items-center justify-content-between"><div><span class="text-muted small text-uppercase fw-bold mb-1 d-block">En Mora / Suspendidos</span><h2 class="fw-bold text-danger m-0">{{ academias_suspendidas }}</h2></div><div class="icon-box bg-danger bg-opacity-10 text-danger"><i class="bi bi-shield-lock-fill display-6"></i></div></div></div></div>
     </div>
 
@@ -142,24 +141,10 @@
                                 </div>
                             </td>
                             <td class="text-end">
-                                <div class="form-check form-switch d-inline-block me-3 align-middle m-0" title="Kill Switch">
-                                    <input class="form-check-input shadow-sm {% if aca.suscripcion_saas.estado == 'SUSPENDIDO' %}bg-danger border-danger{% else %}bg-success border-success{% endif %}" type="checkbox" role="switch" id="switchBloqueo_{{ aca.id }}" {% if aca.suscripcion_saas.estado != 'SUSPENDIDO' %}checked{% endif %} onchange="toggleBloqueoGeneral('{{ aca.id }}', '{{ aca.nombre|escapejs }}', this)">
-                                </div>
                                 <div class="btn-group shadow-sm rounded-pill bg-white border">
                                     <button type="button" class="btn btn-sm btn-white text-dark py-2 px-3 border-end hover-shadow" title="Editar Datos" onclick="abrirModalEditarAcademia('{{ aca.id }}', '{{ aca.nombre|escapejs }}', '{{ aca.slug|escapejs }}', '{{ aca.ciudad|default:'Bogotá'|escapejs }}', '{{ aca.template_landing_personalizado|default:''|escapejs }}')"><i class="bi bi-pencil-fill text-warning"></i></button>
                                     <button type="button" class="btn btn-sm btn-white text-dark py-2 px-3 border-end hover-shadow" title="Auditoría Financiera" onclick="abrirModalFinanzas('{{ aca.id }}', '{{ aca.nombre|escapejs }}')"><i class="bi bi-bar-chart-fill text-success"></i></button>
-                                    <button type="button" class="btn btn-sm btn-white text-dark py-2 px-3 hover-shadow" title="Control de Licencia" 
-                                        onclick="abrirModalGestion(
-                                            '{{ aca.id }}', '{{ aca.nombre|escapejs }}', '{{ aca.suscripcion_saas.estado }}', 
-                                            '{{ aca.suscripcion_saas.plan.id }}', '{{ aca.suscripcion_saas.bloqueo_manual_estudiantes|yesno:'False,True' }}',
-                                            '{{ aca.suscripcion_saas.bloqueo_manual_asistencias|yesno:'False,True' }}', '{{ aca.suscripcion_saas.bloqueo_manual_finanzas|yesno:'False,True' }}',
-                                            '{{ aca.suscripcion_saas.bloqueo_manual_multimedia|yesno:'False,True' }}', '{{ aca.suscripcion_saas.modulo_eventos_activo|yesno:'True,False' }}',
-                                            '{{ aca.suscripcion_saas.bloqueo_manual_tienda|yesno:'False,True' }}', '{{ aca.suscripcion_saas.bloqueo_manual_profesores|yesno:'False,True' }}',
-                                            '{{ aca.suscripcion_saas.bloqueo_manual_calendario|yesno:'False,True' }}', '{{ aca.suscripcion_saas.es_cuenta_partner_gratis|yesno:'True,False' }}',
-                                            '{{ aca.es_solo_eventos|yesno:'True,False' }}', '{{ aca.suscripcion_saas.fecha_inicio|date:"Y-m-d" }}', '{{ aca.suscripcion_saas.fecha_vencimiento|date:"Y-m-d" }}',
-                                            '{{ aca.suscripcion_saas.comision_por_tiquete|floatformat:0 }}'
-                                        )"><i class="bi bi-sliders text-primary"></i>
-                                    </button>
+                                    <a class="btn btn-sm btn-white py-2 px-3" title="Política comercial" href="{% url 'admin:saas_core_billingaccount_changelist' %}?academia__id__exact={{ aca.pk }}"><i class="bi bi-sliders text-primary"></i></a>
                                 </div>
                             </td>
                         </tr>
@@ -526,8 +511,7 @@
                     <input type="email" name="admin_email" class="form-control" required>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label small fw-bold">Contraseña Inicial</label>
-                    <input type="password" name="admin_password" class="form-control" required>
+                    <p class="small text-muted">El propietario recibirá un enlace de un solo uso para crear su contraseña.</p>
                 </div>
             </div>
             <div class="modal-footer border-0 pb-4 px-4 bg-transparent">
@@ -1028,8 +1012,8 @@
                     let nombreCompleto = `${est.nombres} ${est.apellidos || ''}`.trim();
                     let fila = `
                         <tr>
-                            <td class="fw-bold text-dark">${nombreCompleto}</td>
-                            <td class="text-secondary fw-medium">${est.identificacion || '--'}</td>
+                            <td class="fw-bold text-dark">${AppDanzaUI.text(nombreCompleto)}</td>
+                            <td class="text-secondary fw-medium">${AppDanzaUI.text(est.identificacion || '--')}</td>
                             <td>${badgeEstado}</td>
                             <td class="text-muted">${new Date(est.fecha_registro).toLocaleDateString('es-CO')}</td>
                         </tr>`;
@@ -1061,11 +1045,11 @@
                 const r = data.resumen;
                 tabResumen.innerHTML = `
                     <div class="row g-3 mt-2">
-                        <div class="col-6"><div class="card p-3 border-0 bg-success bg-opacity-10 shadow-sm rounded-4"><h6 class="text-success small fw-bold mb-1">Total Ingresos</h6><h4 class="m-0 text-success fw-bold">$${r.ingresos_totales.toLocaleString('es-CO')}</h4></div></div>
-                        <div class="col-6"><div class="card p-3 border-0 bg-danger bg-opacity-10 shadow-sm rounded-4"><h6 class="text-danger small fw-bold mb-1">Total Gastos</h6><h4 class="m-0 text-danger fw-bold">$${r.gastos.toLocaleString('es-CO')}</h4></div></div>
-                        <div class="col-12"><div class="card p-3 border-0 bg-dark bg-opacity-10 shadow-sm rounded-4"><h6 class="text-dark small fw-bold mb-1">Facturación Tienda POS</h6><h4 class="m-0 text-dark fw-bold">$${r.ingresos_tienda.toLocaleString('es-CO')}</h4></div></div>
-                        <div class="col-6"><div class="card p-3 border-0 bg-info bg-opacity-10 shadow-sm rounded-4"><h6 class="text-info small fw-bold mb-1">Margen Neto</h6><h4 class="m-0 text-info fw-bold">${r.margen.toFixed(1)}%</h4></div></div>
-                        <div class="col-6"><div class="card p-3 border-0 bg-warning bg-opacity-10 shadow-sm rounded-4"><h6 class="text-warning small fw-bold mb-1 text-dark">Valor Prom. Alumno</h6><h4 class="m-0 text-dark fw-bold">$${r.ticket_promedio.toLocaleString('es-CO', {maximumFractionDigits:0})}</h4></div></div>
+                        <div class="col-6"><div class="card p-3 border-0 bg-success bg-opacity-10 shadow-sm rounded-4"><h6 class="text-success small fw-bold mb-1">Total Ingresos</h6><h4 class="m-0 text-success fw-bold">$${Number(r.ingresos_totales).toLocaleString('es-CO')}</h4></div></div>
+                        <div class="col-6"><div class="card p-3 border-0 bg-danger bg-opacity-10 shadow-sm rounded-4"><h6 class="text-danger small fw-bold mb-1">Total Gastos</h6><h4 class="m-0 text-danger fw-bold">$${Number(r.gastos).toLocaleString('es-CO')}</h4></div></div>
+                        <div class="col-12"><div class="card p-3 border-0 bg-dark bg-opacity-10 shadow-sm rounded-4"><h6 class="text-dark small fw-bold mb-1">Facturación Tienda POS</h6><h4 class="m-0 text-dark fw-bold">$${Number(r.ingresos_tienda).toLocaleString('es-CO')}</h4></div></div>
+                        <div class="col-6"><div class="card p-3 border-0 bg-info bg-opacity-10 shadow-sm rounded-4"><h6 class="text-info small fw-bold mb-1">Margen Neto</h6><h4 class="m-0 text-info fw-bold">${Number(r.margen).toFixed(1)}%</h4></div></div>
+                        <div class="col-6"><div class="card p-3 border-0 bg-warning bg-opacity-10 shadow-sm rounded-4"><h6 class="text-warning small fw-bold mb-1 text-dark">Valor Prom. Alumno</h6><h4 class="m-0 text-dark fw-bold">$${Number(r.ticket_promedio).toLocaleString('es-CO', {maximumFractionDigits:0})}</h4></div></div>
                     </div>
                 `;
                 
@@ -1076,8 +1060,8 @@
                                 <h2 class="accordion-header">
                                     <button class="accordion-button collapsed bg-light text-dark fw-bold border-0" type="button" data-bs-toggle="collapse" data-bs-target="#collapse${index}">
                                         <div class="d-flex justify-content-between w-100 me-3">
-                                            <span><i class="bi bi-calendar-event text-primary me-2"></i>${e.nombre}</span>
-                                            <span class="text-success">$${e.total_ingreso.toLocaleString('es-CO')}</span>
+                                            <span><i class="bi bi-calendar-event text-primary me-2"></i>${AppDanzaUI.text(e.nombre)}</span>
+                                            <span class="text-success">$${Number(e.total_ingreso).toLocaleString('es-CO')}</span>
                                         </div>
                                     </button>
                                 </h2>
@@ -1085,12 +1069,12 @@
                                     <div class="accordion-body small bg-white border-top">
                                         <div class="row text-center mb-3">
                                             <div class="col-4">Regs: <br><b class="fs-6">${e.cant_recibos}</b></div>
-                                            <div class="col-4 text-primary">Online: <br><b class="fs-6">$${e.ingresos_online.toLocaleString('es-CO')}</b></div>
-                                            <div class="col-4 text-warning">Taquilla: <br><b class="fs-6 text-dark">$${e.ingresos_taquilla.toLocaleString('es-CO')}</b></div>
+                                            <div class="col-4 text-primary">Online: <br><b class="fs-6">$${Number(e.ingresos_online).toLocaleString('es-CO')}</b></div>
+                                            <div class="col-4 text-warning">Taquilla: <br><b class="fs-6 text-dark">$${Number(e.ingresos_taquilla).toLocaleString('es-CO')}</b></div>
                                         </div>
                                         <div class="d-flex justify-content-between border-top pt-2 bg-light p-2 rounded-3">
-                                            <span>Gastos: <b class="text-danger">-$${e.gastos.toLocaleString('es-CO')}</b></span>
-                                            <span>Neto: <b class="text-success fs-6">$${e.neto.toLocaleString('es-CO')}</b></span>
+                                            <span>Gastos: <b class="text-danger">-$${Number(e.gastos).toLocaleString('es-CO')}</b></span>
+                                            <span>Neto: <b class="text-success fs-6">$${Number(e.neto).toLocaleString('es-CO')}</b></span>
                                         </div>
                                     </div>
                                 </div>
@@ -1291,14 +1275,14 @@
 
     // ================== FUNCIONALIDAD: APROBAR PAGOS ==================
     function abrirModalAprobarPago(reporteId, academiaNombre, urlArchivo, planId) {
-        document.getElementById('rev-titulo').innerHTML = `<i class="bi bi-shield-check text-success me-2"></i>Auditoría Pago: ${academiaNombre}`;
+        document.getElementById('rev-titulo').innerHTML = `<i class="bi bi-shield-check text-success me-2"></i>Auditoría Pago: ${AppDanzaUI.text(academiaNombre)}`;
         
         // 1. Mostrar la imagen o PDF
         const visor = document.getElementById('visor-comprobante-pago');
         if(urlArchivo.toLowerCase().endsWith('.pdf')) {
-            visor.innerHTML = `<iframe src="${urlArchivo}" class="w-100 border-0" style="height: 500px;"></iframe>`;
+            visor.innerHTML = `<iframe src="${AppDanzaUI.localUrl(urlArchivo)}" class="w-100 border-0" style="height: 500px;"></iframe>`;
         } else {
-            visor.innerHTML = `<img src="${urlArchivo}" class="img-fluid w-100" style="object-fit: contain; max-height: 500px;">`;
+            visor.innerHTML = `<img src="${AppDanzaUI.localUrl(urlArchivo)}" class="img-fluid w-100" style="object-fit: contain; max-height: 500px;">`;
         }
 
         // 2. Pre-seleccionar el Plan que tenían

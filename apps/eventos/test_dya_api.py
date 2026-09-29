@@ -22,6 +22,9 @@ class DyAIntegrationTests(TestCase):
         self.auth = {'HTTP_AUTHORIZATION': 'Bearer test-integration-only'}
 
     def receipt(self, **kwargs):
+        # These fixtures represent pre-migration records, whose paid flag stays intact.
+        kwargs.setdefault('payment_status', 'LEGACY')
+        kwargs.setdefault('revisado_por_admin', True)
         return ReciboEvento.objects.create(evento=self.event, comprador_nombre='Dato privado',
             comprador_telefono='privado', origen='PUERTA', precio_unitario_aplicado=100,
             monto_total=100, **kwargs)
@@ -63,7 +66,7 @@ class DyAIntegrationTests(TestCase):
         for url in (self.url, reverse('dya_event', args=[self.event.pk])):
             for method in ('post', 'put', 'patch', 'delete'):
                 self.assertEqual(getattr(self.client, method)(url, **self.auth).status_code, 405)
-        self.assertEqual(Evento.objects.count(), 3)
+        self.assertEqual(Evento.unfiltered_objects.count(), 3)
 
     @override_settings(DEBUG=False)
     def test_production_requires_https(self):

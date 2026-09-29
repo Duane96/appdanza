@@ -1,3 +1,4 @@
+from apps.academias.private_media import validate_private_upload
 # apps/eventos/forms.py
 from django import forms
 from .models import Evento, CodigoDescuento, FasePreventa, ReciboEvento, GastoEvento
@@ -58,6 +59,13 @@ class EventoForm(forms.ModelForm):
 
 
 class CodigoDescuentoForm(forms.ModelForm):
+    def __init__(self, *args, evento=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.evento = evento or (self.instance.evento if self.instance.evento_id else None)
+        self.fields['pase_aplicable'].queryset = TipoPase.objects.filter(evento=self.evento) if self.evento else TipoPase.objects.none()
+        if self.evento:
+            self.instance.evento = self.evento
+
     class Meta:
         model = CodigoDescuento
         # 🎯 Añadimos 'precio_especial_dia' a los campos permitidos
@@ -85,6 +93,11 @@ class GastoEventoForm(forms.ModelForm):
 
 
 class RegistroOnlineEventoForm(forms.ModelForm):
+    registration_key = forms.UUIDField(widget=forms.HiddenInput)
+    cantidad_entradas = forms.IntegerField(min_value=1, max_value=25,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'max': 25, 'value': 1}))
+    comprobante_pago = forms.ImageField(required=True, validators=[validate_private_upload], widget=forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*'}))
+
     """El formulario dinámico público para que la gente se inscriba desde la web."""
     codigo_cupon = forms.CharField(
         required=False, 
@@ -104,6 +117,8 @@ class RegistroOnlineEventoForm(forms.ModelForm):
 
 
 class VentaPuertaForm(forms.ModelForm):
+    cantidad_entradas = forms.IntegerField(min_value=1, max_value=25)
+
     """El formulario para que Duane/Aleja registren ventas manuales en la taquilla física."""
     class Meta:
         model = ReciboEvento
@@ -123,7 +138,7 @@ from .models import TipoPase
 class TipoPaseForm(forms.ModelForm):
     class Meta:
         model = TipoPase
-        fields = ['nombre', 'precio', 'accesos_permitidos', 'qrs_por_pase', 'activo']
+        fields = ['nombre', 'precio', 'accesos_permitidos', 'qrs_por_pase', 'admissions_per_unit', 'activo']
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Solo Social (Viernes)'}),
             'precio': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Dejar vacío si hay Fases de Fecha'}),
@@ -137,6 +152,10 @@ class TipoPaseForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         # Hacemos que el precio sea opcional a nivel backend
         self.fields['precio'].required = False
+        self.fields['qrs_por_pase'].min_value = 1
+        self.fields['qrs_por_pase'].max_value = 10
+        self.fields['admissions_per_unit'].min_value = 1
+        self.fields['admissions_per_unit'].max_value = 10
 
 class FasePreventaForm(forms.ModelForm):
     class Meta:

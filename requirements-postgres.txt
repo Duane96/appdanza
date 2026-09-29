@@ -1,0 +1,3 @@
+-r requirements.txt
+# Optional deployment target; SQLite production does not install this driver.
+psycopg[binary]>=3.2,<4

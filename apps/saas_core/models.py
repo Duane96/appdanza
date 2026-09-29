@@ -1,6 +1,11 @@
+from apps.academias.private_media import private_storage, validate_private_upload
 from django.db import models
 from apps.academias.models import Academia # Importamos tu modelo actual de Academia
 from django.utils import timezone
+from .operations_models import AuditEvent, DurableJob
+from .billing_models import (BillingAccount, PlanVersion, CommercialSubscription, EventFeeRate,
+    SaaSInvoice, InvoiceLine, UsageEntry, UsageAllocation, PaymentAttempt, SaaSPayment,
+    SaaSCredit, SaaSRefund, ProviderEvent, ProviderEventResult, PaymentMandate, OnboardingRequest)
 
 
 class PlanSaaS(models.Model):
@@ -87,120 +92,66 @@ class SuscripcionAcademia(models.Model):
     
     @property
     def modulo_eventos_activo(self):
-        """
-        Prioridad:
-        1. Bloqueo manual (Override maestro): Si está bloqueado, nadie entra.
-        2. Estado Partner: Si es Partner, acceso total.
-        3. Plan: Si no es Partner, solo acceso si el plan lo permite.
-        """
-        if self.bloqueo_manual_eventos: return False
-        if self.es_cuenta_partner_gratis: return True
-        return self.plan.permite_eventos
-
-    # 🚀 ACTUALIZA LA PROPERTY DE EVENTOS PARA QUE NO DEPENDA DEL PLAN:
-    @property
-    def modulo_eventos_activo(self):
-        """
-        NUEVA LÓGICA: Los eventos son un módulo 100% independiente de los planes.
-        Depende exclusivamente del interruptor manual o de si es Partner VIP.
-        (Nota: bloqueo_manual_eventos=False significa que SÍ lo tiene activo)
-        """
-        if self.es_cuenta_partner_gratis: return True
-        return not self.bloqueo_manual_eventos
+        from .policy import EntitlementService
+        return EntitlementService(self.academia).has('eventos')
 
     @property
     def modulo_calendario_activo(self):
-        """Lógica de activación para Calendario"""
-        if self.bloqueo_manual_calendario: return False
-        if self.es_cuenta_partner_gratis: return True
-        return self.plan.permite_calendario
-    
+        from .policy import EntitlementService
+        return EntitlementService(self.academia).has('calendario')
+
     @property
     def modulo_multimedia_activo(self):
-        if self.bloqueo_manual_multimedia: return False
-        if self.es_cuenta_partner_gratis: return True
-        return self.plan.permite_multimedia
+        from .policy import EntitlementService
+        return EntitlementService(self.academia).has('multimedia')
 
     @property
     def modulo_finanzas_activo(self):
-        if self.bloqueo_manual_finanzas: return False
-        if self.es_cuenta_partner_gratis: return True
-        return self.plan.permite_finanzas
+        from .policy import EntitlementService
+        return EntitlementService(self.academia).has('finanzas')
 
     @property
     def modulo_asistencias_activo(self):
-        if self.bloqueo_manual_asistencias: return False
-        if self.es_cuenta_partner_gratis: return True
-        return self.plan.permite_asistencias_qr
-    
+        from .policy import EntitlementService
+        return EntitlementService(self.academia).has('asistencias')
+
     @property
     def modulo_estudiantes_activo(self):
-        if self.bloqueo_manual_estudiantes: return False
-        if self.es_cuenta_partner_gratis: return True
-        return self.plan.permite_estudiantes
-    
+        from .policy import EntitlementService
+        return EntitlementService(self.academia).has('estudiantes')
+
     @property
     def modulo_tienda_activo(self):
-        if self.bloqueo_manual_tienda: return False
-        if self.es_cuenta_partner_gratis: return True
-        return self.plan.permite_tienda
-    
+        from .policy import EntitlementService
+        return EntitlementService(self.academia).has('tienda')
+
+    @property
+    def modulo_profesores_activo(self):
+        from .policy import EntitlementService
+        return EntitlementService(self.academia).has('profesores')
+
     @property
     def dias_restantes_licencia(self):
-        """Calcula de forma exacta cuántos días le quedan de uso a la academia en Hora Colombia."""
-        # Forzamos la zona horaria local colombiana configurada en Django (America/Bogota)
-        hoy_colombia = timezone.localtime(timezone.now()).date()
-        delta = self.fecha_vencimiento - hoy_colombia
-        return delta.days
+        from .policy import BillingPolicy
+        policy = BillingPolicy(self.academia)
+        end = policy.subscription.period_end.date() if policy.subscription else self.fecha_vencimiento
+        return (end - timezone.localdate()).days
 
     @property
     def mostrar_alerta_vencimiento(self):
-        """Condición: Muestra alerta permanente durante los 5 días previos al vencimiento."""
-        if self.es_cuenta_partner_gratis or self.estado == 'SUSPENDIDO':
-            return False
-        
-        dias = self.dias_restantes_licencia
-        # Retorna True si está entre el día 0 (último día de pago) y el día 5 de anticipación
-        return 0 <= dias <= 5
+        from .policy import BillingPolicy
+        return not BillingPolicy(self.academia).exempt and 0 <= self.dias_restantes_licencia <= 5
 
     @property
     def esta_bloqueada(self):
-        """
-        Bloqueo inteligente:
-        - Si es partner, nunca se bloquea.
-        - Si lo pasas a SUSPENDIDO manualmente, se bloquea.
-        - Si tiene más de 5 días de vencido (Mora vencida), se bloquea automáticamente.
-        """
-        if self.es_cuenta_partner_gratis:
-            return False
-            
-        if self.estado == 'SUSPENDIDO':
-            return True
-            
-        # Si ya pasaron los 5 días de gracia (días restantes es menor a -5)
-        if self.dias_restantes_licencia < -5:
-            return True
-            
-        return False
+        from .policy import BillingPolicy
+        return BillingPolicy(self.academia).restricted
 
     @property
     def esta_en_mora(self):
-        """
-        Detecta si la academia está en los 5 días de gracia.
-        Retorna True si los días restantes están entre -1 y -5.
-        """
-        if self.es_cuenta_partner_gratis or self.estado in ['PRUEBA', 'SUSPENDIDO']:
-            return False
-            
-        # Si está entre el día de vencimiento (0) y el día de corte final (-5)
-        if -5 <= self.dias_restantes_licencia < 0:
-            return True
-            
-        if self.estado == 'MORA':
-            return True
-            
-        return False
-    
+        from .policy import BillingPolicy
+        policy = BillingPolicy(self.academia)
+        return not policy.exempt and policy.subscription is not None and policy.subscription.state == 'PAST_DUE'
 
 
 
@@ -360,8 +311,9 @@ class ReportePagoSaaS(models.Model):
     ]
 
     academia = models.ForeignKey(Academia, on_delete=models.CASCADE, related_name='reportes_pago')
+    invoice = models.ForeignKey(SaaSInvoice, null=True, blank=True, on_delete=models.PROTECT)
     plan = models.ForeignKey(PlanSaaS, on_delete=models.SET_NULL, null=True)
-    comprobante = models.FileField(upload_to='saas_comprobantes/%Y/%m/')
+    comprobante = models.FileField(storage=private_storage, validators=[validate_private_upload], upload_to='saas_comprobantes/%Y/%m/')
     fecha_envio = models.DateTimeField(auto_now_add=True)
     estado = models.CharField(max_length=20, choices=ESTADOS, default='PENDIENTE')
 
@@ -394,12 +346,14 @@ class ReciboSaaS(models.Model):
         return f"{self.numero_recibo} - {self.academia.nombre} - ${self.monto}"
 
     def save(self, *args, **kwargs):
-        """Autogenera un consecutivo único para tus facturas SaaS"""
+        from .policy import BillingPolicy
+        from django.core.exceptions import ValidationError
+        import uuid
+        from decimal import Decimal
+        if self._state.adding and Decimal(str(self.monto)) > 0 and BillingPolicy(self.academia).exempt:
+            raise ValidationError('La política comercial no permite cobrar a esta academia.')
         if not self.numero_recibo:
-            ultimo = ReciboSaaS.objects.order_by('id').last()
-            consecutivo = (ultimo.id + 1) if ultimo else 1
-            # Tus recibos tendrán el prefijo SAAS-0001, SAAS-0002...
-            self.numero_recibo = f"SAAS-{consecutivo:04d}"
+            self.numero_recibo = 'SAAS-'+uuid.uuid4().hex[:16].upper()
         super().save(*args, **kwargs)
 
 
@@ -408,7 +362,7 @@ class GastoSaaS(models.Model):
     fecha = models.DateField(default=timezone.now, verbose_name="Fecha del Gasto")
     monto = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Monto")
     concepto = models.CharField(max_length=255, verbose_name="Descripción / Concepto")
-    comprobante = models.FileField(upload_to='saas/gastos_comprobantes/', blank=True, null=True)
+    comprobante = models.FileField(storage=private_storage, validators=[validate_private_upload], upload_to='saas/gastos_comprobantes/', blank=True, null=True)
 
     class Meta:
         ordering = ['-fecha']

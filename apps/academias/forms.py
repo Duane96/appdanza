@@ -93,7 +93,7 @@ class TenantLoginForm(AuthenticationForm):
         widget=forms.TextInput(attrs={
             'class': 'form-control form-control-lg rounded-pill', 
             'placeholder': 'Tu correo, documento o usuario',
-            'autocomplete': 'off'
+            'autocomplete': 'username'
         })
     )
     password = forms.CharField(
@@ -105,112 +105,35 @@ class TenantLoginForm(AuthenticationForm):
     )
 
     def clean(self):
+        from django.db.models import Q
+        from .authorization import can
+        from .models import TenantMembership
         username = self.cleaned_data.get('username')
         password = self.cleaned_data.get('password')
-
-        if username is not None and password:
-            real_username = username
-            estudiante_detectado = None
-
-            print("\n" + "="*50)
-            print(f"🚀 INICIANDO DEBUG DE LOGIN (TENANT: {getattr(self.request, 'tenant', 'SIN TENANT')})")
-            print(f"📥 Input recibido en formulario: '{username}'")
-            print("="*50)
-
-            # 1. 📧 ¿Ingresó un Email?
-            if '@' in username:
-                print("📧 Detectado intento por correo electrónico.")
-                user_obj = User.objects.filter(email__iexact=username).first()
-                if user_obj:
-                    real_username = user_obj.username
-                    print(f"✅ Correo encontrado. Username global asociado: '{real_username}'")
-                else:
-                    print("❌ Correo no encontrado en la base de datos global.")
-            else:
-                # 2. 🪪 ¿Ingresó su Documento de Identidad?
-                if hasattr(self.request, 'tenant'):
-                    from apps.planes_estudiantes.models import Estudiante 
-                    from apps.academias.models import PerfilUsuario 
-                    
-                    print("🪪 Buscando si el input coincide con un documento en esta academia...")
-                    estudiante_detectado = Estudiante.objects.filter(
-                        identificacion=username, 
-                        academia=self.request.tenant
-                    ).first()
-                    
-                    if estudiante_detectado:
-                        print(f"✅ ¡Estudiante encontrado localmente! -> {estudiante_detectado.nombres} {estudiante_detectado.apellidos} (ID: {estudiante_detectado.id})")
-                        
-                        perfiles_academia = PerfilUsuario.objects.filter(
-                            academia=self.request.tenant, 
-                            rol='ESTUDIANTE'
-                        ).select_related('user')
-                        
-                        print(f"👥 Total de perfiles de estudiantes en esta academia: {perfiles_academia.count()}")
-
-                        perfil_encontrado = None
-
-                        if estudiante_detectado.email:
-                            print(f"🔍 Buscando PerfilUsuario usando su email: {estudiante_detectado.email}")
-                            perfil_encontrado = perfiles_academia.filter(user__email__iexact=estudiante_detectado.email).first()
-                        
-                        if not perfil_encontrado:
-                            print("⚠️ No se encontró por email. Intentando reconstruir username...")
-                            nombre_limpio = "".join(estudiante_detectado.nombres.split()).lower()
-                            apellido_limpio = "".join(estudiante_detectado.apellidos.split()).lower()
-                            base_username = f"{nombre_limpio}{apellido_limpio}"
-                            base_username = "".join(c for c in unicodedata.normalize('NFD', base_username) if unicodedata.category(c) != 'Mn')
-                            
-                            print(f"🔍 Buscando PerfilUsuario cuyo username global comience con: '{base_username}'")
-                            perfil_encontrado = perfiles_academia.filter(user__username__startswith=base_username).first()
-                        
-                        if perfil_encontrado:
-                            real_username = perfil_encontrado.user.username
-                            print(f"🎯 ¡BINGO! PerfilUsuario encontrado. Username real de Django es: '{real_username}'")
-                        else:
-                            print("🚨 ERROR CRÍTICO: Existe el modelo Estudiante, pero NO tiene un PerfilUsuario asociado en esta academia.")
-                    else:
-                        print("❌ No se encontró ningún estudiante con ese documento en ESTA academia.")
-
-            # 3. 🔐 Intentamos autenticar
-            print(f"🔐 Ejecutando authenticate() de Django con username='{real_username}'...")
-            self.user_cache = authenticate(self.request, username=real_username, password=password)
-            
+        tenant = getattr(self.request, 'tenant', None)
+        if username and password:
+            actual = username
+            if '@' in username and tenant:
+                candidates = User.objects.filter(email__iexact=username).filter(
+                    Q(tenant_memberships__academia=tenant, tenant_memberships__active=True) |
+                    Q(eventos_colaborados__evento__academia=tenant)).distinct()
+                # Never choose an arbitrary account sharing an email address.
+                if candidates.count() == 1:
+                    actual = candidates.get().username
+            elif tenant:
+                from apps.planes_estudiantes.models import Estudiante
+                from .student_identity import user_for_student
+                students = Estudiante.unfiltered_objects.filter(academia=tenant,
+                    identificacion=username).select_related('user')
+                if students.count() == 1:
+                    account = user_for_student(students.get())
+                    if account:
+                        actual = account.username
+            self.user_cache = authenticate(self.request, username=actual, password=password)
             if self.user_cache is None:
-                print("❌ authenticate() falló. Contraseña incorrecta o el usuario no existe/está inactivo.")
-                if estudiante_detectado:
-                    raise forms.ValidationError(
-                        f"¡Hola {estudiante_detectado.nombres}! Encontramos tu perfil, pero la contraseña no coincide. "
-                        f"(Tu verdadero nombre de usuario en esta academia es: '{real_username}')"
-                    )
                 raise self.get_invalid_login_error()
-            else:
-                print("✅ authenticate() EXITOSO. Validando autorización de Tenant...")
-                self.confirm_login_allowed(self.user_cache)
-                
-                # 4. 🚀 BARRERA MULTI-TENANT
-                if hasattr(self.request, 'tenant') and not self.user_cache.is_superuser:
-                    try:
-                        # 1. Verificamos si es el dueño/estudiante nativo de esta academia
-                        es_dueno = (self.user_cache.perfil.academia == self.request.tenant)
-                        
-                        # 2. 🚀 VERIFICACIÓN DE INVITADO VIP (Colaborador de Evento)
-                        # Importamos aquí adentro para evitar "circular imports" entre academias y eventos
-                        from apps.eventos.models import ColaboradorEvento
-                        es_colaborador = ColaboradorEvento.objects.filter(
-                            evento__academia=self.request.tenant,
-                            usuario=self.user_cache
-                        ).exists()
-
-                        # 3. Si no es nativo ni es invitado VIP, lo pateamos
-                        if not (es_dueno or es_colaborador):
-                            print(f"🚨 BLOQUEO MULTI-TENANT: El usuario pertenece a {self.user_cache.perfil.academia.nombre}, intentó entrar a {self.request.tenant.nombre}")
-                            raise forms.ValidationError("No tienes credenciales ni invitaciones para acceder a esta academia.")
-                            
-                    except ObjectDoesNotExist:
-                        print("🚨 BLOQUEO: El usuario no tiene perfil SaaS (ObjectDoesNotExist).")
-                        raise forms.ValidationError("Este usuario no tiene un perfil SaaS asociado.")
-                
-                print("🎉 LOGIN COMPLETAMENTE APROBADO (Dueño o Colaborador VIP).")
-
+            self.confirm_login_allowed(self.user_cache)
+            if tenant and not (can(self.user_cache, tenant, 'tenant.view') or
+                               can(self.user_cache, tenant, 'events.view')):
+                raise self.get_invalid_login_error()
         return self.cleaned_data

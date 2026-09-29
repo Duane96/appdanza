@@ -9,7 +9,7 @@ from django.db import transaction
 from django.contrib import messages
 from django.utils import timezone
 
-from academias.mixins import TenantAdminRequiredMixin
+from apps.academias.mixins import TenantAdminRequiredMixin
 
 from .models import ReciboIngreso, Gasto
 from .forms import GastoForm, LiquidacionProfesorForm, IngresoExtraForm
@@ -31,7 +31,7 @@ from io import BytesIO
 from django.http import HttpResponse
 import os
 
-from comunicaciones.services import enviar_correo_transaccional
+from apps.comunicaciones.services import enviar_correo_transaccional
 
 
 class PanelFinanzasView(TenantAdminRequiredMixin, ListView):
@@ -138,45 +138,15 @@ class RegistrarIngresoExtraView(TenantAdminRequiredMixin, FormView):
 class AnularTransaccionView(TenantAdminRequiredMixin, View):
     """Pone en CERO el efecto contable de un recibo o gasto guardando el rastro legal"""
     def post(self, request, slug_academia, tipo, pk):
-        motivo = request.POST.get('motivo_anulacion', 'No especificado')
-        
-        if tipo == 'ingreso':
-            item = get_object_or_404(ReciboIngreso, pk=pk, academia=request.tenant)
-            item.estado = 'ANULADO'
-            item.motivo_anulacion = motivo
-            item.anulado_por = request.user
-            item.save()
-            
-            # 🚀 LÓGICA SENIOR: Si el recibo pagaba un plan de estudiante, anulamos la inscripción y actualizamos al alumno
-            if item.inscripcion:
-                inscripcion = item.inscripcion
-                estudiante = inscripcion.estudiante
-                
-                # Eliminamos o invalidamos la inscripción asociada al pago falso/anulado
-                # (Opcional: Si prefieres borrarla físicamente para que no estorbe: inscripcion.delete())
-                # Aquí la eliminaremos para limpiar el historial de tiquetera activa del alumno:
-                inscripcion.delete()
-                
-                # Verificamos si al estudiante le quedan otras inscripciones activas o vigentes
-                tiene_otros_planes = estudiante.inscripciones.filter(academia=request.tenant).exists()
-                
-                if not tiene_otros_planes:
-                    estudiante.estado = 'INACTIVO'
-                    estudiante.save()
-                    messages.warning(request, f"El estudiante {estudiante.nombres} se ha quedado sin planes activos y pasó a estado Inactivo.")
-
-            messages.warning(request, f"El Recibo de Caja {item.numero_recibo} ha sido ANULADO y se desvinculó el plan del estudiante.")
-            
-        elif tipo == 'gasto':
-            item = get_object_or_404(Gasto, pk=pk, academia=request.tenant)
-            item.estado = 'ANULADO'
-            item.motivo_anulacion = motivo
-            item.anulado_por = request.user
-            item.save()
-            messages.warning(request, f"El Comprobante de Egreso {item.numero_egreso} ha sido ANULADO.")
-
+        from .operations import annul
+        from django.core.exceptions import ValidationError
+        try:
+            annul(request.tenant, request.user, tipo, pk, request.POST.get('motivo_anulacion', ''))
+            messages.warning(request, 'Comprobante anulado. Se conserva el historial asociado.')
+        except ValidationError as exc:
+            messages.error(request, '; '.join(exc.messages))
         return redirect('finanzas:panel_finanzas', slug_academia=slug_academia)
-    
+
 
 class ObtenerDetalleTransaccionView(TenantAdminRequiredMixin, View):
     """
@@ -447,7 +417,7 @@ class DescargarSoportesZipView(TenantAdminRequiredMixin, View):
                         nombre_anexo = f"Egresos/Anexos/Factura_Soporte_{gas.numero_egreso}_{gas.proveedor_nit}{extension}"
                         zip_file.writestr(nombre_anexo, archivo_bytes)
                     except Exception as e:
-                        print(f"Error adjuntando anexo de gasto {gas.numero_egreso}: {e}")
+                        pass  # Sensitive diagnostics are deliberately not logged.
                     finally:
                         gas.soporte_digital.close()
 

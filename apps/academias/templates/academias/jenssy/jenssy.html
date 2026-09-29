@@ -1,3 +1,4 @@
+{% load branding_text %}
 {% load static %}
 <!DOCTYPE html>
 <html lang="es">
@@ -359,7 +360,7 @@
                     </div>
                     
                     <h1 class="hero-title">
-                        {{ academia.hero_titulo|default:"Sabor.<br>Curvas.<br>Repique."|safe }}
+                        {{ academia.hero_titulo|default:"Sabor.<br>Curvas.<br>Repique."|safe_heading }}
                     </h1>
                     
                     <p class="fs-4 mb-5 text-dark fw-medium" style="max-width: 600px;">
@@ -409,7 +410,7 @@
             <div class="col-lg-7 ps-lg-5 reveal-on-scroll" style="transition-delay: 0.2s;">
                 <h4 class="font-salsa fs-2 mb-2">Más que baile</h4>
                 <h2 class="display-3 mb-4" style="color: var(--soft-purple); letter-spacing: -2px;">
-                    {{ academia.info_titulo|default:"Tu versión<br>más radiante."|safe }}
+                    {{ academia.info_titulo|default:"Tu versión<br>más radiante."|safe_heading }}
                 </h2>
                 
                 <p class="fs-4 mb-4 text-dark">

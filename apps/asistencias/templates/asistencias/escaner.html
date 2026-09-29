@@ -144,7 +144,7 @@
             document.getElementById('alerta-titulo').innerText = esExito ? "¡Ingreso Autorizado!" : "¡Acceso Denegado!";
             
             if (esExito) {
-                document.getElementById('alerta-mensaje').innerHTML = `<strong>${res.body.estudiante}</strong><br>Clases restantes: <span class="badge bg-success rounded-pill mt-1">${res.body.clases_restantes}</span>`;
+                document.getElementById('alerta-mensaje').innerHTML = `<strong>${AppDanzaUI.text(res.body.estudiante)}</strong><br>Clases restantes: <span class="badge bg-success rounded-pill mt-1">${res.body.clases_restantes}</span>`;
             } else {
                 document.getElementById('alerta-mensaje').innerText = res.body.mensaje;
             }
@@ -215,7 +215,7 @@
             
             if (isSuccess) {
                 document.getElementById('alerta-mensaje-manual').innerHTML = 
-                    `<strong>${res.body.estudiante}</strong><br>` +
+                    `<strong>${AppDanzaUI.text(res.body.estudiante)}</strong><br>` +
                     `Clases restantes: <span class="badge bg-success rounded-pill mt-1">${res.body.clases_restantes}</span>`;
             } else {
                 document.getElementById('alerta-mensaje-manual').innerText = res.body.mensaje || "Ocurrió un error inesperado.";

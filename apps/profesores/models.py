@@ -18,7 +18,7 @@ class Profesor(TenantModel):
     documento_identidad = models.CharField(
         max_length=50, 
         verbose_name="Documento de Identidad / NIT",
-        help_text="Se usará como contraseña inicial y para soportes de egreso."
+        help_text="Documento para soportes de egreso; nunca se utiliza como contraseña."
     )
     
     telefono = models.CharField(max_length=20)

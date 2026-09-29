@@ -64,7 +64,7 @@ class CalendarioAdminView(TenantAdminRequiredMixin, TemplateView):
         ).prefetch_related(
             'reservas__estudiante' # 🚀 NUEVO: Traemos a los alumnos de un solo golpe (Cero N+1 queries)
         ).annotate(
-            total_reservas=Count('reservas')
+            total_reservas=Count('reservas', filter=Q(reservas__active=True))
         ).order_by('fecha_hora_inicio')
 
         # 5. Organizar las sesiones en un diccionario clave-valor por fecha (YYYY-MM-DD)
@@ -113,6 +113,8 @@ class ProgramarSesionAjaxView(TenantAdminRequiredMixin, View):
             fin_str = data.get('fin')
             repetir = data.get('repetir', False)
             semanas = int(data.get('semanas', 1))
+            if not 1 <= semanas <= 52:
+                return JsonResponse({'status': 'error', 'message': 'Selecciona entre 1 y 52 semanas.'}, status=400)
 
             # 🛡️ Validar pertenencia al Tenant
             clase = Clase.objects.get(id=clase_id, academia=request.tenant)
@@ -161,7 +163,7 @@ class ProgramarSesionAjaxView(TenantAdminRequiredMixin, View):
         except Profesor.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'El profesor seleccionado no es válido o está inactivo.'}, status=404)
         except Exception as e:
-            return JsonResponse({'status': 'error', 'message': f'Error interno: {str(e)}'}, status=500)
+            return JsonResponse({'status': 'error', 'message': 'No se pudo completar la operación. Revisa los datos.'}, status=500)
 
 from decimal import Decimal
 
@@ -171,105 +173,17 @@ class MarcarClaseDictadaView(TenantAdminRequiredMixin, View):
     Flujo dinámico: Acumula en la planilla "Abierta" hasta que el profe decida enviarla.
     """
     def post(self, request, *args, **kwargs):
+        from django.core.exceptions import ValidationError
+        from apps.profesores.operations import mark_session
         try:
-            if not request.body:
-                return JsonResponse({'status': 'error', 'message': 'Cuerpo de petición vacío.'}, status=400)
-                
             data = json.loads(request.body)
-            sesion_id = data.get('sesion_id')
-            confirmar_pago = data.get('confirmar_pago', False) 
-
-            sesion = SesionClase.objects.select_related(
-                'profesor_asignado__usuario',
-                'profesor_reemplazo__usuario'
-            ).get(id=sesion_id, clase__academia=request.tenant)
-
-            if sesion.estado == 'DICTADA':
-                if not (confirmar_pago and not sesion.pagada_al_profesor):
-                    return JsonResponse({'status': 'info', 'message': 'Esta clase ya había sido procesada.'})
-
-            profesor = sesion.profe_a_pagar
-            if not profesor:
-                return JsonResponse({'status': 'error', 'message': 'La sesión no tiene un profesor válido asignado.'}, status=400)
-                
-            tarifa = Decimal(str(sesion.tarifa_a_pagar or 0))
-
-            with transaction.atomic():
-                sesion.estado = 'DICTADA'
-                
-                # --- LÓGICA 1: PROFESOR COBRA MENSUAL (FLUJO ACUMULATIVO) ---
-                if profesor.tipo_pago == 'MENSUAL':
-                    # 🚀 MAGIA AQUÍ: Buscamos la planilla que esté "Abierta" (GENERADA)
-                    orden = OrdenPagoMensual.objects.filter(
-                        profesor=profesor, 
-                        academia=request.tenant,
-                        estado='GENERADA'
-                    ).first()
-                    
-                    # Si no hay ninguna abierta (porque es nuevo o porque ya la envió), creamos una nueva
-                    if not orden:
-                        mes_actual = timezone.localtime(timezone.now()).date().replace(day=1)
-                        orden = OrdenPagoMensual.objects.create(
-                            profesor=profesor,
-                            mes_periodo=mes_actual, # Queda con el nombre del mes actual en que se genera
-                            academia=request.tenant,
-                            estado='GENERADA',
-                            cantidad_clases=0,
-                            monto_total=Decimal('0.00')
-                        )
-                    
-                    sesion.orden_pago_mensual = orden
-                    sesion.pagada_al_profesor = False
-                    sesion.save()
-
-                    # Sumamos a la bolsa
-                    orden.cantidad_clases += 1
-                    orden.monto_total += tarifa
-                    orden.save()
-
-                    return JsonResponse({
-                        'status': 'success', 
-                        'tipo_pago': 'MENSUAL',
-                        'message': f'Clase añadida a la cuenta de cobro abierta de {profesor.usuario.first_name}.'
-                    })
-
-                # --- LÓGICA 2: PROFESOR COBRA POR CLASE ---
-                elif profesor.tipo_pago == 'POR_CLASE':
-                    if confirmar_pago:
-                        gasto = Gasto.objects.create(
-                            academia=request.tenant,
-                            categoria='NOMINA',
-                            concepto=f"Pago clase dictada: {sesion.clase.nombre} - Prof. {profesor.usuario.get_full_name()}",
-                            monto=tarifa,
-                            proveedor_nit=profesor.documento_identidad,
-                            proveedor_nombre=profesor.usuario.get_full_name(),
-                            es_deducible=True
-                        )
-                        sesion.gasto_individual = gasto
-                        sesion.pagada_al_profesor = True
-                        sesion.save()
-
-                        return JsonResponse({
-                            'status': 'success', 
-                            'tipo_pago': 'POR_CLASE',
-                            'pagado': True,
-                            'message': '¡Clase marcada y Gasto registrado exitosamente en Finanzas!'
-                        })
-                    else:
-                        sesion.save()
-                        return JsonResponse({
-                            'status': 'success', 
-                            'tipo_pago': 'POR_CLASE',
-                            'pagado': False,
-                            'tarifa': tarifa,
-                            'profesor_nombre': profesor.usuario.get_full_name(),
-                            'message': 'Clase registrada exitosamente.'
-                        })
-
-        except SesionClase.DoesNotExist:
-            return JsonResponse({'status': 'error', 'message': 'La sesión no existe.'}, status=404)
-        except Exception as e:
-            return JsonResponse({'status': 'error', 'message': f'Error interno: {str(e)}'}, status=500)
+            session = mark_session(request.tenant, request.user, data.get('sesion_id'),
+                                   data.get('confirmar_pago') is True)
+        except (ValueError, TypeError, ValidationError):
+            return JsonResponse({'status': 'error', 'message': 'No se pudo registrar la sesión. Revisa los datos.'}, status=400)
+        return JsonResponse({'status': 'success', 'tipo_pago': session.profe_a_pagar.tipo_pago,
+            'pagado': session.pagada_al_profesor, 'tarifa': str(session.tarifa_a_pagar),
+            'profesor_nombre': session.profe_a_pagar.usuario.get_full_name(), 'message': 'Clase registrada.'})
 
 # ---------------------------------------------------------
 # VISTAS DE CONFIGURACIÓN (PROGRAMACIÓN)
@@ -327,14 +241,17 @@ class EditarExcepcionSesionView(TenantAdminRequiredMixin, UpdateView):
         return kwargs
 
     def form_valid(self, form):
-        sesion = form.save(commit=False)
-        # Si la cancelan, aseguramos que no quede como pagada
-        if sesion.estado == 'CANCELADA':
-            sesion.pagada_al_profesor = False
-            # Opcional: Aquí podrías emitir una notificación a los alumnos reservados
-        sesion.save()
-        messages.success(self.request, "Excepción aplicada correctamente a la sesión.")
-        return super().form_valid(form)
+        from apps.academias.locks import lock_tenant
+        from apps.saas_core.audit import record
+        with transaction.atomic():
+            lock_tenant(self.request.tenant)
+            current = self.get_object()
+            if current.estado == 'DICTADA' or current.pagada_al_profesor or current.orden_pago_mensual_id:
+                form.add_error(None, 'Una clase dictada o liquidada requiere corrección contable; no se puede reabrir desde este formulario.')
+                return self.form_invalid(form)
+            result = super().form_valid(form)
+            record(self.request.tenant, self.request.user, 'calendar.session.updated', self.object.pk)
+        return result
 
     def get_success_url(self):
         return reverse('calendario:admin_calendario', kwargs={'slug_academia': self.request.tenant.slug})
@@ -358,7 +275,7 @@ class CalendarioEventosJSONView(TenantAdminRequiredMixin, View):
             fecha_hora_inicio__gte=start_date,
             fecha_hora_inicio__lte=end_date
         ).select_related('clase', 'profesor_asignado__usuario').annotate(
-            total_reservas=Count('reservas')
+            total_reservas=Count('reservas', filter=Q(reservas__active=True))
         )
 
         eventos = []
@@ -516,7 +433,7 @@ class CalendarioEstudianteView(TenantAccessMixin, TemplateView):
 
         # 🚀 EXTRAEMOS RESERVAS ACTIVAS
         mis_reservas_ids = list(ReservaEstudiante.objects.filter(
-            estudiante=self.request.user,
+            estudiante=self.request.user, active=True,
             sesion__clase__academia=self.request.tenant
         ).values_list('sesion_id', flat=True))
 
@@ -525,16 +442,8 @@ class CalendarioEstudianteView(TenantAccessMixin, TemplateView):
         user = self.request.user
         academia = self.request.tenant
         
-        estudiante_obj = None
-        if user.first_name and user.last_name:
-            qs = Estudiante.objects.filter(nombres__iexact=user.first_name, apellidos__iexact=user.last_name, academia=academia)
-            if qs.count() > 1 and user.email and user.email.strip() != "":
-                estudiante_obj = qs.filter(email__iexact=user.email).first()
-            else:
-                estudiante_obj = qs.first()
-                
-        if not estudiante_obj and user.email and user.email.strip() != "":
-            estudiante_obj = Estudiante.objects.filter(email__iexact=user.email, academia=academia).first()
+        from apps.academias.student_identity import student_for
+        estudiante_obj = student_for(user, academia)
 
         if estudiante_obj:
             context['plan_activo'] = InscripcionPlan.objects.filter(
@@ -565,83 +474,17 @@ class ReservarClaseView(TenantAccessMixin, View):
     Endpoint AJAX Inteligente y Seguro.
     """
     def post(self, request, *args, **kwargs):
+        from django.core.exceptions import ValidationError
+        from django.db import OperationalError
+        from .reservations import change_reservation
         try:
             data = json.loads(request.body)
-            sesion_id = data.get('sesion_id')
-            accion = data.get('accion') 
-
-            sesion = SesionClase.objects.annotate(
-                total_reservas=Count('reservas')
-            ).get(id=sesion_id, clase__academia=request.tenant, estado='PROGRAMADA')
-
-            from apps.planes_estudiantes.models import Estudiante, InscripcionPlan
-            user = request.user
-            academia = request.tenant
-            
-            estudiante_obj = None
-            if user.first_name and user.last_name:
-                qs = Estudiante.objects.filter(nombres__iexact=user.first_name, apellidos__iexact=user.last_name, academia=academia)
-                if qs.count() > 1 and user.email and user.email.strip() != "":
-                    estudiante_obj = qs.filter(email__iexact=user.email).first()
-                else:
-                    estudiante_obj = qs.first()
-                    
-            if not estudiante_obj and user.email and user.email.strip() != "":
-                estudiante_obj = Estudiante.objects.filter(email__iexact=user.email, academia=academia).first()
-
-            if not estudiante_obj:
-                return JsonResponse({'status': 'error', 'message': 'No tienes una ficha de estudiante activa.'})
-
-            plan_activo = InscripcionPlan.objects.filter(
-                estudiante=estudiante_obj,
-                academia=academia,
-                fecha_fin__gte=timezone.localtime(timezone.now()).date()
-            ).order_by('fecha_fin').first()
-
-            # --- CANCELAR ---
-            if accion == 'CANCELAR':
-                reserva = ReservaEstudiante.objects.filter(sesion=sesion, estudiante=user).first()
-                if reserva:
-                    with transaction.atomic():
-                        reserva.delete()
-                        if plan_activo:
-                            plan_activo.clases_restantes += 1
-                            plan_activo.save()
-                    return JsonResponse({'status': 'success', 'message': 'Has cancelado tu asistencia. Se devolvió el cupo a tu saldo.'})
-                return JsonResponse({'status': 'info', 'message': 'No tenías reserva en esta clase.'})
-
-            # --- RESERVAR ---
-            elif accion == 'RESERVAR':
-                if sesion.total_reservas >= sesion.clase.limite_cupos:
-                    return JsonResponse({'status': 'error', 'message': 'Lo sentimos, esta clase ya está llena.'})
-
-                if not plan_activo or plan_activo.clases_restantes <= 0:
-                    return JsonResponse({'status': 'error', 'message': 'No tienes clases disponibles. Por favor renueva tu plan.'})
-
-                with transaction.atomic():
-                    # 🚀 FIX SENIOR: Le indicamos explícitamente el Tenant al crear la reserva
-                    reserva, created = ReservaEstudiante.objects.get_or_create(
-                        sesion=sesion, 
-                        estudiante=user,
-                        defaults={'academia': academia}  # <--- AQUÍ ESTÁ LA MAGIA
-                    )
-                    
-                    if created:
-                        plan_activo.clases_restantes -= 1
-                        plan_activo.save()
-                        return JsonResponse({'status': 'success', 'message': '¡Cupo reservado con éxito! Nos vemos en clase.'})
-                    else:
-                        return JsonResponse({'status': 'info', 'message': 'Ya tenías un cupo reservado.'})
-
-        except SesionClase.DoesNotExist:
-            return JsonResponse({'status': 'error', 'message': 'La clase no existe o ya pasó.'}, status=404)
-        except Exception as e:
-            print(f"\n🚨 ERROR GRAVE EN AJAX RESERVA: {str(e)}\n")
-            return JsonResponse({'status': 'error', 'message': f'Fallo en el servidor: {str(e)}'}, status=500)
-
-
-
-
+            message = change_reservation(request.tenant, request.user, data.get('sesion_id'), data.get('accion'))
+            return JsonResponse({'status': 'success', 'message': message})
+        except (ValueError, TypeError, ValidationError) as exc:
+            return JsonResponse({'status': 'error', 'message': '; '.join(exc.messages) if isinstance(exc, ValidationError) else 'Solicitud inválida.'}, status=400)
+        except OperationalError:
+            return JsonResponse({'status': 'error', 'message': 'La operación está ocupada. Intenta nuevamente.'}, status=503)
 
 
 class CalendarioProfesorView(TenantAccessMixin, TemplateView):
@@ -686,7 +529,7 @@ class CalendarioProfesorView(TenantAccessMixin, TemplateView):
         ).prefetch_related(
             'reservas__estudiante' # 🚀 NUEVO: Traemos a los alumnos de un solo golpe (Cero N+1 queries)
         ).annotate(
-            total_reservas=Count('reservas')
+            total_reservas=Count('reservas', filter=Q(reservas__active=True))
         ).order_by('fecha_hora_inicio')
 
         sesiones_por_fecha = {}

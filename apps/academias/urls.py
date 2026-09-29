@@ -2,10 +2,12 @@
 from django.urls import path
 from django.contrib.auth import views as auth_views
 from . import views
+from . import invitations
 
 app_name = 'academias'
 
 urlpatterns = [
+    path('<slug:slug_academia>/invitacion/<str:token>/', invitations.accept, name='accept_invitation'),
     # 🌍 La Landing pública de la academia: web.com/duane-y-aleja/
     path('<slug:slug_academia>/', views.LandingAcademiaView.as_view(), name='index'),
     

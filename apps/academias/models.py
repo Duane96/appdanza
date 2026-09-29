@@ -3,6 +3,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from gestoracademia.tenants import get_current_tenant
+from .scoped_model import ScopedModel
 
 from PIL import Image
 from io import BytesIO
@@ -22,10 +23,10 @@ class TenantManager(models.Manager):
         # Si hay un tenant activo en el hilo actual, filtramos estrictamente por él
         if tenant:
             return queryset.filter(academia=tenant)
-        return queryset
+        return queryset.none()
 
 
-class TenantModel(models.Model):
+class TenantModel(ScopedModel):
     """
     Clase abstracta de la cual heredarán TODOS los modelos del proyecto
     que requieran aislamiento por academia (Planes, Estudiantes, Finanzas, etc.)
@@ -51,6 +52,8 @@ def ruta_branding_academia(instance, filename):
 
 
 class Academia(models.Model):
+    workspace_type = models.CharField(max_length=20, default='ACADEMY', choices=[
+        ('ACADEMY', 'Academia'), ('EVENT_ORGANIZER', 'Organizador de eventos'), ('INTERNAL', 'Interno')])
     # --- CATÁLOGO EXTENDIDO DE 20 ÍCONOS TEMÁTICOS AAA ---
     ICONOS_OPCIONES = (
         ('bi-music-note-beamed', '🎵 Notas Musicales / Ritmo'),
@@ -250,7 +253,7 @@ class Academia(models.Model):
                     # Abre la imagen con PIL, conviértela a BytesIO y reasígnale el ContentFile
                     pass # Sustituye este 'pass' por tu bloque 'try' original de conversión WebP
                 except Exception as e:
-                    print(f"Error procesando imagen en {campo}: {e}")
+                    pass  # Sensitive diagnostics are deliberately not logged.
 
         # Finalmente guardamos en la base de datos
         super().save(*args, **kwargs)
@@ -286,3 +289,35 @@ class PerfilUsuario(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.get_rol_display()} ({self.academia.nombre if self.academia else 'SaaS Global'})"
+
+
+class TenantMembership(models.Model):
+    """Explicit membership; PerfilUsuario remains a compatible legacy projection."""
+    class Role(models.TextChoices):
+        OWNER = 'OWNER', 'Propietario'
+        ADMIN = 'ADMIN', 'Administrador'
+        TEACHER = 'TEACHER', 'Profesor'
+        STUDENT = 'STUDENT', 'Estudiante'
+        BILLING = 'BILLING', 'Facturación'
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tenant_memberships')
+    academia = models.ForeignKey(Academia, on_delete=models.CASCADE, related_name='memberships')
+    role = models.CharField(max_length=16, choices=Role.choices)
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    source = models.CharField(max_length=32, default='MANUAL')
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['user', 'academia'], name='membership_user_academy_unique')]
+
+    def __str__(self):
+        return f'{self.academia_id}: {self.user_id} ({self.role})'
+
+
+class AccountInvitation(models.Model):
+    academia = models.ForeignKey(Academia, on_delete=models.PROTECT)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    token_hash = models.CharField(max_length=64, unique=True)
+    expires_at = models.DateTimeField()
+    consumed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)

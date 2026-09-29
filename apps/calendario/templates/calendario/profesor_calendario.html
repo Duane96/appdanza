@@ -263,7 +263,7 @@
         if (data.alumnos.length > 0) {
             listaHTML = '<ul class="list-group list-group-flush text-start small mb-0 style-scroll" style="max-height: 160px; overflow-y: auto;">';
             data.alumnos.forEach(alumno => {
-                listaHTML += `<li class="list-group-item py-2 px-3 border-bottom"><i class="bi bi-person-check text-success me-2"></i><strong>${alumno}</strong></li>`;
+                listaHTML += `<li class="list-group-item py-2 px-3 border-bottom"><i class="bi bi-person-check text-success me-2"></i><strong>${AppDanzaUI.text(alumno)}</strong></li>`;
             });
             listaHTML += '</ul>';
         } else {

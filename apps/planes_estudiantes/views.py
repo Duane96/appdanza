@@ -1,3 +1,4 @@
+from apps.saas_core.entitlement_guards import creation_guard
 # apps/planes_estudiantes/views.py
 from django.db.models import ProtectedError
 from django.views import View
@@ -6,12 +7,12 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse
 from django.utils import timezone
 
-from academias.mixins import TenantAdminRequiredMixin
+from apps.academias.mixins import TenantAdminRequiredMixin
 from .models import Estudiante, Plan, InscripcionPlan
 from .forms import EstudianteForm, PlanForm, InscripcionPlanForm
 from apps.academias.models import PerfilUsuario                 # 🚀 Importamos PerfilUsuario
 from django.db import transaction                               # 🚀 Para guardar todo en un solo bloque seguro
-from django.contrib.auth.models import User     
+from django.contrib.auth.models import User
 from django.http import HttpResponseRedirect # 🚀 Importamos esto para la redirección directa                # 🚀 Importamos User nativo
 import unicodedata
 from apps.finanzas.models import ReciboIngreso  # 🚀 IMPORTANTE: Importamos el nuevo modelo contable
@@ -28,6 +29,7 @@ class CrearEstudianteView(TenantAdminRequiredMixin, CreateView):
     form_class = EstudianteForm
     template_name = "planes_estudiantes/form_estudiante.html"
 
+    @creation_guard('estudiantes', 'max_students')
     def form_valid(self, form):
         identificacion = form.cleaned_data['identificacion']
         email = form.cleaned_data['email']
@@ -45,7 +47,7 @@ class CrearEstudianteView(TenantAdminRequiredMixin, CreateView):
         nombre_limpio = "".join(nombres.split()).lower()
         apellido_limpio = "".join(apellidos.split()).lower()
         base_username = f"{nombre_limpio}{apellido_limpio}"
-        
+
         base_username = "".join(
             c for c in unicodedata.normalize('NFD', base_username)
             if unicodedata.category(c) != 'Mn'
@@ -55,19 +57,19 @@ class CrearEstudianteView(TenantAdminRequiredMixin, CreateView):
             # 🚀 CONTROL SENIOR 2: Generador de Usuario 100% Único Globalmente
             username_final = base_username
             contador = 1
-            
+
             # Bucle antibloqueos: Si el username global ya existe, iteramos hasta encontrar un hueco
             while User.objects.filter(username=username_final).exists():
                 username_final = f"{base_username}{identificacion[-4:]}{contador}"
                 contador += 1
-                
+
             # 🚀 EL FIX DE LA CONTRASEÑA ESTÁ AQUÍ
             # create_user() se encarga de aplicar el Hash (encriptación) automáticamente
             # y de manera perfecta desde el instante en que nace el usuario.
             user = User.objects.create_user(
                 username=username_final,
                 email=email or '',
-                password=identificacion,  # <-- Django encripta el documento automáticamente
+                password=None,  # Setup invitation; never use identity documents as credentials.
                 first_name=nombres,
                 last_name=apellidos
             )
@@ -81,8 +83,11 @@ class CrearEstudianteView(TenantAdminRequiredMixin, CreateView):
 
             # Guardar el modelo Estudiante asignando el Tenant
             form.instance.academia = academia_actual
-            self.object = form.save() 
-            
+            form.instance.user = user
+            self.object = form.save()
+            from apps.academias.invitations import invite_new_account
+            invite_new_account(user, academia_actual, base_url=self.request.build_absolute_uri("/"), actor=self.request.user)
+
         messages.success(self.request, f"Estudiante {nombres} registrado con éxito.")
         return HttpResponseRedirect(self.get_success_url())
 
@@ -109,7 +114,7 @@ class AsignarPlanView(TenantAdminRequiredMixin, CreateView):
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         # 🎯 CRÍTICO: Debe llamarse 'tenant' para que tu form.py lo pueda atrapar
-        kwargs['tenant'] = self.request.tenant 
+        kwargs['tenant'] = self.request.tenant
         return kwargs
 
     def form_valid(self, form):
@@ -117,19 +122,19 @@ class AsignarPlanView(TenantAdminRequiredMixin, CreateView):
             # 1. Guardamos la inscripción de la tiquetera
             inscripcion = form.save(commit=False)
             inscripcion.academia = self.request.tenant
-            
+
             # Recuperamos los datos del plan para calcular clases y saldos
             plan = form.cleaned_data['plan']
             monto_pagado = form.cleaned_data['monto_pagado']
             fecha_fin_manual = form.cleaned_data['fecha_fin']
-            
+
             inscripcion.clases_restantes = plan.clases_totales
-            
+
             if fecha_fin_manual:
                 inscripcion.fecha_fin = fecha_fin_manual
             else:
                 inscripcion.fecha_fin = form.cleaned_data['fecha_inicio'] + timezone.timedelta(days=plan.duracion_dias)
-            
+
             inscripcion.saldo_pendiente = plan.precio - monto_pagado
             inscripcion.save()
 
@@ -158,7 +163,7 @@ class AsignarPlanView(TenantAdminRequiredMixin, CreateView):
                 portal_url = self.request.build_absolute_uri(
                     reverse('planes_estudiantes:portal_estudiante', kwargs={'slug_academia': self.request.tenant.slug})
                 )
-                
+
                 enviar_correo_transaccional(
                     asunto=f"Tu recibo de pago en {self.request.tenant.nombre}",
                     template_name="comunicaciones/recibo_plan.html",
@@ -179,7 +184,7 @@ class AsignarPlanView(TenantAdminRequiredMixin, CreateView):
 
         messages.success(self.request, f"Plan asignado con éxito a {alumno.nombres}. Recibo autogenerado.")
         return redirect('planes_estudiantes:lista_estudiantes', slug_academia=self.request.tenant.slug)
-    
+
 
 
     # apps/planes_estudiantes/views.py
@@ -196,45 +201,24 @@ class PortalEstudianteView(LoginRequiredMixin, TemplateView):
         user = self.request.user
         academia_actual = self.request.tenant
 
-        from apps.asistencias.models import Asistencia 
+        from apps.asistencias.models import Asistencia
 
         estudiante = None
 
         try:
-            # 🚀 CONTROL SENIOR 1: Prioridad Absoluta a la Identidad Real
-            # Buscamos primero por los nombres que Django guardó fielmente al crear el usuario.
-            # Esto evita que los "correos autocompletados" crucen información entre alumnos.
-            if user.first_name and user.last_name:
-                queryset = Estudiante.objects.filter(
-                    nombres=user.first_name,
-                    apellidos=user.last_name,
-                    academia=academia_actual
-                )
-                
-                # Si hay dos alumnos que se llaman EXACTAMENTE igual, desempatamos con el email
-                if queryset.count() > 1 and user.email and user.email.strip() != "":
-                    estudiante = queryset.filter(email__iexact=user.email).first()
-                else:
-                    estudiante = queryset.first()
-
-            # 🚀 CONTROL SENIOR 2: Red de seguridad
-            # Si el alumno no se encontró por nombre (muy raro), buscamos por email
-            if not estudiante and user.email and user.email.strip() != "":
-                estudiante = Estudiante.objects.filter(
-                    email__iexact=user.email, 
-                    academia=academia_actual
-                ).first()
+            from apps.academias.student_identity import student_for
+            estudiante = student_for(user, academia_actual)
 
             # --- RENDERIZADO DEL PORTAL ---
             if estudiante:
                 context['estudiante'] = estudiante
 
                 todas_inscripciones = InscripcionPlan.objects.filter(
-                    estudiante=estudiante, 
+                    estudiante=estudiante,
                     academia=academia_actual
                 ).order_by('-fecha_inicio')
-                
-                context['pagos'] = todas_inscripciones[:10] 
+
+                context['pagos'] = todas_inscripciones[:10]
 
                 plan_actual = todas_inscripciones.first()
                 context['plan_actual'] = plan_actual
@@ -252,12 +236,12 @@ class PortalEstudianteView(LoginRequiredMixin, TemplateView):
                 context['error'] = "No se encontró la ficha de estudiante asociada a tu usuario."
 
         except Exception as e:
-            print(f"🚨 Error cargando portal del estudiante: {e}")
+            pass  # Sensitive diagnostics are deliberately not logged.
             context['error'] = "Ocurrió un error al cargar tu información."
-        
+
         return context
-    
-class CrearPlanView(LoginRequiredMixin, CreateView):
+
+class CrearPlanView(TenantAdminRequiredMixin, CreateView):
     """Permite a la academia crear nuevos planes/tiqueteras aisladas a su tenant."""
     model = Plan
     form_class = PlanForm
@@ -266,7 +250,7 @@ class CrearPlanView(LoginRequiredMixin, CreateView):
     def form_valid(self, form):
         # 1. Asignamos la academia actual en silencio para que el usuario no tenga que elegirla
         form.instance.academia = self.request.tenant
-        
+
         # 2. Mensaje de éxito visual para el usuario
         messages.success(self.request, f"¡Plan '{form.instance.nombre}' creado exitosamente!")
         return super().form_valid(form)
@@ -274,17 +258,21 @@ class CrearPlanView(LoginRequiredMixin, CreateView):
     def get_success_url(self):
         # Al terminar, lo regresamos al panel de estudiantes
         return reverse('planes_estudiantes:lista_estudiantes', kwargs={'slug_academia': self.request.tenant.slug})
-    
 
+
+from apps.academias.authorization import tenant_permission, slug_academy
+
+
+@tenant_permission('tenant.admin', slug_academy)
 def api_detalle_estudiante(request, slug_academia, est_id):
-    est = get_object_or_404(Estudiante, id=est_id, academia__slug=slug_academia)
+    est = get_object_or_404(Estudiante.unfiltered_objects, id=est_id, academia__slug=slug_academia)
 
     # Traemos solo los últimos 10 planes por defecto para no saturar el JSON
     ultimos_planes = est.inscripciones.select_related('plan').order_by('-fecha_fin')[:10]
 
     # Traer últimas 5 asistencias
     asistencias = est.asistencias.all().order_by('-fecha_hora')[:5]
-    
+
     # Preparamos los datos
     data = {
         "nombres": est.nombres,
@@ -302,10 +290,10 @@ def api_detalle_estudiante(request, slug_academia, est_id):
         ],
 
         "asistencias": [
-            {"fecha": a.fecha_hora.strftime('%d/%m/%Y %H:%M'), "tipo": a.tipo_marcado} 
+            {"fecha": a.fecha_hora.strftime('%d/%m/%Y %H:%M'), "tipo": a.tipo_marcado}
             for a in asistencias
         ],
-        
+
         "total_planes": est.inscripciones.count() # Para mostrar si tiene más de 10
         # Aquí podrías añadir un query para traer asistencias recientes
     }
@@ -340,9 +328,9 @@ class EditarPlanView(TenantAdminRequiredMixin, UpdateView):
         # 🚀 LÓGICA SENIOR: Protección de integridad SaaS
         # Si este plan ya ha sido vendido a algún alumno, congelamos el precio.
         if self.object and self.object.inscripciones.exists():
-            # disabled=True hace que el campo sea de solo lectura en el HTML 
+            # disabled=True hace que el campo sea de solo lectura en el HTML
             # y además ignora cualquier intento de hackeo por POST.
-            form.fields['precio'].disabled = True 
+            form.fields['precio'].disabled = True
         return form
 
     def form_valid(self, form):
@@ -356,7 +344,7 @@ class EliminarPlanView(TenantAdminRequiredMixin, View):
     """Elimina un plan de forma segura, capturando restricciones de base de datos."""
     def post(self, request, slug_academia, pk):
         plan = get_object_or_404(Plan, pk=pk, academia=request.tenant)
-        
+
         try:
             nombre_plan = plan.nombre
             plan.delete()
@@ -365,5 +353,5 @@ class EliminarPlanView(TenantAdminRequiredMixin, View):
             # 🚀 LÓGICA SENIOR: Si un alumno ya compró este plan, la BD nos impide borrarlo.
             # Capturamos el error y mostramos un mensaje amigable en vez de romper el sistema.
             messages.error(request, f"No puedes eliminar el plan '{plan.nombre}' porque hay estudiantes activos usándolo. Te sugerimos editar su nombre agregando '(Inactivo)'.")
-            
+
         return redirect('planes_estudiantes:lista_planes', slug_academia=slug_academia)

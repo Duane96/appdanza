@@ -1,0 +1,9 @@
+{% extends "base_tenant.html" %}
+{% block content %}
+<main class="container py-5" style="max-width:600px">
+  <h1>Configura tu acceso</h1>
+  {% if expired %}<p>Este enlace venció o ya fue utilizado. Solicita una nueva invitación a tu academia.</p>
+  {% else %}<p>Elige una contraseña personal para acceder a {{ academia.nombre }}.</p>
+  <form method="post">{% csrf_token %}{{ form.as_p }}<button class="btn btn-primary" type="submit">Guardar contraseña</button></form>{% endif %}
+</main>
+{% endblock %}

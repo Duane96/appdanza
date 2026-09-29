@@ -11,7 +11,7 @@ class Command(BaseCommand):
         ahora = timezone.now()
         
         # 1. Buscamos eventos que NO estén finalizados
-        eventos_abiertos = Evento.objects.exclude(estado='FINALIZADO')
+        eventos_abiertos = Evento.unfiltered_objects.exclude(estado='FINALIZADO')
         eventos_cerrados_hoy = 0
 
         for evento in eventos_abiertos:

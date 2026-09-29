@@ -1,8 +1,9 @@
+from apps.academias.platform_admin import PlatformModelAdmin
 from django.contrib import admin
 from .models import VideoClase, ModuloClase
 
 @admin.register(VideoClase)
-class VideoClaseAdmin(admin.ModelAdmin):
+class VideoClaseAdmin(PlatformModelAdmin):
     # Columnas que se mostrarán en la lista del admin
     list_display = ('titulo', 'get_modulo_titulo', 'get_academia', 'youtube_id', 'fecha_subida')
     # Filtros laterales, permitimos filtrar por el módulo (que ya vendrá filtrado por academia)

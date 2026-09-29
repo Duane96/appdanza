@@ -18,114 +18,19 @@
         </div>
     </div>
 
-    <!-- 🚀 TOP BANNER DE LICENCIA SAAS -->
-<div class="card border-0 shadow-sm rounded-4 mb-4" style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); color: white;">
-    <div class="card-body p-4 d-flex flex-column flex-md-row align-items-center justify-content-between gap-3">
-        
-        <div class="d-flex align-items-center gap-3">
-            <div class="bg-white bg-opacity-10 p-3 rounded-circle d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
-                <i class="bi bi-shield-check fs-3 text-warning"></i>
-            </div>
-            <div>
-                <h6 class="mb-1 text-uppercase tracking-wider fw-bold text-white-50" style="font-size: 0.75rem;">Licencia AppDanza Actual</h6>
-                <h4 class="mb-0 fw-bold text-white d-flex align-items-center gap-2">
-                    <!-- Evalúa si tiene plan, si no (porque está en Prueba), muestra texto genérico -->
-                    {{ academia.suscripcion_saas.plan.nombre|default:"Plan de Prueba Personalizado" }}
-                    
-                    <!-- Badges dinámicos de Estado -->
-                    {% if academia.suscripcion_saas.estado == 'ACTIVO' %}
-                        <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-50 fs-6 rounded-pill px-3 ms-2 align-middle">Activo</span>
-                    {% elif academia.suscripcion_saas.estado == 'PRUEBA' %}
-                        <span class="badge bg-info bg-opacity-25 text-info border border-info border-opacity-50 fs-6 rounded-pill px-3 ms-2 align-middle">Modo Prueba</span>
-                    {% elif academia.suscripcion_saas.esta_en_mora %}
-                        <span class="badge bg-warning bg-opacity-25 text-warning border border-warning border-opacity-50 fs-6 rounded-pill px-3 ms-2 align-middle">En Mora</span>
-                    {% endif %}
-                </h4>
-            </div>
-        </div>
-
-        <!-- Alerta de Días Restantes -->
-        <div class="text-center text-md-end bg-white bg-opacity-10 px-4 py-2 rounded-4 border border-white border-opacity-10">
-            <span class="d-block text-white-50 small fw-bold text-uppercase" style="font-size: 0.7rem;">Corte de Servicio en</span>
-            <span class="fs-4 fw-bold {% if academia.suscripcion_saas.dias_restantes_licencia <= 5 %}text-danger{% else %}text-white{% endif %}">
-                {{ academia.suscripcion_saas.dias_restantes_licencia }} días
-            </span>
-        </div>
-        
-    </div>
-</div>
-
-<!-- Tus alertas de mora/prueba que ya configuramos en el paso anterior irían justo debajo de esto -->
-
-    <!-- 🟠 ALERTA DE MORA / PERÍODO DE GRACIA -->
-{% if academia.suscripcion_saas.esta_en_mora %}
-<div class="alert alert-warning border-warning border-2 shadow-sm rounded-4 d-flex align-items-center mb-4">
-    <i class="bi bi-exclamation-triangle-fill fs-3 text-warning me-3"></i>
-    <div>
-        <strong class="text-dark">¡Atención! Tu mensualidad presenta retrasos.</strong><br>
-        <span class="text-muted small">Tu fecha de corte ha pasado. Tienes un período de gracia activo. Para evitar el bloqueo de tu sistema y la taquilla, por favor regulariza tu pago o contacta a soporte.</span>
-    </div>
-</div>
-{% endif %}
-
-<!-- 🟡 ALERTA DE PERÍODO DE PRUEBA -->
-{% if academia.suscripcion_saas.estado == 'PRUEBA' %}
-<div class="alert alert-info border-info border-2 shadow-sm rounded-4 d-flex align-items-center mb-4">
-    <i class="bi bi-rocket-takeoff-fill fs-3 text-info me-3"></i>
-    <div>
-        <strong class="text-dark">¡Estás en Período de Prueba Premium!</strong><br>
-        <span class="text-muted small">Disfruta de tus módulos habilitados. Te quedan <strong>{{ academia.suscripcion_saas.dias_restantes_licencia }} días</strong> para activar tu licencia comercial definitiva.</span>
-    </div>
-</div>
-{% endif %}
-
-    {% if request.tenant.suscripcion_saas.mostrar_alerta_vencimiento %}
-        <div class="row mb-4 animate__animated animate__fadeIn">
-            <div class="col-12">
-                <div class="alert border-0 bg-warning bg-opacity-10 text-dark rounded-4 p-4 shadow-sm d-md-flex align-items-center justify-content-between" style="border-left: 5px solid #ffc107 !important;">
-                    <div class="d-flex align-items-center gap-3 mb-3 mb-md-0">
-                        <div class="bg-warning bg-opacity-25 rounded-circle p-3 text-warning-dark d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
-                            <i class="bi bi-exclamation-triangle-fill fs-4 text-warning"></i>
-                        </div>
-                        <div>
-                            <h5 class="fw-bold m-0 text-dark">Tu suscripción SaaS vencerá pronto</h5>
-                            <p class="text-muted small mb-0">
-                                Quedan exactamente <strong>{{ request.tenant.suscripcion_saas.dias_restantes_licencia }} días</strong> de acceso completo. Evita cortes automáticos en tus módulos.
-                            </p>
-                        </div>
-                    </div>
-                    <div>
-                        <!-- Formulario para inyectar en tu Modal o Pantalla de Bloqueo -->
-                        <form action="{% url 'saas_core:api_subir_comprobante' %}" method="POST" enctype="multipart/form-data" class="bg-light p-4 rounded-4 border shadow-sm">
-                            {% csrf_token %}
-                            <input type="hidden" name="academia_id" value="{{ academia.id|default:request.tenant.id }}">    
-                            <h6 class="fw-bold text-dark mb-3"><i class="bi bi-cloud-arrow-up text-primary me-2"></i>Reportar Pago</h6>
-                                <p class="small text-muted mb-3">Transfiere a la cuenta mostrada y sube tu pantallazo de éxito.</p>
-    
-                                <div class="mb-3">
-                                    <input class="form-control form-control-lg bg-white" type="file" name="comprobante" accept="image/*,.pdf" required>
-                                </div>
-    
-                                <button type="submit" class="btn btn-primary w-100 rounded-pill fw-bold py-2 shadow-sm hover-lift">
-                                    <i class="bi bi-send-check-fill me-2"></i> Enviar Comprobante
-                                </button>
-                        </form>
-
-                        <!-- Si pones esto, cuando la vista haga redirect, mostrará el mensaje en pantalla -->
-                        {% if messages %}
-                            <div class="mt-3">
-                                {% for message in messages %}
-                                    <div class="alert alert-{{ message.tags }} rounded-3 shadow-sm border-0 border-start border-5 {% if message.tags == 'success' %}border-success{% endif %}">
-                                        <i class="bi bi-info-circle-fill me-2"></i> {{ message }}
-                                    </div>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-    {% endif %}
+    <section class="card border-0 shadow-sm rounded-4 mb-4 p-4 bg-dark text-white">
+        <h2 class="h5">Acceso a AppDanza</h2>
+        {% if billing_policy.exempt %}
+            <p class="mb-1">{{ billing_policy.account.get_mode_display|default:"Acceso histórico" }} · Sin cobros SaaS.</p>
+            {% if billing_policy.account.grant_until %}<p>Acceso concedido hasta {{ billing_policy.account.grant_until|date:"d M Y" }}. No se cobrará automáticamente al terminar.</p>
+            {% else %}<p class="mb-1">Acceso concedido sin fecha de finalización configurada.</p>{% endif %}
+        {% elif billing_policy.subscription %}
+            <p>{{ billing_policy.subscription.plan_version.name }} · {{ billing_policy.subscription.get_state_display }}</p>
+            <p>Período actual hasta {{ billing_policy.subscription.period_end|date:"d M Y" }}.</p>
+        {% endif %}
+        {% if billing_policy.restricted %}<p class="text-warning">El plan requiere revisión para crear nuevos registros. Tus datos y el acceso a entradas ya vendidas se conservan.</p>{% endif %}
+        {% if request.user.is_superuser or request.membership_role == 'OWNER' %}<a class="text-info" href="{% url 'saas_core:billing_portal' request.tenant.slug %}">Consultar plan, uso y facturación</a>{% endif %}
+    </section>
 
     <!-- 🚀 NUEVA FILA: CARTERA Y TRANSACCIONES RECIENTES -->
     <div class="row g-4 mb-4">
@@ -444,16 +349,16 @@
                 
                 <h6 class="fw-bold mb-4 text-uppercase text-white-50 tracking-wide">Estado de Licencia</h6>
                 
-                <h4 class="fw-black mb-1 text-white">{{ request.tenant.suscripcion_saas.plan.nombre|default:"Plan Base" }}</h4>
-                <p class="small text-white-50 mb-4">Vence: {{ request.tenant.suscripcion_saas.fecha_vencimiento|date:"d M, Y"|default:"Sin registro" }}</p>
+                <h4 class="fw-black mb-1 text-white">{{ billing_policy.subscription.plan_version.name|default:"Acceso actual" }}</h4>
+                <p class="small text-white-50 mb-4">Vence: {{ billing_policy.subscription.period_end|date:"d M, Y"|default:"Sin fecha configurada" }}</p>
 
                 <div class="mb-3">
                     <div class="d-flex justify-content-between small mb-1 text-white">
                         <span>Capacidad Base de Datos</span>
-                        <span class="fw-bold">{{ estudiantes_totales }} / {{ request.tenant.suscripcion_saas.plan.max_estudiantes|default:"100" }}</span>
+                        <span class="fw-bold">{{ estudiantes_totales }} / {{ student_limit|default_if_none:"Sin límite" }}</span>
                     </div>
                     <div class="progress rounded-pill bg-white bg-opacity-25" style="height: 8px;">
-                        <div class="progress-bar bg-success" style="width: {% widthratio estudiantes_totales request.tenant.suscripcion_saas.plan.max_estudiantes|default:100 100 %}%"></div>
+                        <div class="progress-bar bg-success" style="width: {% if student_limit %}{% widthratio estudiantes_totales student_limit 100 %}{% else %}0{% endif %}%"></div>
                     </div>
                 </div>
             </div>

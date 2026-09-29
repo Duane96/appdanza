@@ -1,3 +1,4 @@
+from apps.academias.private_media import private_storage, validate_private_upload
 # apps/planes_estudiantes/models.py
 import qrcode
 import uuid
@@ -27,6 +28,8 @@ class Estudiante(TenantModel):
     )
     
     nombres = models.CharField(max_length=100)
+    user = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True,
+                             related_name='student_records')
     apellidos = models.CharField(max_length=100)
     identificacion = models.CharField(max_length=20, verbose_name="Cédula / TI")
     email = models.EmailField(blank=True, null=True)
@@ -34,7 +37,7 @@ class Estudiante(TenantModel):
     estado = models.CharField(max_length=15, choices=ESTADOS, default='INACTIVO')
     
     # Manejo de QR físico en disco
-    qr_code = models.ImageField(upload_to="qrs_estudiantes/", blank=True, null=True)
+    qr_code = models.ImageField(storage=private_storage, validators=[validate_private_upload], upload_to="qrs_estudiantes/", blank=True, null=True)
     token_asistencia = models.CharField(max_length=64, unique=True, editable=False, null=True)
     fecha_registro = models.DateTimeField(auto_now_add=True)
 
@@ -42,6 +45,7 @@ class Estudiante(TenantModel):
         # 🎯 ESTO PERMITE QUE EL MISMO ID PUEDA EXISTIR EN DIFERENTES ACADEMIAS
         # Pero sea único dentro de una sola academia.
         unique_together = ('academia', 'identificacion')
+        constraints = [models.UniqueConstraint(fields=['academia', 'user'], name='student_tenant_user_unique')]
 
     def __str__(self):
         return f"{self.nombres} {self.apellidos}"
@@ -72,6 +76,7 @@ class Estudiante(TenantModel):
 class InscripcionPlan(TenantModel):
     """Registro de compras de planes por estudiante."""
     estudiante = models.ForeignKey(Estudiante, on_delete=models.CASCADE, related_name="inscripciones")
+    cancelled_at = models.DateTimeField(null=True, blank=True)
     plan = models.ForeignKey(Plan, on_delete=models.PROTECT, related_name="inscripciones")
     fecha_inicio = models.DateField(default=timezone.now)
     fecha_fin = models.DateField()

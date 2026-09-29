@@ -12,6 +12,7 @@ class TenantMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        clear_current_tenant()
         match = resolve(request.path_info)
         slug_academia = match.kwargs.get('slug_academia')
 
@@ -35,8 +36,7 @@ class TenantMiddleware:
             request.tenant = None
             clear_current_tenant()
 
-        response = self.get_response(request)
-        
-        # Limpieza absoluta al terminar el ciclo de la petición
-        clear_current_tenant()
-        return response
+        try:
+            return self.get_response(request)
+        finally:
+            clear_current_tenant()

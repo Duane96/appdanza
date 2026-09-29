@@ -1,9 +1,20 @@
 from django.urls import path
 from . import views
+from . import billing_views
+from . import onboarding
 
 app_name = 'saas_core'
 
 urlpatterns = [
+    path('registro/', onboarding.signup, name='onboarding_signup'),
+    path('verificar/<str:token>/', onboarding.verify, name='onboarding_verify'),
+    path('master/billing/', billing_views.master, name='billing_master'),
+    path('billing/epayco/confirmation/', billing_views.epayco_confirmation, name='epayco_confirmation'),
+    path('<slug:slug_academia>/mi-plan/', billing_views.portal, name='billing_portal'),
+    path('<slug:slug_academia>/mi-plan/medio-pago/', billing_views.mandate, name='billing_mandate'),
+    path('<slug:slug_academia>/mi-plan/seleccionar/', billing_views.select_plan, name='billing_select_plan'),
+    path('<slug:slug_academia>/mi-plan/cancelar/', billing_views.cancel, name='billing_cancel'),
+    path('<slug:slug_academia>/mi-plan/comprobante/<uuid:invoice_id>/', billing_views.upload_proof, name='billing_proof'),
     path('', views.IndexSaaSGlobalView.as_view(), name='saas_index_global'),
     path('master/control-panel/', views.PanelMaestroDashboardView.as_view(), name='panel_maestro_dashboard'),
     # 🎯 LA PIEZA FALTANTE: Endpoint POST para la actualización de licencias vía Fetch/AJAX

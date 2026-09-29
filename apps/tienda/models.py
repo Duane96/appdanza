@@ -1,11 +1,15 @@
 # apps/tienda/models.py
 from django.db import models
+from django.db import transaction
+from django.db.models import F
+from django.core.exceptions import ValidationError
+from apps.academias.scoped_model import ScopedModel
 from django.db.models import Sum
 from apps.academias.models import Academia
 from apps.finanzas.models import ReciboIngreso
 from django.contrib.auth.models import User
 
-class CategoriaProducto(models.Model):
+class CategoriaProducto(ScopedModel):
     academia = models.ForeignKey(Academia, on_delete=models.CASCADE, related_name='categorias_tienda')
     nombre = models.CharField(max_length=100)
     descripcion = models.CharField(max_length=255, blank=True, null=True)
@@ -20,7 +24,7 @@ class CategoriaProducto(models.Model):
         return self.nombre
 
 
-class Producto(models.Model):
+class Producto(ScopedModel):
     academia = models.ForeignKey(Academia, on_delete=models.CASCADE, related_name='productos')
     categoria = models.ForeignKey(CategoriaProducto, on_delete=models.SET_NULL, null=True, related_name='productos')
 
@@ -44,7 +48,7 @@ class Producto(models.Model):
         return self.precio_venta_actual - self.precio_compra_actual
 
 
-class EntradaStock(models.Model):
+class EntradaStock(ScopedModel):
     """
     Registra cuando se compran nuevos productos para reabastecer el inventario.
     Mantiene el historial de a cómo se compró en determinada fecha.
@@ -55,24 +59,28 @@ class EntradaStock(models.Model):
     fecha = models.DateTimeField(auto_now_add=True)
     registrado_por = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
 
+    @transaction.atomic
     def save(self, *args, **kwargs):
+        if self.cantidad < 1 or self.precio_compra < 0:
+            raise ValidationError('Cantidad o costo inválido.')
         is_new = self.pk is None
         super().save(*args, **kwargs)
         # Si es una entrada nueva, sumamos al stock del producto y actualizamos su costo base
         if is_new:
-            self.producto.stock += self.cantidad
-            self.producto.precio_compra_actual = self.precio_compra
-            self.producto.save()
+            Producto.objects.filter(pk=self.producto_id).update(stock=F('stock')+self.cantidad,
+                                                               precio_compra_actual=self.precio_compra)
 
     def __str__(self):
         return f"+{self.cantidad} {self.producto.nombre} el {self.fecha.strftime('%d/%m/%Y')}"
 
 
-class VentaTienda(models.Model):
+class VentaTienda(ScopedModel):
     """
     Cabecera de la venta. Se relaciona con la app de Finanzas para la contabilidad general.
     """
     academia = models.ForeignKey(Academia, on_delete=models.CASCADE, related_name='ventas_tienda')
+    request_key = models.UUIDField(null=True, blank=True, unique=True)
+    request_fingerprint = models.CharField(max_length=64, blank=True)
 
     # 🔗 Conexión directa a la contabilidad general (Uno a Uno)
     recibo_caja = models.OneToOneField(
@@ -93,7 +101,7 @@ class VentaTienda(models.Model):
         return f"Venta #{self.id} - ${self.total_venta} ({self.fecha.strftime('%d/%m/%Y')})"
 
 
-class DetalleVenta(models.Model):
+class DetalleVenta(ScopedModel):
     """
     Los items individuales dentro de una VentaTienda (El carrito de compras)
     """
@@ -109,7 +117,15 @@ class DetalleVenta(models.Model):
     subtotal = models.DecimalField(max_digits=12, decimal_places=2, editable=False)
     ganancia = models.DecimalField(max_digits=12, decimal_places=2, editable=False)
 
+    @transaction.atomic
     def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValidationError('Las líneas de una venta emitida son inmutables.')
+        self.validate_scope()
+        if self.cantidad < 1 or self.precio_unitario_venta < 0 or self.costo_unitario_compra < 0:
+            raise ValidationError('Cantidad o precio inválido.')
+        if not Producto.objects.filter(pk=self.producto_id, stock__gte=self.cantidad).update(stock=F('stock')-self.cantidad):
+            raise ValidationError('Stock insuficiente.')
         # Cálculos automáticos antes de guardar la línea
         self.subtotal = self.cantidad * self.precio_unitario_venta
         self.ganancia = self.cantidad * (self.precio_unitario_venta - self.costo_unitario_compra)
@@ -119,9 +135,6 @@ class DetalleVenta(models.Model):
 
         # Descontar del stock automáticamente
         if is_new:
-            self.producto.stock -= self.cantidad
-            self.producto.save()
-
             # Actualizar los totales de la Venta maestra
             self.venta.total_venta = self.venta.detalles.aggregate(total=Sum('subtotal'))['total'] or 0
             self.venta.total_ganancia = self.venta.detalles.aggregate(ganancia=Sum('ganancia'))['ganancia'] or 0
@@ -156,8 +169,7 @@ def restaurar_stock_por_recibo_anulado(sender, instance, **kwargs):
                     # 4. Iteramos sobre los detalles (el carrito de esa venta)
                     for detalle in venta.detalles.all():
                         # Devolvemos el producto a la estantería (Sumamos el stock)
-                        detalle.producto.stock += detalle.cantidad
-                        detalle.producto.save()
+                        Producto.objects.filter(pk=detalle.producto_id).update(stock=F('stock')+detalle.cantidad)
 
         except ReciboIngreso.DoesNotExist:
             # Si por alguna razón no existe el viejo, no hacemos nada

@@ -1,35 +1,16 @@
-import threading
-from django.core.mail import EmailMultiAlternatives
+"""Render and persist email; delivery is handled by the durable worker."""
+import base64
 from django.template.loader import render_to_string
-from django.conf import settings
+from apps.saas_core.jobs import enqueue
 
-class HiloCorreo(threading.Thread):
-    def __init__(self, asunto, html_content, destinatarios, adjunto=None):
-        self.asunto = asunto
-        self.html_content = html_content
-        self.destinatarios = destinatarios
-        self.adjunto = adjunto # Nuevo parámetro
-        threading.Thread.__init__(self)
-
-    def run(self):
-        msg = EmailMultiAlternatives(
-            subject=self.asunto,
-            body="Por favor, visualiza este correo en un cliente que soporte HTML.",
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=self.destinatarios
-        )
-        msg.attach_alternative(self.html_content, "text/html")
-        
-        # 📎 Si recibimos un adjunto, lo pegamos al correo
-        if self.adjunto:
-            # adjunto debe ser una tupla: ('nombre_archivo.pdf', bytes_del_archivo, 'application/pdf')
-            msg.attach(self.adjunto['nombre'], self.adjunto['contenido'], self.adjunto['mimetype'])
-            
-        try:
-            msg.send()
-        except Exception as e:
-            print(f"Error enviando correo a {self.destinatarios}: {e}")
 
 def enviar_correo_transaccional(asunto, template_name, context, destinatarios, adjunto=None):
-    html_content = render_to_string(template_name, context)
-    HiloCorreo(asunto, html_content, destinatarios, adjunto).start()
+    payload = {'subject': asunto, 'html': render_to_string(template_name, context), 'to': destinatarios}
+    if adjunto:
+        payload['attachment'] = {'name': adjunto['nombre'], 'type': adjunto['mimetype'],
+                                 'data': base64.b64encode(adjunto['contenido']).decode('ascii')}
+    return enqueue('EMAIL', payload, tenant=context.get('academia'))
+def queue_mail(subject, message, from_email=None, recipient_list=None, html_message=None, fail_silently=False, **kwargs):
+    from apps.saas_core.jobs import enqueue
+    return enqueue('EMAIL', {'subject': subject, 'text': message, 'to': recipient_list or [],
+                             'html': html_message or ''})

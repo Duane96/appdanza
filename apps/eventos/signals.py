@@ -18,6 +18,13 @@ logger = logging.getLogger(__name__)
 
 @receiver(post_save, sender=EntradaQR)
 def generar_codigo_qr_boleta(sender, instance, created, **kwargs):
+    if created and not instance.imagen_qr:
+        from apps.saas_core.jobs import enqueue
+        enqueue('EVENT_QR', {'ticket_id': instance.pk}, tenant=instance.recibo.evento.academia,
+                key=f'qr:{instance.pk}:{instance.codigo_unico}')
+
+
+def render_ticket_image(sender, instance, created, **kwargs):
     """
     Signal Indestructible: Carga local, busca en fuentes de Windows/Linux del S.O.
     y si todo falla, descarga la fuente vectorial directo de Google Fonts a la RAM.
@@ -73,23 +80,7 @@ def generar_codigo_qr_boleta(sender, instance, created, **kwargs):
                     fuente_final = path
                     break
 
-        # Intento 4 (El Salvador de Emergencias): Descarga directa a RAM desde Google Fonts
-        if not fuente_final:
-            print("--- [QR_SIGNAL] Alerta: No hay fuentes físicas. Descargando de Google Fonts... ---")
-            try:
-                import requests
-                # URL directa al TTF crudo de Montserrat Black o Roboto Bold en los servidores de Google
-                url_fuente = "https://github.com/google/fonts/raw/main/ofl/montserrat/Montserrat-Bold.ttf"
-                respuesta = requests.get(url_fuente, timeout=3)
-                if respuesta.status_code == 200:
-                    # Guardamos el archivo binario directamente en un BytesIO de memoria volatil
-                    fuente_en_memoria = BytesIO(respuesta.content)
-                    print("--- [QR_SIGNAL] ¡Fuente descargada con éxito a la RAM! ---")
-            except Exception as e:
-                logger.error(f"[QR_SIGNAL] Falló la descarga de emergencia: {str(e)}")
-                fuente_en_memoria = None
-        else:
-            fuente_en_memoria = None
+        fuente_en_memoria = None
 
         # ----------------------------------------------------
         # 🎭 ASIGNACIÓN ASISTIDA POR TIPO DE INYECCIÓN

@@ -1,3 +1,6 @@
+import uuid
+import hashlib
+from apps.academias.locks import lock_tenant
 # apps/tienda/views.py
 import json
 from django.shortcuts import render, redirect, get_object_or_404
@@ -8,7 +11,7 @@ from django.http import JsonResponse
 from django.db import transaction
 from django.contrib import messages
 
-from academias.mixins import TenantAdminRequiredMixin
+from apps.academias.mixins import TenantAdminRequiredMixin
 
 from .models import CategoriaProducto, Producto, VentaTienda, DetalleVenta, EntradaStock
 from .forms import CategoriaProductoForm, ProductoForm, EntradaStockForm
@@ -90,20 +93,32 @@ class ProcesarVentaPOSView(TenantAdminRequiredMixin, View):
         try:
             # Lectura del payload JSON enviado por JavaScript
             data = json.loads(request.body)
+            key = uuid.UUID(str(data.get('request_key', '')))
+            fingerprint = hashlib.sha256(json.dumps(data, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
             carrito = data.get('carrito', []) # Formato esperado: [{"id": 1, "cantidad": 2}]
             medio_pago = data.get('medio_pago', 'EFECTIVO')
             cliente_nombre = data.get('cliente_nombre', 'Cliente General (POS)')
             cliente_nit = data.get('cliente_nit', '222222222222') # NIT de cuantías menores por defecto en Colombia
 
+            if medio_pago not in dict(ReciboIngreso.MEDIOS_PAGO):
+                raise ValueError('Medio de pago inválido.')
+            if not isinstance(carrito, list) or len(carrito) > 100:
+                raise ValueError('Carrito inválido.')
             if not carrito:
                 return JsonResponse({'error': 'El carrito de compras está vacío.'}, status=400)
 
             # Usamos transacciones atómicas: si falla la venta de un solo producto, nada se guarda en la DB
             with transaction.atomic():
+                lock_tenant(request.tenant)
+                existing = VentaTienda.objects.filter(request_key=key).first()
+                if existing:
+                    if existing.academia_id != request.tenant.pk or existing.request_fingerprint != fingerprint:
+                        raise ValueError('La referencia ya fue utilizada para otra venta.')
+                    return JsonResponse({'success': True, 'numero_recibo': existing.recibo_caja.numero_recibo})
                 # 1. Crear el registro maestro de la venta
                 venta = VentaTienda.objects.create(
                     academia=request.tenant,
-                    vendedor=request.user
+                    vendedor=request.user, request_key=key, request_fingerprint=fingerprint
                 )
 
                 # 2. Iterar e insertar cada fila del detalle del carrito
@@ -161,7 +176,7 @@ class ProcesarVentaPOSView(TenantAdminRequiredMixin, View):
         except ValueError as e:
             return JsonResponse({'error': str(e)}, status=400)
         except Exception as e:
-            return JsonResponse({'error': f'Error crítico en pasarela interna: {str(e)}'}, status=500)
+            return JsonResponse({'error': 'No se completó la operación. Reintenta con la misma referencia.'}, status=503)
 
 
 class PanelInventarioView(TenantAdminRequiredMixin, ListView):

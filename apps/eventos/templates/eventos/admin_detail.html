@@ -39,9 +39,9 @@
             <i class="bi bi-search me-1 text-primary"></i> CHECK-IN MANUAL
         </button>
         <div class="btn-group shadow-sm">
-            <a href="{% url 'eventos:cambiar_estado' request.tenant.slug evento.slug 'REGISTRO_ONLINE' %}" class="btn btn-sm btn-outline-success {% if evento.estado == 'REGISTRO_ONLINE' %}active{% endif %}">Venta Online</a>
-            <a href="{% url 'eventos:cambiar_estado' request.tenant.slug evento.slug 'REGISTRO_PUERTA' %}" class="btn btn-sm btn-outline-warning {% if evento.estado == 'REGISTRO_PUERTA' %}active{% endif %}">Solo Puerta</a>
-            <a href="{% url 'eventos:cambiar_estado' request.tenant.slug evento.slug 'FINALIZADO' %}" class="btn btn-sm btn-outline-danger {% if evento.estado == 'FINALIZADO' %}active{% endif %}">Finalizar</a>
+            <form method="post" action="{% url 'eventos:cambiar_estado' request.tenant.slug evento.slug 'REGISTRO_ONLINE' %}" class="d-inline">{% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-success {% if evento.estado == 'REGISTRO_ONLINE' %}active{% endif %}">Venta Online</button></form>
+            <form method="post" action="{% url 'eventos:cambiar_estado' request.tenant.slug evento.slug 'REGISTRO_PUERTA' %}" class="d-inline">{% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-warning {% if evento.estado == 'REGISTRO_PUERTA' %}active{% endif %}">Solo Puerta</button></form>
+            <form method="post" action="{% url 'eventos:cambiar_estado' request.tenant.slug evento.slug 'FINALIZADO' %}" class="d-inline">{% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-danger {% if evento.estado == 'FINALIZADO' %}active{% endif %}">Finalizar</button></form>
         </div>
     </div>
 </div>
@@ -303,13 +303,32 @@
                                                 </div>
                                             </div>
                                             <small class="text-muted d-block mt-1" style="font-size: 0.60rem;">ID: {{ boleta.codigo_unico|slice:":8" }}...</small>
+                                            {% if not recibo.anulado and not boleta.revoked_at %}
+                                            <details class="mt-2"><summary class="small">Reemitir credencial</summary>
+                                                <form method="post" action="{% url 'eventos:reissue_ticket' request.tenant.slug evento.slug boleta.pk %}">{% csrf_token %}
+                                                    <input name="reason" class="form-control form-control-sm" placeholder="Motivo" required maxlength="200">
+                                                    <button class="btn btn-sm btn-outline-secondary mt-1">Invalidar código anterior y reemitir</button>
+                                                </form>
+                                            </details>{% endif %}
                                         </div>
                                         {% endfor %}
                                     </div>
                                 {% endif %}
                             </td>
                             <td class="text-end">
-                                {% if recibo.comprobante_pago %}
+                                <span class="badge bg-light text-dark">{{ recibo.get_payment_status_display }}</span>
+{% if recibo.payment_status == 'PENDING' or recibo.payment_status == 'REVIEW' %}
+<form method="post" action="{% url 'eventos:confirm_payment' request.tenant.slug evento.slug recibo.pk %}" class="mt-2">
+{% csrf_token %}<input name="reason" class="form-control form-control-sm" required maxlength="200" placeholder="Referencia o evidencia del pago verificado">
+<button class="btn btn-sm btn-success mt-1">Confirmar pago recibido</button></form>{% endif %}
+{% if recibo.payment_status == 'CONFIRMED' %}
+<details class="mt-2 text-start"><summary class="small">Registrar devolución real</summary>
+<p class="small">Sólo después de devolver {{ recibo.monto_total }} al comprador. Este formulario no envía dinero.</p>
+<form method="post" action="{% url 'eventos:record_refund' request.tenant.slug evento.slug recibo.pk %}">{% csrf_token %}
+<input name="reference" required maxlength="100" class="form-control form-control-sm" placeholder="Referencia bancaria de la devolución">
+<input name="reason" required maxlength="200" class="form-control form-control-sm mt-1" placeholder="Motivo de la devolución">
+<button class="btn btn-sm btn-outline-danger mt-1">Registrar devolución comprobada</button></form></details>{% endif %}
+{% if recibo.comprobante_pago %}
                                     <a href="{{ recibo.comprobante_pago.url }}" target="_blank" class="btn btn-sm btn-light border px-2 py-1"><i class="bi bi-image text-primary"></i></a>
                                 {% else %}
                                     <span class="text-muted extra-small me-2">En Puerta</span>
@@ -420,7 +439,7 @@
 <div class="modal fade" id="modalVentaPuerta" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
-            <form action="{% url 'eventos:registrar_puerta' request.tenant.slug evento.slug %}" method="POST">
+            <form action="{% url 'eventos:registrar_puerta' request.tenant.slug evento.slug %}" method="POST"><input type="hidden" name="registration_key" value="{{ registration_key }}">
                 {% csrf_token %}
                 <div class="modal-header bg-warning text-dark">
                     <h5 class="modal-title fw-bold"><i class="bi bi-cart4 me-2"></i>Registrar Venta Directa en Puerta</h5>
@@ -492,7 +511,7 @@
 <div class="modal fade" id="modalAgregarCodigo" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
-            <form action="{% url 'eventos:agregar_codigo' request.tenant.slug evento.slug %}" method="POST">
+            <form action="{% url 'eventos:agregar_codigo' request.tenant.slug evento.slug %}" method="POST"><input type="hidden" name="registration_key" value="{{ registration_key }}">
                 {% csrf_token %}
                 <div class="modal-header bg-dark text-white">
                     <h5 class="modal-title fw-bold"><i class="bi bi-tag-fill me-2"></i>Crear Código de Descuento</h5>
@@ -559,7 +578,7 @@
 <div class="modal fade" id="modalAgregarGasto" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
-            <form action="{% url 'eventos:agregar_gasto' request.tenant.slug evento.slug %}" method="POST">
+            <form action="{% url 'eventos:agregar_gasto' request.tenant.slug evento.slug %}" method="POST"><input type="hidden" name="registration_key" value="{{ registration_key }}">
                 {% csrf_token %}
                 <div class="modal-header bg-danger text-white">
                     <h5 class="modal-title fw-bold">Registrar Gasto del Evento</h5>
@@ -611,7 +630,7 @@
                 <div class="modal-body text-center p-4">
                     <i class="bi bi-exclamation-triangle-fill text-danger display-4 mb-3"></i>
                     <h5 class="fw-bold text-dark mb-2">¿Anular Recibo?</h5>
-                    <p class="text-muted small mb-4">Se anulará el recibo <strong>{{ recibo.numero_recibo }}</strong> de {{ recibo.comprador_nombre }}. Los QR quedarán inválidos y el dinero se restará de la caja. <strong>Esto no se puede deshacer.</strong></p>
+                    <p class="text-muted small mb-4">Se anulará el recibo <strong>{{ recibo.numero_recibo }}</strong> de {{ recibo.comprador_nombre }}. Los QR quedarán inválidos y el recibo se excluirá de los totales vigentes. Esto no registra ni ejecuta una devolución de dinero. El historial se conserva.</p>
                     <div class="d-flex gap-2 w-100">
                         <button type="button" class="btn btn-light w-50 fw-semibold border" data-bs-dismiss="modal">Cancelar</button>
                         <form action="{% url 'eventos:anular_recibo' request.tenant.slug evento.slug recibo.id %}" method="POST" class="w-50">
@@ -668,6 +687,12 @@
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js" type="text/javascript"></script>
 
 <script>
+function escapeHtml(value) {
+  const element = document.createElement('span');
+  element.textContent = String(value ?? '');
+  return element.innerHTML;
+}
+
 document.addEventListener("DOMContentLoaded", function () {
     
     // 🔊 HELPER COMPARTIDO: GENERADOR DE SONIDO (BEEP) WEB AUDIO API
@@ -853,7 +878,7 @@ document.addEventListener("DOMContentLoaded", function () {
             .then(data => {
                 if (data.status === 'success') {
                     feedback.className = "alert alert-success text-center mt-3 mb-0 py-2 fs-7 shadow-sm";
-                    feedback.innerHTML = `<div>${data.message}</div><div class="text-dark small fw-normal mt-1">Cliente: <strong>${data.comprador}</strong> (${data.recibo})</div>`;
+                    feedback.innerHTML = `<div>${escapeHtml(data.message)}</div><div class="text-dark small fw-normal mt-1">Cliente: <strong>${escapeHtml(data.comprador)}</strong> (${escapeHtml(data.recibo)})</div>`;
                     playBeep(2200, 0.15);
                     
                     actualizarAforoDOM(data.nuevo_total_ingresados);
@@ -861,11 +886,11 @@ document.addEventListener("DOMContentLoaded", function () {
                     
                 } else if (data.status === 'fraud') {
                     feedback.className = "alert alert-danger text-center mt-3 mb-0 py-2 fs-7 border border-danger border-2 fw-bold";
-                    feedback.innerHTML = `<div>${data.message}</div><div class="text-dark small fw-normal mt-1">Titular: <strong>${data.comprador}</strong></div>`;
+                    feedback.innerHTML = `<div>${escapeHtml(data.message)}</div><div class="text-dark small fw-normal mt-1">Titular: <strong>${escapeHtml(data.comprador)}</strong></div>`;
                     playBeep(350, 0.5);
                 } else {
                     feedback.className = "alert alert-danger text-center mt-3 mb-0 py-2 fs-7";
-                    feedback.innerHTML = `<div>${data.message}</div>`;
+                    feedback.innerHTML = `<div>${escapeHtml(data.message)}</div>`;
                     playBeep(450, 0.3);
                 }
                 setTimeout(() => { escaneando = false; }, 2500);
@@ -949,10 +974,10 @@ document.addEventListener("DOMContentLoaded", function () {
                     <div class="card border-0 shadow-sm rounded-3 bg-white p-3 mb-2 transition-all" id="card-boleta-${item.codigo_unico}">
                         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
                             <div>
-                                <strong class="text-dark fs-6 d-block">${item.comprador}</strong>
-                                <span class="badge bg-light text-dark font-monospace extra-small border">${item.recibo}</span>
-                                <span class="text-muted extra-small ms-1"><i class="bi bi-phone me-1"></i>${item.telefono}</span>
-                                <span class="badge bg-primary-subtle text-primary extra-small ms-1">${item.tipo_pase}</span>
+                                <strong class="text-dark fs-6 d-block">${escapeHtml(item.comprador)}</strong>
+                                <span class="badge bg-light text-dark font-monospace extra-small border">${escapeHtml(item.recibo)}</span>
+                                <span class="text-muted extra-small ms-1"><i class="bi bi-phone me-1"></i>${escapeHtml(item.telefono)}</span>
+                                <span class="badge bg-primary-subtle text-primary extra-small ms-1">${escapeHtml(item.tipo_pase)}</span>
                             </div>
                             <div>${badgeEstado}</div>
                         </div>
@@ -967,7 +992,7 @@ document.addEventListener("DOMContentLoaded", function () {
                                     <div class="progress-bar ${colorBarra}" role="progressbar" style="width: ${porcentaje}%"></div>
                                 </div>
                                 <div class="extra-small text-muted mt-1">
-                                    <i class="bi bi-clock-history me-1"></i>Último ingreso: <strong>${item.ultimo_ingreso}</strong>
+                                    <i class="bi bi-clock-history me-1"></i>Último ingreso: <strong>${escapeHtml(item.ultimo_ingreso)}</strong>
                                 </div>
                             </div>
                             <div class="col-md-5 text-md-end mt-2 mt-md-0">
@@ -1016,7 +1041,7 @@ document.addEventListener("DOMContentLoaded", function () {
                             <div class="text-center py-3 text-success">
                                 <i class="bi bi-check-circle-fill display-6 d-block mb-1"></i>
                                 <strong class="fs-6 d-block">¡INGRESO REGISTRADO CON ÉXITO!</strong>
-                                <span class="small">${data.message}</span>
+                                <span class="small">${escapeHtml(data.message)}</span>
                             </div>`;
                     }
                     
@@ -1026,7 +1051,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 } else {
                     playBeep(350, 0.5);
-                    alert(`❌ ATENCIÓN: ${data.message}`);
+                    alert(`❌ ATENCIÓN: ${escapeHtml(data.message)}`);
                     botonDom.disabled = false;
                     botonDom.innerHTML = '<i class="bi bi-box-arrow-in-right me-1"></i> Reintentar';
                 }

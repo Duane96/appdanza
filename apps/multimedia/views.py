@@ -5,6 +5,7 @@ from django.views import View
 from django.contrib import messages
 from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin
+from apps.academias.mixins import TenantAdminRequiredMixin, TenantAccessMixin
 from django.views.generic import ListView, CreateView
 
 from .models import ModuloClase, VideoClase
@@ -16,17 +17,17 @@ from django.utils.decorators import method_decorator
 from apps.planes_estudiantes.models import Estudiante
 
 
-class VisorClaseView(View):
+class VisorClaseView(TenantAccessMixin, View):
     """Vista para el estudiante: Muestra el reproductor y las lecciones."""
     def get(self, request, slug_academia, modulo_id):
 
-        # 🔒 CAPA DE SEGURIDAD SENIOR: Bloquear acceso directo por URL a inactivos
-        if request.user.perfil.rol == 'ESTUDIANTE':
-            estudiante = Estudiante.objects.filter(
-                nombres=request.user.first_name, 
-                apellidos=request.user.last_name, 
-                academia=request.tenant
-            ).first()
+        from apps.academias.authorization import membership_role
+        from apps.academias.student_identity import student_for
+        from django.core.exceptions import PermissionDenied
+        if membership_role(request.user, request.tenant) == 'STUDENT':
+            estudiante = student_for(request.user, request.tenant)
+            if estudiante is None or estudiante.estado != 'ACTIVO':
+                raise PermissionDenied('No tienes acceso a esta clase.')
         # Aseguramos el aislamiento Multi-Tenant interceptando el request.tenant
         # Traemos el módulo evaluando de forma estricta que pertenezca a la academia actual.
         modulo = get_object_or_404(ModuloClase, id=modulo_id, academia=request.tenant)
@@ -47,7 +48,7 @@ class VisorClaseView(View):
         return render(request, 'multimedia/visor.html', context)
 
 
-class ListaModulosAdminView(LoginRequiredMixin, ListView):
+class ListaModulosAdminView(TenantAdminRequiredMixin, ListView):
     model = ModuloClase
     template_name = "multimedia/admin_lista_clases.html"
     context_object_name = 'modulos'
@@ -63,7 +64,7 @@ class ListaModulosAdminView(LoginRequiredMixin, ListView):
         return context
 
 
-class CrearModuloAdminView(LoginRequiredMixin, CreateView):
+class CrearModuloAdminView(TenantAdminRequiredMixin, CreateView):
     model = ModuloClase
     form_class = ModuloClaseForm
     template_name = "multimedia/admin_form_clase.html"
@@ -84,8 +85,7 @@ class CrearModuloAdminView(LoginRequiredMixin, CreateView):
         return reverse_lazy('multimedia:lista_clases_admin', kwargs={'slug_academia': self.request.tenant.slug})
 
 
-@method_decorator(csrf_exempt, name='dispatch')
-class SubirVideoAdminView(LoginRequiredMixin, View):
+class SubirVideoAdminView(TenantAdminRequiredMixin, View):
     def get(self, request, slug_academia):
         form = VideoClaseForm(academia=request.tenant)
         return render(request, 'multimedia/admin_subir_video.html', {'form': form, 'slug_academia': slug_academia})
@@ -110,7 +110,7 @@ class SubirVideoAdminView(LoginRequiredMixin, View):
 
 
 
-class GoogleOAuthCallbackView(LoginRequiredMixin, View):
+class GoogleOAuthCallbackView(TenantAdminRequiredMixin, View):
     """
     Vista global y estática que intercepta el retorno de Google OAuth 
     para la API de YouTube sin requerir parámetros dinámicos en la URL.
@@ -150,7 +150,7 @@ from django.views.generic import ListView, CreateView, UpdateView, DeleteView # 
 
 # ... (tus vistas existentes)
 
-class ListaModulosAdminView(LoginRequiredMixin, ListView):
+class ListaModulosAdminView(TenantAdminRequiredMixin, ListView):
     model = ModuloClase
     template_name = "multimedia/admin_lista_clases.html"
     context_object_name = 'modulos'
@@ -168,7 +168,7 @@ class ListaModulosAdminView(LoginRequiredMixin, ListView):
 
 # === NUEVAS VISTAS CRUD PARA EDICIÓN Y ELIMINACIÓN ===
 
-class EditarModuloAdminView(LoginRequiredMixin, UpdateView):
+class EditarModuloAdminView(TenantAdminRequiredMixin, UpdateView):
     model = ModuloClase
     form_class = ModuloClaseForm
     template_name = "multimedia/admin_form_clase.html" # Puedes reusar el mismo template de creación
@@ -185,7 +185,7 @@ class EditarModuloAdminView(LoginRequiredMixin, UpdateView):
         return reverse_lazy('multimedia:lista_clases_admin', kwargs={'slug_academia': self.request.tenant.slug})
 
 
-class EliminarModuloAdminView(LoginRequiredMixin, DeleteView):
+class EliminarModuloAdminView(TenantAdminRequiredMixin, DeleteView):
     model = ModuloClase
     
     def get_queryset(self):
@@ -197,7 +197,7 @@ class EliminarModuloAdminView(LoginRequiredMixin, DeleteView):
         return reverse_lazy('multimedia:lista_clases_admin', kwargs={'slug_academia': self.request.tenant.slug})
 
 
-class EditarVideoAdminView(LoginRequiredMixin, UpdateView):
+class EditarVideoAdminView(TenantAdminRequiredMixin, UpdateView):
     model = VideoClase
     form_class = VideoClaseForm
     
@@ -221,7 +221,7 @@ class EditarVideoAdminView(LoginRequiredMixin, UpdateView):
         return reverse_lazy('multimedia:lista_clases_admin', kwargs={'slug_academia': self.request.tenant.slug})
 
 
-class EliminarVideoAdminView(LoginRequiredMixin, DeleteView):
+class EliminarVideoAdminView(TenantAdminRequiredMixin, DeleteView):
     model = VideoClase
 
     def get_queryset(self):

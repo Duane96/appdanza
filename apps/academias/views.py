@@ -126,61 +126,28 @@ class LoginAcademiaView(LoginView):
         if url_destino:
             return url_destino
 
-        """🚀 REDIRECCIÓN INTELIGENTE: Evalúa roles y suspensiones."""
-        user = self.request.user
-        tenant = self.request.tenant
-        slug = tenant.slug
-        suscripcion = tenant.suscripcion_saas
-
-        # 🛑 FILTRO DE CONTROL SAAS
-        if suscripcion.estado == 'SUSPENDIDO':
-            return reverse('academias:dashboard', kwargs={'slug_academia': slug})
-
-        try:
-            perfil = user.perfil
-            
-            # 1. 👑 Administrador -> Panel Global
-            if perfil.rol == 'ADMIN_ACADEMIA':
-                return reverse('academias:dashboard', kwargs={'slug_academia': slug})
-            
-            # 2. 👨‍🏫 Profesor -> Su propio Dashboard (NUEVO)
-            elif perfil.rol == 'PROFESOR':
-                return reverse('profesores:dashboard_profesor', kwargs={'slug_academia': slug})
-            
-            # 3. 🎓 Estudiante -> Portal Estudiantil
-            elif perfil.rol == 'ESTUDIANTE':
-                return reverse('planes_estudiantes:portal_estudiante', kwargs={'slug_academia': slug})
-        
-        except AttributeError:
-            if user.is_staff:
-                return reverse('academias:dashboard', kwargs={'slug_academia': slug})
-        
-        return reverse('academias:index', kwargs={'slug_academia': slug})
+        from .authorization import membership_role, can
+        user, tenant = self.request.user, self.request.tenant
+        role = membership_role(user, tenant)
+        if user.is_superuser or role in ('OWNER', 'ADMIN'):
+            target = 'academias:dashboard'
+        elif role == 'BILLING':
+            target = 'saas_core:billing_portal'
+        elif role == 'TEACHER':
+            target = 'profesores:dashboard_profesor'
+        elif role == 'STUDENT':
+            target = 'planes_estudiantes:portal_estudiante'
+        elif can(user, tenant, 'events.view'):
+            target = 'eventos:admin_lista'
+        else:
+            target = 'academias:index'
+        return reverse(target, kwargs={'slug_academia': tenant.slug})
 
 
 
 class DashboardAdminView(TenantAdminRequiredMixin, TemplateView):
     """Renderiza el panel de control administrativo de la academia específica."""
     template_name = "academias/dashboard.html"
-
-    def get(self, request, *args, **kwargs):
-        """Intercepta la petición GET para evitar procesar contexto si la cuenta está en mora."""
-        academia = self.request.tenant
-        suscripcion = academia.suscripcion_saas
-        
-        # ⚡ CORTOCIRCUITO MAESTRO: Si la academia está suspendida, congelamos el backend aquí
-        if suscripcion.estado == 'SUSPENDIDO':
-            datos_pago = ConfigPagoGlobalSaaS.objects.first()
-            
-            # Renderizamos directamente la plantilla de bloqueo, ignorando por completo todo el código de abajo
-            return render(request, 'academias/bloqueado_pago.html', {
-                'academia': academia,
-                'suscripcion': suscripcion,
-                'datos_pago': datos_pago,
-                'monto_a_pagar': suscripcion.plan.precio_mensual
-            }, status=403)
-            
-        return super().get(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         # Este método ya SOLO se ejecutará si la academia está ACTIVA y AL DÍA.
@@ -189,7 +156,10 @@ class DashboardAdminView(TenantAdminRequiredMixin, TemplateView):
         context['academia'] = academia
         
         suscripcion = academia.suscripcion_saas
-        context['es_partner'] = suscripcion.es_cuenta_partner_gratis
+        from apps.saas_core.policy import BillingPolicy
+        context['billing_policy'] = BillingPolicy(academia)
+        context['es_partner'] = context['billing_policy'].exempt
+        context['student_limit'] = context['billing_policy'].features.get('max_students')
 
         # 📅 MANEJO DE FECHAS
         ahora = timezone.localtime(timezone.now())
@@ -349,24 +319,24 @@ class BrandingConfigView(TenantAdminRequiredMixin, UpdateView):
         return self.request.tenant
 
     def form_valid(self, form):
-        print("✅ FORM VALID")
-        print("Nombre:", form.cleaned_data.get("nombre"))
+        pass  # Sensitive diagnostics are deliberately not logged.
+        pass  # Sensitive diagnostics are deliberately not logged.
         return super().form_valid(form)
 
     def form_valid(self, form):
-        print("ANTES")
-        print("OBJETO:", self.get_object().nombre)
+        pass  # Sensitive diagnostics are deliberately not logged.
+        pass  # Sensitive diagnostics are deliberately not logged.
 
         self.object = form.save()
 
-        print("DESPUES")
-        print("OBJETO:", self.object.nombre)
+        pass  # Sensitive diagnostics are deliberately not logged.
+        pass  # Sensitive diagnostics are deliberately not logged.
 
         from apps.academias.models import Academia
         refrescado = Academia.objects.get(pk=self.object.pk)
 
-        print("BD:")
-        print(refrescado.nombre)
+        pass  # Sensitive diagnostics are deliberately not logged.
+        pass  # Sensitive diagnostics are deliberately not logged.
 
         return redirect(
             'academias:configuracion',

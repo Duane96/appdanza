@@ -4,7 +4,7 @@ import datetime
 from django.views.generic import TemplateView
 from django.contrib.auth.mixins import UserPassesTestMixin
 from apps.academias.models import Academia, PerfilUsuario
-from django.core.mail import send_mail
+from apps.comunicaciones.services import queue_mail as send_mail
 from django.conf import settings
 from .forms import ConfigPagoSaaSForm
 from .models import PlanSaaS, SuscripcionAcademia
@@ -53,34 +53,16 @@ from django.db.models import Min
 from django.db.models.functions import Coalesce
 
 
+from decimal import Decimal
+from apps.academias.authorization import tenant_permission, target_academy
+from apps.finanzas.reporting import event_totals
+
+
+@tenant_permission('tenant.admin', target_academy)
 def api_finanzas_academia(request):
     academia_id = request.GET.get('academia_id')
     
-    # Optimizamos: traemos el conteo y sumatorias por evento en una sola consulta
-    eventos_data = Evento.objects.filter(academia_id=academia_id).annotate(
-        cant_recibos=Count('recibos_evento'),
-        total_gastos_evento=Sum('gastos_evento__monto'),
-        ingresos_online=Sum('recibos_evento__monto_total', filter=Q(recibos_evento__origen='ONLINE')),
-        ingresos_taquilla=Sum('recibos_evento__monto_total', filter=Q(recibos_evento__origen='PUERTA'))
-    ).values(
-        'nombre', 'cant_recibos', 'ingresos_online', 'ingresos_taquilla', 'total_gastos_evento'
-    )
-
-    # Convertimos los QuerySets a una lista de diccionarios con cálculo seguro
-    lista_eventos = []
-    for e in eventos_data:
-        onl = float(e['ingresos_online'] or 0)
-        taq = float(e['ingresos_taquilla'] or 0)
-        gast = float(e['total_gastos_evento'] or 0)
-        lista_eventos.append({
-            'nombre': e['nombre'],
-            'cant_recibos': e['cant_recibos'],
-            'ingresos_online': onl,
-            'ingresos_taquilla': taq,
-            'gastos': gast,
-            'total_ingreso': onl + taq, # ✅ Django hace la suma real
-            'neto': (onl + taq) - gast   # ✅ Django calcula el neto real
-        })
+    lista_eventos = event_totals(academia_id)
 
     # 2. Resumen: Ingresos Totales y Gastos
     # Separamos ingresos de tienda para que puedas mostrarlos aparte
@@ -88,29 +70,29 @@ def api_finanzas_academia(request):
     ingresos = ReciboIngreso.objects.filter(academia_id=academia_id, estado='ACTIVO')
     
     # 2. Desglose real
-    total_ingresos = ingresos.aggregate(Sum('monto'))['monto__sum'] or 0
-    ingresos_tienda = ingresos.filter(tipo_ingreso='TIENDA').aggregate(Sum('monto'))['monto__sum'] or 0
+    total_ingresos = ingresos.aggregate(Sum('monto'))['monto__sum'] or Decimal('0.00')
+    ingresos_tienda = ingresos.filter(tipo_ingreso='TIENDA').aggregate(Sum('monto'))['monto__sum'] or Decimal('0.00')
     
     # Ingreso por Membresías: Total menos lo que vino de tienda
     ingresos_membresias = total_ingresos - ingresos_tienda
     
-    total_gastos = Gasto.objects.filter(academia_id=academia_id, estado='ACTIVO').aggregate(Sum('monto'))['monto__sum'] or 0
+    total_gastos = Gasto.objects.filter(academia_id=academia_id, estado='ACTIVO').aggregate(Sum('monto'))['monto__sum'] or Decimal('0.00')
     estudiantes_activos = Estudiante.unfiltered_objects.filter(academia_id=academia_id, estado='ACTIVO').count()
     
     # 3. Ticket Promedio Lógico: Ingresos de membresías / Estudiantes activos
-    ticket_promedio = ingresos_membresias / estudiantes_activos if estudiantes_activos > 0 else 0
+    ticket_promedio = ingresos_membresias / estudiantes_activos if estudiantes_activos > 0 else Decimal('0.00')
 
     return JsonResponse({
         'status': 'success',
         'eventos': lista_eventos,
         'resumen': {
-            'ingresos_totales': float(total_ingresos),
-            'ingresos_tienda': float(ingresos_tienda),
-            'gastos': float(total_gastos),
-            'balance': float(total_ingresos - total_gastos),
-            'margen': (float(total_ingresos - total_gastos) / float(total_ingresos) * 100) if total_ingresos > 0 else 0,
+            'ingresos_totales': total_ingresos,
+            'ingresos_tienda': ingresos_tienda,
+            'gastos': total_gastos,
+            'balance': total_ingresos - total_gastos,
+            'margen': ((total_ingresos - total_gastos) / total_ingresos * Decimal('100')) if total_ingresos > 0 else Decimal('0.00'),
             'estudiantes_activos': estudiantes_activos,
-            'ticket_promedio': float(ticket_promedio) # Ahora es limpio
+            'ticket_promedio': ticket_promedio # Ahora es limpio
         }
     })
 
@@ -127,8 +109,9 @@ class PanelMaestroDashboardView(UserPassesTestMixin, TemplateView):
         
         # 🎯 REPARACIÓN SENIOR: KPIs Globales usando 'unfiltered_objects'
         context['total_academias'] = Academia.unfiltered_objects.count()
-        context['academias_activas'] = SuscripcionAcademia.objects.filter(estado='ACTIVO').count()
-        context['academias_suspendidas'] = SuscripcionAcademia.objects.filter(estado='SUSPENDIDO').count()
+        context['academias_activas'] = Academia.unfiltered_objects.filter(activo=True).count()
+        from .models import CommercialSubscription
+        context['academias_suspendidas'] = CommercialSubscription.objects.filter(state__in=('PAST_DUE', 'LIMITED', 'SUSPENDED')).count()
         
         # 📊 NUEVOS KPIs: Estudiantes y Eventos totales del ecosistema
         context['total_estudiantes'] = Estudiante.unfiltered_objects.count()
@@ -138,7 +121,7 @@ class PanelMaestroDashboardView(UserPassesTestMixin, TemplateView):
         
         # 🚀 OPTIMIZACIÓN EXTREMA: Traemos academias, planes y contamos sus alumnos/eventos en 1 sola Query
         context['academias'] = Academia.unfiltered_objects.all().select_related(
-            'suscripcion_saas__plan'
+            'suscripcion_saas__plan', 'billing_account'
         ).annotate(
             # 'estudiantes' y 'eventos_academia' son los related_name de tus modelos
             num_estudiantes=Count('estudiantes', distinct=True),
@@ -172,7 +155,16 @@ class CrearAcademiaSaaSView(UserPassesTestMixin, View):
         template_personalizado = request.POST.get('template_landing_personalizado', '').strip() or None
         es_productora = request.POST.get('es_solo_eventos') == 'on'
         admin_email = request.POST.get('admin_email')
-        admin_password = request.POST.get('admin_password')
+        from django.core.validators import validate_email, validate_slug
+        from django.core.exceptions import ValidationError
+        try:
+            validate_email(admin_email or '')
+            validate_slug(slug or '')
+            if not nombre or User.objects.filter(email__iexact=admin_email).exists() or Academia.unfiltered_objects.filter(slug=slug).exists():
+                raise ValidationError('Datos duplicados o incompletos.')
+        except ValidationError:
+            messages.error(request, 'Revisa el nombre, identificador y correo; no deben pertenecer a otra cuenta.')
+            return redirect('saas_core:panel_maestro_dashboard')
 
         with transaction.atomic():
             # 1. Creamos la escuela de baile
@@ -216,7 +208,7 @@ class CrearAcademiaSaaSView(UserPassesTestMixin, View):
             nuevo_admin = User.objects.create_user(
                 username=admin_email,
                 email=admin_email,
-                password=admin_password
+                password=None
             )
             nuevo_admin.is_staff = False 
             nuevo_admin.save()
@@ -227,13 +219,13 @@ class CrearAcademiaSaaSView(UserPassesTestMixin, View):
                 rol='ADMIN_ACADEMIA'
             )
 
-            # 3. Disparador de correo
-            enviar_correo_transaccional(
-                asunto=f"¡Bienvenido a AppDanza, {nueva_academia.nombre}!",
-                template_name="comunicaciones/bienvenida_academia.html",
-                context={'academia': nueva_academia},
-                destinatarios=[admin_email]
-            )
+            from apps.academias.invitations import invite_new_account
+            from .models import BillingAccount
+            from .audit import record
+            BillingAccount.objects.create(academia=nueva_academia, mode='LEGACY', grant_features={},
+                grant_reason='Creada por administración; pendiente de asignación comercial explícita.')
+            invite_new_account(nuevo_admin, nueva_academia, base_url=settings.APPDANZA_PUBLIC_URL, actor=request.user)
+            record(nueva_academia, request.user, 'tenant.created', nueva_academia.pk)
 
         messages.success(request, f"Academia {nombre} creada. Esperando validación de pago o asignación de Plan.")
         return redirect('saas_core:panel_maestro_dashboard')
@@ -247,55 +239,8 @@ class MasterAsignarYRenovarPlanView(UserPassesTestMixin, View):
         return self.request.user.is_superuser and self.request.user.is_staff
 
     def post(self, request, *args, **kwargs):
-        academia_id = request.POST.get('academia_id')
-        plan_id = request.POST.get('plan_id')
-        meses_a_renovar = int(request.POST.get('meses_a_renovar', 1))
-        
-        academia = get_object_or_404(Academia.unfiltered_objects, id=academia_id)
-        plan = get_object_or_404(PlanSaaS, id=plan_id)
-        hoy = timezone.localtime(timezone.now()).date()
+        return JsonResponse({'status': 'error', 'message': 'El flujo anterior fue reemplazado. Usa Mi plan y facturación o Administración de políticas comerciales.'}, status=410)
 
-        with transaction.atomic():
-            # 1. Buscar si ya existe una suscripción, si no, crearla
-            suscripcion, created = SuscripcionAcademia.objects.get_or_create(
-                academia=academia,
-                defaults={
-                    'plan': plan,
-                    'estado': 'ACTIVO',
-                    'fecha_inicio': hoy,
-                    'fecha_vencimiento': hoy + timezone.timedelta(days=30 * meses_a_renovar)
-                }
-            )
-
-            # 2. Lógica de Actualización y Fechas (Si la suscripción ya existía)
-            if not created:
-                suscripcion.plan = plan
-                suscripcion.estado = 'ACTIVO'
-                
-                # Si está vencida, partimos de hoy. Si no, sumamos desde la fecha de vencimiento actual.
-                base_fecha = suscripcion.fecha_vencimiento if suscripcion.fecha_vencimiento >= hoy else hoy
-                suscripcion.fecha_vencimiento = base_fecha + timezone.timedelta(days=30 * meses_a_renovar)
-                suscripcion.save()
-
-            # 3. 🚀 GENERACIÓN DEL RECIBO (Si NO es cuenta Partner)
-            # Solo generamos deuda (recibo) si la cuenta no es VIP gratis
-            if not suscripcion.es_cuenta_partner_gratis:
-                monto_calculado = plan.precio_mensual * meses_a_renovar
-                
-                # Creamos el registro en tus Finanzas Master
-                ReciboSaaS.objects.create(
-                    academia=academia,
-                    plan=plan,
-                    monto=monto_calculado,
-                    concepto=f"Asignación/Renovación: Plan {plan.nombre} ({meses_a_renovar} mes/es).",
-                    medio_pago="PENDIENTE / POR VALIDAR" # Puedes cambiar esto si es pago directo
-                )
-                
-            messages.success(request, f"¡Suscripción de {academia.nombre} actualizada correctamente!")
-            return redirect('saas_core:panel_maestro_dashboard')
-
-
-# apps/saas_core/views.py
 
 class CrearPlanSaaSView(UserPassesTestMixin, View):
     def test_func(self):
@@ -331,78 +276,8 @@ class ActualizarLicenciaSaaSView(UserPassesTestMixin, View):
         return self.request.user.is_superuser and self.request.user.is_staff
 
     def post(self, request, *args, **kwargs):
-        academia_id = request.POST.get('academia_id')
-        suscripcion = get_object_or_404(SuscripcionAcademia, academia_id=academia_id)
-        
-        estado_nuevo = request.POST.get('estado')
-        
-        # 1. 🚀 LÓGICA DE PLAN INTELIGENTE (Prueba vs Comercial)
-        if estado_nuevo == 'PRUEBA':
-            # En prueba no amarramos a ningún plan comercial
-            suscripcion.plan = None
-        else:
-            nuevo_plan_id = request.POST.get('plan_id')
-            if nuevo_plan_id:
-                try:
-                    suscripcion.plan = PlanSaaS.objects.get(id=nuevo_plan_id)
-                except PlanSaaS.DoesNotExist:
-                    return JsonResponse({'status': 'error', 'message': 'El plan no existe.'}, status=400)
-            elif not suscripcion.plan:
-                return JsonResponse({'status': 'error', 'message': 'Debes seleccionar un plan comercial para estados Activo o Mora.'}, status=400)
+        return JsonResponse({'status': 'error', 'message': 'El flujo anterior fue reemplazado. Usa Mi plan y facturación o Administración de políticas comerciales.'}, status=410)
 
-        # 2. Lógica de Fechas Personalizadas (Las que colocaste en los inputs)
-        fecha_inicio_str = request.POST.get('fecha_inicio')
-        fecha_vencimiento_str = request.POST.get('fecha_vencimiento')
-        
-        if fecha_inicio_str and fecha_vencimiento_str:
-            from datetime import datetime
-            suscripcion.fecha_inicio = datetime.strptime(fecha_inicio_str, '%Y-%m-%d').date()
-            suscripcion.fecha_vencimiento = datetime.strptime(fecha_vencimiento_str, '%Y-%m-%d').date()
-
-        # 3. Datos VIP y Comisiones Independientes
-        suscripcion.es_cuenta_partner_gratis = request.POST.get('es_cuenta_partner_gratis') in ['on', 'True', 'true', '1']
-        
-        # Si NO es partner y habilitaste el módulo de eventos, guardamos la comisión que elegiste
-        if not suscripcion.es_cuenta_partner_gratis:
-            comision = request.POST.get('comision_por_tiquete', 0)
-            suscripcion.comision_por_tiquete = float(comision) if comision else 0
-        else:
-            suscripcion.comision_por_tiquete = 0 # Partners no pagan comisión
-
-        # 4. 🚀 GENERACIÓN MANUAL DE COBRO (Opcional en el Modal)
-        generar_cobro = request.POST.get('generar_cobro') in ['on', 'True', 'true', '1']
-        
-        if generar_cobro and not suscripcion.es_cuenta_partner_gratis:
-            monto_personalizado = request.POST.get('monto_factura', suscripcion.plan.precio_mensual)
-            ReciboSaaS.objects.create(
-                academia=suscripcion.academia,
-                plan=suscripcion.plan,
-                monto=monto_personalizado,
-                concepto=f"Facturación Manual de Licencia - Plan: {suscripcion.plan.nombre}",
-                medio_pago="ACTUALIZACIÓN MANUAL (MODAL LICENCIA)"
-            )
-
-        suscripcion.estado = estado_nuevo
-        
-        # 5. Guardamos los bloqueos (invertimos el switch para guardar: Si envías 'on', bloqueo es False)
-        suscripcion.bloqueo_manual_estudiantes = not (request.POST.get('modulo_estudiantes_activo') in ['on', 'True', 'true', '1'])
-        suscripcion.bloqueo_manual_asistencias = not (request.POST.get('modulo_asistencias_activo') in ['on', 'True', 'true', '1'])
-        suscripcion.bloqueo_manual_finanzas = not (request.POST.get('modulo_finanzas_activo') in ['on', 'True', 'true', '1'])
-        suscripcion.bloqueo_manual_multimedia = not (request.POST.get('modulo_multimedia_activo') in ['on', 'True', 'true', '1'])
-        suscripcion.bloqueo_manual_tienda = not (request.POST.get('modulo_tienda_activo') in ['on', 'True', 'true', '1'])
-        suscripcion.bloqueo_manual_profesores = not (request.POST.get('modulo_profesores_activo') in ['on', 'True', 'true', '1'])
-        suscripcion.bloqueo_manual_calendario = not (request.POST.get('modulo_calendario_activo') in ['on', 'True', 'true', '1'])
-        
-        # El módulo de eventos ahora es independiente (Si el switch está ON, el bloqueo es False)
-        suscripcion.bloqueo_manual_eventos = not (request.POST.get('modulo_eventos_activo') in ['on', 'True', 'true', '1'])
-        
-        suscripcion.save()
-
-        academia = suscripcion.academia
-        academia.es_solo_eventos = request.POST.get('es_solo_eventos') in ['on', 'True', 'true', '1']
-        academia.save()
-
-        return JsonResponse({'status': 'success'})
 
 class APIObtenerEstudiantesAcademiaView(UserPassesTestMixin, View):
     """API de Soporte: Retorna los alumnos de un inquilino para el Súper Admin."""
@@ -472,7 +347,7 @@ class IndexSaaSGlobalView(TemplateView):
         return context
     
 
-from django.utils.html import strip_tags
+from django.utils.html import strip_tags, escape
 
 class ProcesarLeadLandingView(View):
     """
@@ -481,9 +356,9 @@ class ProcesarLeadLandingView(View):
     """
     def post(self, request, *args, **kwargs):
         # 1. Capturamos los datos del POST (usando los atributos 'name' del form)
-        nombre_director = request.POST.get('director_name')
-        nombre_academia = request.POST.get('academy_name')
-        telefono = request.POST.get('phone')
+        nombre_director = escape(request.POST.get('director_name', '')[:150])
+        nombre_academia = escape(request.POST.get('academy_name', '')[:150])
+        telefono = escape(request.POST.get('phone', '')[:40])
 
         if not nombre_director or not nombre_academia or not telefono:
             return JsonResponse({'status': 'error', 'message': 'Todos los campos son obligatorios.'}, status=400)
@@ -588,7 +463,7 @@ class MasterActualizarLandingView(UserPassesTestMixin, View):
 
             return JsonResponse({'status': 'success'})
         except Exception as e:
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+            return JsonResponse({'status': 'error', 'message': 'No se pudo completar la operación. Revisa los datos o contacta con soporte.'}, status=400)
         
 
 class EliminarPlanSaaSView(UserPassesTestMixin, View):
@@ -673,7 +548,7 @@ class MasterConfirmarPagoAcademiaView(UserPassesTestMixin, View):
                     destinatarios=[suscripcion.academia.usuarios.filter(perfil__rol='ADMIN_ACADEMIA').first().user.email]
                 )
             except Exception as e:
-                print(f"Error enviando correo de confirmación: {e}")
+                pass  # Sensitive diagnostics are deliberately not logged.
 
         return JsonResponse({
             'status': 'success', 
@@ -709,78 +584,14 @@ class ToggleBloqueoSaaSView(UserPassesTestMixin, View):
         return self.request.user.is_superuser and self.request.user.is_staff
 
     def post(self, request, *args, **kwargs):
-        try:
-            data = json.loads(request.body)
-            academia_id = data.get('academia_id')
-            estado_deseado = data.get('estado') # 'ACTIVO' o 'SUSPENDIDO'
+        return JsonResponse({'status': 'error', 'message': 'El flujo anterior fue reemplazado. Usa Mi plan y facturación o Administración de políticas comerciales.'}, status=410)
 
-            suscripcion = get_object_or_404(SuscripcionAcademia, academia_id=academia_id)
-            estado_anterior = suscripcion.estado
-
-            # 🚀 MAGIA FINANCIERA TAMBIÉN EN EL SWITCH
-            if estado_anterior == 'SUSPENDIDO' and estado_deseado == 'ACTIVO':
-                hoy_colombia = timezone.localtime(timezone.now()).date()
-                
-                suscripcion.fecha_inicio = hoy_colombia
-                suscripcion.fecha_vencimiento = hoy_colombia + timezone.timedelta(days=30)
-
-                if not suscripcion.es_cuenta_partner_gratis:
-                    ReciboSaaS.objects.create(
-                        academia=suscripcion.academia,
-                        plan=suscripcion.plan,
-                        monto=suscripcion.plan.precio_mensual,
-                        concepto=f"Reactivación Rápida de Licencia (30 días) - Plan: {suscripcion.plan.nombre}",
-                        medio_pago="SWITCH MANUAL (TABLA MAESTRA)"
-                    )
-
-            suscripcion.estado = estado_deseado
-            suscripcion.save()
-
-            return JsonResponse({'status': 'success', 'nuevo_estado': suscripcion.estado})
-        except Exception as e:
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
-        
 
 class SubirComprobanteSaaSView(View):
     """Vista que recibe el comprobante desde la academia (Bloqueada o Activa)."""
     
     def post(self, request, *args, **kwargs):
-        # 1. 🚀 SOLUCIÓN: Capturamos el ID directamente desde el formulario oculto
-        academia_id = request.POST.get('academia_id')
-        academia = get_object_or_404(Academia, id=academia_id)
-        
-        archivo = request.FILES.get('comprobante')
-        
-        if archivo:
-            # 2. Guardamos el reporte vinculándolo a la academia que encontramos
-            reporte = ReportePagoSaaS.objects.create(
-                academia=academia,
-                plan=academia.suscripcion_saas.plan,
-                comprobante=archivo
-            )
-            
-            # 3. Enviamos el correo de alerta al Admin Maestro
-            url_revision = request.build_absolute_uri(reverse('saas_core:master_revisar_pago', args=[reporte.id]))
-            
-            try:
-                send_mail(
-                    subject=f"🚨 Nuevo Pago de Licencia: {academia.nombre}",
-                    message=f"La academia {academia.nombre} ha subido un comprobante de pago.\n\n"
-                            f"Plan: {reporte.plan.nombre}\n"
-                            f"Fecha: {reporte.fecha_envio.strftime('%d/%m/%Y %H:%M')}\n\n"
-                            f"👉 Haz clic aquí para ver el comprobante y aprobar la renovación:\n{url_revision}",
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=['appdanza2026@gmail.com'], 
-                    fail_silently=True
-                )
-            except Exception as e:
-                pass 
-
-            messages.success(request, "¡Comprobante enviado con éxito! En unos minutos verificaremos tu pago y reactivaremos tu plataforma.")
-        else:
-            messages.error(request, "Por favor, selecciona un archivo válido.")
-            
-        return redirect(request.META.get('HTTP_REFERER', '/'))
+        return JsonResponse({'status': 'error', 'message': 'El flujo anterior fue reemplazado. Usa Mi plan y facturación o Administración de políticas comerciales.'}, status=410)
 
 
 class RevisarYAprobarPagoView(UserPassesTestMixin, View):
@@ -790,10 +601,23 @@ class RevisarYAprobarPagoView(UserPassesTestMixin, View):
 
     def post(self, request, pk):
         reporte = get_object_or_404(ReportePagoSaaS, pk=pk)
+        if reporte.invoice_id:
+            from .manual_payments import approve_proof
+            from django.core.exceptions import ValidationError
+            try:
+                approve_proof(pk, request.user, request.POST.get('bank_reference', ''))
+                return JsonResponse({'status': 'success', 'message': 'Pago confirmado una sola vez.'})
+            except ValidationError:
+                return JsonResponse({'status': 'error', 'message': 'Revisa la cuenta y la referencia bancaria.'}, status=400)
         suscripcion = reporte.academia.suscripcion_saas
         
         try:
             with transaction.atomic():
+                from apps.academias.locks import lock_tenant
+                lock_tenant(reporte.academia)
+                reporte.refresh_from_db()
+                if reporte.estado == 'APROBADO':
+                    return JsonResponse({'status': 'success', 'message': 'El comprobante ya estaba aprobado.'})
                 # 1. Marcamos el reporte como Aprobado
                 reporte.estado = 'APROBADO'
                 reporte.save()
@@ -857,7 +681,7 @@ class RevisarYAprobarPagoView(UserPassesTestMixin, View):
 
             return JsonResponse({'status': 'success', 'message': 'Comprobante aprobado y academia activada exitosamente.'})
         except Exception as e:
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+            return JsonResponse({'status': 'error', 'message': 'No se pudo completar la operación. Revisa los datos o contacta con soporte.'}, status=400)
     
 
 class FinanzasMaestroDashboardView(UserPassesTestMixin, TemplateView):
@@ -1084,7 +908,7 @@ class MasterCrearEventoView(UserPassesTestMixin, View):
         try:
             # Creamos el evento saltando el aislamiento (ya que somos el Master)
             # Asegúrate de usar unfiltered_objects si tu TenantModel lo requiere
-            Evento.objects.create(
+            Evento.unfiltered_objects.create(
                 academia=academia,
                 nombre=nombre,
                 fecha=fecha,
@@ -1096,7 +920,7 @@ class MasterCrearEventoView(UserPassesTestMixin, View):
             )
             messages.success(request, f"Evento '{nombre}' inyectado exitosamente en la cartelera.")
         except Exception as e:
-            messages.error(request, f"Error al crear evento: {str(e)}")
+            messages.error(request, "No se pudo crear el evento. Revisa los datos.")
 
         return redirect('saas_core:panel_maestro_dashboard')
 

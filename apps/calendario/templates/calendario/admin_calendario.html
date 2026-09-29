@@ -379,7 +379,7 @@
         if (data.alumnos.length > 0) {
             listaHTML = '<ul class="list-group list-group-flush text-start small mb-0 style-scroll" style="max-height: 160px; overflow-y: auto;">';
             data.alumnos.forEach(alumno => {
-                listaHTML += `<li class="list-group-item py-2 px-3 border-bottom"><i class="bi bi-person-check text-success me-2"></i><strong>${alumno}</strong></li>`;
+                listaHTML += `<li class="list-group-item py-2 px-3 border-bottom"><i class="bi bi-person-check text-success me-2"></i><strong>${AppDanzaUI.text(alumno)}</strong></li>`;
             });
             listaHTML += '</ul>';
         } else {
@@ -401,7 +401,7 @@
                 <button class="btn btn-success btn-lg rounded-pill fw-bold shadow-sm mb-2" onclick="marcarClaseDictada(${data.id})">
                     <i class="bi bi-check2-circle me-2"></i> Confirmar Clase Dictada
                 </button>
-                <a href="${data.urlExcepcion}" class="btn btn-outline-dark rounded-pill fw-bold shadow-sm">
+                <a href="${AppDanzaUI.localUrl(data.urlExcepcion)}" class="btn btn-outline-dark rounded-pill fw-bold shadow-sm">
                     <i class="bi bi-sliders me-1"></i> Configurar Excepción Específica
                 </a>
             `;

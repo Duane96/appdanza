@@ -1,0 +1,44 @@
+{% extends "base_tenant.html" %}
+{% block content %}
+<h1 class="h3">{{ evento.nombre }}</h1>
+<p class="text-muted">Operación del evento · Acceso según tu rol</p>
+{% if can_metrics %}<div class="card p-4"><h2 class="h5">Registros confirmados</h2><p>{{ count }} registros · {{ total|default:0 }} {{ request.tenant.divisa }}</p></div>{% endif %}
+{% if can_checkin %}
+<section class="card p-4 my-3"><h2 class="h5">Validar entrada</h2>
+<div id="reader"></div><label class="form-label" for="ticket-code">Código de entrada</label>
+<input id="ticket-code" class="form-control" autocomplete="off"><button id="check-ticket" class="btn btn-primary mt-2">Validar ingreso</button>
+<p id="check-result" role="status" class="mt-3"></p>{% csrf_token %}</section>
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script>
+const output = document.getElementById('check-result');
+let busy = false;
+async function checkTicket(code) {
+  if (busy) return; busy = true;
+  const button = document.getElementById('check-ticket'); button.disabled = true;
+  try {
+    const response = await fetch("{% url 'eventos:api_validar_ingreso_qr' request.tenant.slug evento.slug %}", {
+      method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value},
+      body: JSON.stringify({codigo_unico: code, request_key: crypto.randomUUID()})});
+    const data = await response.json(); output.textContent = data.message || 'No se pudo validar.';
+  } catch (error) { output.textContent = 'Revisa la conexión e inténtalo nuevamente.'; }
+  finally { button.disabled = false; busy = false; }
+}
+document.getElementById('check-ticket').addEventListener('click', () => checkTicket(document.getElementById('ticket-code').value));
+if (window.Html5QrcodeScanner) new Html5QrcodeScanner('reader', {fps: 5, qrbox: 220}, false).render(checkTicket);
+</script>
+{% endif %}
+{% if can_sell %}
+<form class="card p-4 mt-3" method="post" action="{% url 'eventos:registrar_puerta' request.tenant.slug evento.slug %}">
+{% csrf_token %}<input type="hidden" name="registration_key" value="{{ registration_key }}">
+<h2 class="h5">Pago recibido en taquilla</h2>
+<label class="form-label">Nombre<input name="comprador_nombre" class="form-control" required maxlength="150"></label>
+<label class="form-label">Teléfono<input name="comprador_telefono" class="form-control" maxlength="30"></label>
+<label class="form-label">Pase<select name="tipo_pase" class="form-select">{% for pase in pases %}<option value="PASE_{{ pase.pk }}">{{ pase.nombre }} · {{ pase.precio }}</option>{% endfor %}</select></label>
+<label class="form-label">Cantidad<input type="number" name="cantidad_entradas" min="1" max="25" value="1" class="form-control" required></label>
+<input type="hidden" name="precio_unitario_aplicado" value="0">
+<label class="form-label">Medio<select name="medio_pago" class="form-select"><option value="EFECTIVO">Efectivo</option><option value="TRANSFERENCIA">Transferencia verificada</option></select></label>
+<p class="small">Confirma únicamente cuando hayas verificado el pago. El precio se calcula desde el catálogo del evento.</p>
+<button class="btn btn-primary" {% if evento.estado == 'FINALIZADO' %}disabled{% endif %}>Confirmar pago recibido</button>
+</form>
+{% endif %}
+{% endblock %}

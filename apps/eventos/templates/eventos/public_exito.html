@@ -22,28 +22,33 @@
 <div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-md-8 col-lg-6 ticket-wrapper">
-            
+
             <div class="text-center mb-4">
                 <i class="bi bi-check-circle-fill text-success display-2 mb-2"></i>
                 <h2 class="fw-bold text-dark">¡Inscripción Registrada!</h2>
                 <p class="text-secondary small">Radicado: <strong class="font-monospace text-dark">{{ recibo.numero_recibo }}</strong></p>
             </div>
 
-            <h5 class="fw-bold text-dark mb-3"><i class="bi bi-qr-code-scan me-2"></i>Tus Entradas de Acceso</h5>
+            <div class="alert {% if recibo.payment_status == 'CONFIRMED' %}alert-success{% else %}alert-info{% endif %}">
+<strong>{{ recibo.get_payment_status_display }}</strong>
+{% if recibo.payment_status == 'PENDING' or recibo.payment_status == 'REVIEW' %}<p class="mb-0">Tu registro está recibido. Las entradas estarán disponibles después de que la administración verifique el pago. Guarda este enlace para consultar el estado.</p>{% endif %}
+{% if recibo.anulado %}<p class="mb-0">Este registro no habilita acceso al evento.</p>{% endif %}
+</div>
+<h5 class="fw-bold text-dark mb-3"><i class="bi bi-qr-code-scan me-2"></i>Tus Entradas de Acceso</h5>
 
             {% for boleta in boletas %}
             <div class="mb-5 text-center">
-                
+
                 <div class="mb-3">
                     {% if boleta.imagen_qr %}
-                        <img src="{{ boleta.imagen_qr.url }}" alt="Tu Boleta de Acceso" class="tarjeta-renderizada" />
+                        <img src="{{ boleta.imagen_qr.url }}?token={{ receipt_access_token|urlencode }}" alt="Tu Boleta de Acceso" class="tarjeta-renderizada" />
                     {% else %}
-                        <div class="alert alert-danger">Error al procesar la boleta física.</div>
+                        <div class="alert alert-danger">La imagen de la entrada se está preparando. Actualiza esta página en unos momentos.</div>
                     {% endif %}
                 </div>
 
                 {% if boleta.imagen_qr %}
-                    <a href="{{ boleta.imagen_qr.url }}" 
+                    <a href="{{ boleta.imagen_qr.url }}?token={{ receipt_access_token|urlencode }}"
                        download="Boleto_{{ forloop.counter }}_{{ evento.nombre|slugify }}.png"
                        class="btn btn-dark fw-bold rounded-pill shadow px-4 py-2 w-100 dynamic-dl-btn">
                         <i class="bi bi-cloud-arrow-down-fill me-2"></i> Descargar Esta Boleta
@@ -53,16 +58,16 @@
             </div>
             {% endfor %}
             <div class="mt-5 pt-4 border-top border-2 border-light text-center">
-                <p class="text-secondary small mb-3">También hemos enviado una copia de estos QRs a tu correo electrónico.</p>
-                
+                <p class="text-secondary small mb-3">Conserva este enlace privado para consultar y descargar tus entradas.</p>
+
                 <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center">
                     {# Asumiendo que tienes una url llamada 'academia_landing' o similar en tus urls globales #}
                     {# Si no la tienes aún, podemos usar un enlace genérico '/' o la ruta que uses para el index del tenant #}
                     <a href="/" class="btn btn-outline-dark fw-bold rounded-pill px-4 py-2">
                         <i class="bi bi-house-door me-2"></i> Volver al Inicio
                     </a>
-                    
-                   
+
+
                 </div>
             </div>
 
@@ -79,18 +84,18 @@
                 e.preventDefault();
                 const urlOriginal = this.href;
                 const nombreArchivo = this.getAttribute('download');
-                
+
                 try {
                     const res = await fetch(urlOriginal);
                     const blob = await res.blob();
                     const urlBlob = URL.createObjectURL(blob);
-                    
+
                     const trigger = document.createElement('a');
                     trigger.href = urlBlob;
                     trigger.download = nombreArchivo;
                     document.body.appendChild(trigger);
                     trigger.click();
-                    
+
                     document.body.removeChild(trigger);
                     URL.revokeObjectURL(urlBlob);
                 } catch (err) {

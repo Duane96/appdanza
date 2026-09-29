@@ -590,14 +590,14 @@
                     const colorTexto = esIngreso ? 'text-success' : 'text-danger';
                     const signo = esIngreso ? '+' : '-';
                     const badgeTipo = esIngreso ? '<span class="badge bg-success-subtle text-success me-1 fs-8">IN</span>' : '<span class="badge bg-danger-subtle text-danger me-1 fs-8">EG</span>';
-                    const refVisual = tipo === 'mensual' ? `<span class="d-block text-muted small font-monospace" style="font-size: 0.65rem;">${tx.fecha}</span>${tx.consecutivo}` : tx.consecutivo;
+                    const refVisual = tipo === 'mensual' ? `<span class="d-block text-muted small font-monospace" style="font-size: 0.65rem;">${AppDanzaUI.text(tx.fecha)}</span>${AppDanzaUI.text(tx.consecutivo)}` : AppDanzaUI.text(tx.consecutivo);
 
                     const filaHTML = `
                         <tr>
                             <td class="ps-3 small font-monospace lh-1">${refVisual}</td>
                             <td class="small py-2 lh-sm">
-                                ${badgeTipo} <strong class="text-dark">${tx.tercero}</strong>
-                                <span class="d-block text-muted text-truncate mt-1" style="max-width: 220px; font-size: 0.75rem;" title="${tx.concepto}">${tx.concepto}</span>
+                                ${badgeTipo} <strong class="text-dark">${AppDanzaUI.text(tx.tercero)}</strong>
+                                <span class="d-block text-muted text-truncate mt-1" style="max-width: 220px; font-size: 0.75rem;" title="${AppDanzaUI.text(tx.concepto)}">${AppDanzaUI.text(tx.concepto)}</span>
                             </td>
                             <td class="pe-3 text-end small fw-bold ${colorTexto}">${signo}${formatoCOP.format(tx.monto)}</td>
                         </tr>

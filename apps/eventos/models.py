@@ -1,7 +1,10 @@
+from apps.academias.scoped_model import ScopedModel
+from apps.academias.private_media import private_storage, validate_private_upload
 # apps/eventos/models.py
 import uuid
 from django.contrib.auth.models import User
 from django.db import models
+from django.utils import timezone
 from apps.academias.models import Academia
 import os
 
@@ -123,85 +126,18 @@ class Evento(TenantModel):
     # 🧠 MÉTODO SENIOR: Cómputo de Deudas Dinámicas con Reglas de País
     # 🧠 MÉTODO SENIOR: Cómputo de Deudas Dinámicas con Reglas de País
     def calcular_estado_comisiones(self):
-        """Calcula de manera exacta las comisiones transaccionales manejando el salvoconducto Partner."""
-        suscripcion = self.academia.suscripcion_saas
-        
-        # 🐛 EL BUG ESTABA AQUÍ: Usabas .count() (contar recibos). Si 1 recibo tenía 5 entradas, lo contaba como 1.
-        # ✅ CORRECCIÓN SENIOR: Usamos models.Sum('cantidad_entradas') para contar a las personas reales.
-        
-        # Conteo físico real de registros emitidos para el evento actual
-        # 🚀 FIX SENIOR: Calculamos personas REALES cruzando las entradas con el multiplicador del pase.
-        total_online = self.recibos_evento.filter(origen='ONLINE', anulado=False).annotate(
-            multiplicador=Coalesce('tipo_pase__qrs_por_pase', 1)
-        ).aggregate(
-            total_personas=Sum(F('cantidad_entradas') * F('multiplicador'))
-        )['total_personas'] or 0
-        
-        total_puerta = self.recibos_evento.filter(origen='PUERTA', anulado=False).annotate(
-            multiplicador=Coalesce('tipo_pase__qrs_por_pase', 1)
-        ).aggregate(
-            total_personas=Sum(F('cantidad_entradas') * F('multiplicador'))
-        )['total_personas'] or 0
-        
-        # 🎁 FILTRO VIP COMPAÑEROS DE PRUEBA: Si es aliado o partner, la plataforma reporta cero deudas
-        if suscripcion and suscripcion.es_cuenta_partner_gratis:
-            return {
-                'total_online': total_online,
-                'total_puerta': total_puerta,
-                'deuda_online': 0,
-                'deuda_puerta': 0,
-                'es_minima_online': False,
-                'divisa': 'COP',
-                'modo_partner': True
-            }
-            
-        # 💵 MATEMÁTICAS COMERCIALES CLIENTES CONVENCIONALES
-        # Ahora sí, multiplicamos la cantidad exacta de BOLETAS por la tarifa del SaaS
-        deuda_online_calculada = total_online * 5000
-        es_minima = False
-        
-        # Regla de Oro Local: Piso mínimo garantizado de $100.000 COP por evento en Colombia
-        if self.academia.pais == 'CO' and deuda_online_calculada > 0 and deuda_online_calculada < 100000:
-            deuda_online_calculada = 100000
-            es_minima = True
-            
-        # Regla Internacional: 5% sobre el dinero bruto acumulado online en su divisa nativa
-        if self.academia.pais != 'CO':
-            total_dinero_online = self.recibos_evento.filter(origen='ONLINE').aggregate(total=models.Sum('monto_total'))['total'] or 0
-            deuda_online_calculada = float(total_dinero_online) * 0.05
-            
-        return {
-            'total_online': total_online,
-            'total_puerta': total_puerta,
-            'deuda_online': deuda_online_calculada,
-            'deuda_puerta': 0, 
-            'es_minima_online': es_minima,
-            'divisa': 'COP' if self.academia.pais == 'CO' else 'USD',
-            'modo_partner': False
-        }
-    
+        from .legacy_fees import statement
+        return statement(self)
+
     def __str__(self):
         return f"{self.nombre} ({self.academia.nombre})"
 
     # 🧠 NUEVO MÉTODO SENIOR: Congelar deuda y cerrar
     def congelar_deuda_y_finalizar(self):
-        """Cierra el evento y guarda la deuda calculada de forma inmutable."""
-        datos_comision = self.calcular_estado_comisiones()
-        
-        if not datos_comision.get('modo_partner', False):
-            self.deuda_online_calculada = datos_comision['deuda_online']
-            self.deuda_puerta_calculada = datos_comision['deuda_puerta']
-            # Marcamos liquidado=False explícitamente por si acaso
-            self.online_liquidado = False 
-            self.puerta_liquidado = False
-            
+        # Closing sales does not invent or recompute historical SaaS debt.
         self.estado = 'FINALIZADO'
-        # Guardamos solo los campos afectados para ahorrar recursos en la BD
-        self.save(update_fields=[
-            'estado', 'deuda_online_calculada', 'deuda_puerta_calculada', 
-            'online_liquidado', 'puerta_liquidado'
-        ])
-    
+        self.save(update_fields=['estado'])
+
     def save(self, *args, **kwargs):
         # 1. Aseguramos el slug antes de guardar
         if not self.slug:
@@ -251,7 +187,7 @@ class Evento(TenantModel):
 
 
 
-class CodigoDescuento(models.Model):
+class CodigoDescuento(ScopedModel):
     evento = models.ForeignKey(Evento, on_delete=models.CASCADE, related_name='codigos_descuento')
     nombre_codigo = models.CharField(max_length=50)
     fecha_caducidad = models.DateTimeField()
@@ -286,7 +222,7 @@ class CodigoDescuento(models.Model):
         return self.activo and timezone.now() <= self.fecha_caducidad and self.usos_actuales < self.limite_usos
 
 
-class TipoPase(models.Model):
+class TipoPase(ScopedModel):
     """
     Modelo Avanzado: Permite a las academias crear múltiples opciones de compra 
     para un mismo evento (Ej: Solo Social, Full Pass, Taller Especial).
@@ -310,6 +246,8 @@ class TipoPase(models.Model):
 
     # 🚀 FIX SENIOR: Control para mostrar u ocultar pases al público
     activo = models.BooleanField(default=True, verbose_name="¿Pase Activo?")
+    admissions_per_unit = models.PositiveIntegerField(null=True, blank=True,
+        help_text='Unidades comerciales por pase. Vacío conserva acceso legacy sin generar cargos SaaS.')
 
     class Meta:
         ordering = ['precio'] # Ordena del más barato al más caro en el select
@@ -317,7 +255,7 @@ class TipoPase(models.Model):
     def __str__(self):
         return f"{self.nombre} - ${self.precio} ({self.evento.nombre})"
     
-class FasePreventa(models.Model):
+class FasePreventa(ScopedModel):
     """
     Define los bloques de tiempo (Tiers) para las ventas.
     Ej: "Preventa 1" (hasta el 15 de Julio), "Preventa 2" (hasta el 1 de Agosto).
@@ -337,7 +275,7 @@ class FasePreventa(models.Model):
         return f"{self.nombre_fase} - Vence: {self.fecha_limite.strftime('%d/%m/%Y')} ({self.evento.nombre})"
 
 
-class PrecioFasePase(models.Model):
+class PrecioFasePase(ScopedModel):
     """
     MATRIZ DE PRECIOS (Tabla Pivote): 
     Define exactamente cuánto cuesta un "Tipo de Pase" específico dentro de una "Fase" específica.
@@ -353,7 +291,19 @@ class PrecioFasePase(models.Model):
     def __str__(self):
         return f"{self.pase.nombre} en {self.fase.nombre_fase}: ${self.precio}"
 
-class ReciboEvento(models.Model):
+class ReciboEvento(ScopedModel):
+    class PaymentStatus(models.TextChoices):
+        LEGACY = 'LEGACY', 'Histórico (verificación no certificada)'
+        PENDING = 'PENDING', 'Pendiente de aprobación'
+        CONFIRMED = 'CONFIRMED', 'Pago confirmado'
+        CANCELLED = 'CANCELLED', 'Anulado (no implica devolución)'
+        REFUNDED = 'REFUNDED', 'Devolución registrada'
+        REVIEW = 'REVIEW', 'En revisión'
+
+    payment_status = models.CharField(max_length=16, choices=PaymentStatus.choices, default=PaymentStatus.PENDING)
+    registration_key = models.UUIDField(null=True, blank=True, unique=True, editable=False)
+    price_snapshot = models.JSONField(default=dict, blank=True)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
     MEDIOS_PAGO = (
         ('EFECTIVO', 'Efectivo'),
         ('TRANSFERENCIA', 'Transferencia / Nequi'),
@@ -381,8 +331,8 @@ class ReciboEvento(models.Model):
     origen = models.CharField(max_length=10, choices=ORIGEN_REGISTRO, default='ONLINE')
     
     # Si compras en puerta, no es obligatorio subir imagen
-    comprobante_pago = models.ImageField(upload_to='comprobantes_eventos/', blank=True, null=True)
-    revisado_por_admin = models.BooleanField(default=True)
+    comprobante_pago = models.ImageField(storage=private_storage, validators=[validate_private_upload], upload_to='comprobantes_eventos/', blank=True, null=True)
+    revisado_por_admin = models.BooleanField(default=False)
     
     # Campo booleano para taquilla: registra si la persona que compró en puerta ya pasó directo al salón
     ingresado_puerta = models.BooleanField(default=False)
@@ -394,45 +344,21 @@ class ReciboEvento(models.Model):
     anulado = models.BooleanField(default=False, verbose_name="¿Recibo Anulado?")
 
     def save(self, *args, **kwargs):
-        # 1. Asignar numeración secuencial robusta orientada a SaaS (Multi-Tenant)
         if not self.numero_recibo:
-            # Contamos cuántos recibos existen ya para este evento específico
-            count = ReciboEvento.objects.filter(evento=self.evento).count()
-            
-            # 🚀 CORRECCIÓN SENIOR: Prefijo único por Academia y Evento
-            # Estructura: RE-A{id_academia}-E{id_evento}-{consecutivo}
-            # Ejemplo de salida: RE-A1-E5-0001
-            prefijo = f"RE-A{self.evento.academia.id}-E{self.evento.id}"
-            nuevo_numero = f"{prefijo}-{count + 1:04d}"
-            
-            # Seguridad extra: Buscamos globalmente si por concurrencia ya existe
-            while ReciboEvento.objects.filter(numero_recibo=nuevo_numero).exists():
-                count += 1
-                nuevo_numero = f"{prefijo}-{count + 1:04d}"
-            
-            self.numero_recibo = nuevo_numero
-            
+            # A stable random reference avoids count()+1 races on every database.
+            self.numero_recibo = f"RE-A{self.evento.academia_id}-E{self.evento_id}-{uuid.uuid4().hex[:16]}"
         super().save(*args, **kwargs)
-
-        # 2. DETONANTE INTELIGENTE DE BOLETAS QR
-        if self.origen == 'ONLINE' and not self.boletas_qr.exists():
-            # Extraemos cuántas personas ampara el pase elegido (por defecto 1)
-            multiplicador = self.tipo_pase.qrs_por_pase if self.tipo_pase else 1
-            # Multiplicamos entradas compradas X cantidad de personas por pase
-            total_qrs = self.cantidad_entradas * multiplicador
-            
-            for _ in range(total_qrs):
-                EntradaQR.objects.create(recibo=self)
-
 
     def __str__(self):
         return f"{self.numero_recibo} - {self.comprador_nombre} ({self.evento.nombre})"
 
 
-class EntradaQR(models.Model):
+class EntradaQR(ScopedModel):
     """Genera boletas individuales con control de múltiples asistencias (días)."""
     recibo = models.ForeignKey(ReciboEvento, on_delete=models.CASCADE, related_name='boletas_qr')
     codigo_unico = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    admission = models.OneToOneField('Admission', null=True, blank=True, on_delete=models.PROTECT, related_name='credential')
+    revoked_at = models.DateTimeField(null=True, blank=True)
     
     # 🔄 CAMBIO: De booleano a contador de asistencias permitidas
     # Si es evento de 1 día, tendrá 1. Si es de 3 días, tendrá 3.
@@ -442,7 +368,7 @@ class EntradaQR(models.Model):
     # Mantenemos registro de la última entrada
     fecha_ultimo_ingreso = models.DateTimeField(null=True, blank=True)
     
-    imagen_qr = models.ImageField(upload_to='qrs_eventos/', blank=True, null=True)
+    imagen_qr = models.ImageField(storage=private_storage, validators=[validate_private_upload], upload_to='qrs_eventos/', blank=True, null=True)
 
     @property
     def ingresado(self):
@@ -453,7 +379,7 @@ class EntradaQR(models.Model):
         return f"Boleta {self.codigo_unico} ({self.asistencias_consumidas}/{self.asistencias_permitidas} días)"
 
 
-class GastoEvento(models.Model):
+class GastoEvento(ScopedModel):
     evento = models.ForeignKey(Evento, on_delete=models.CASCADE, related_name='gastos_evento')
     concepto = models.CharField(max_length=200)
     monto = models.DecimalField(max_digits=10, decimal_places=2)
@@ -466,7 +392,7 @@ class GastoEvento(models.Model):
 
     
 
-class ColaboradorEvento(models.Model):
+class ColaboradorEvento(ScopedModel):
     """
     Controla el acceso VIP de usuarios de otras academias a eventos específicos.
     """
@@ -486,3 +412,38 @@ class ColaboradorEvento(models.Model):
 
     def __str__(self):
         return f"{self.usuario.email} - {self.evento.nombre} ({self.get_rol_display()})"
+
+
+class Admission(ScopedModel):
+    """A stable access entitlement, independent of its replaceable QR and scans."""
+    receipt = models.ForeignKey(ReciboEvento, on_delete=models.PROTECT, related_name='admissions')
+    ordinal = models.PositiveIntegerField()
+    commercial_unit = models.BooleanField(default=False)
+    access_limit = models.PositiveIntegerField(default=1)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['receipt', 'ordinal'], name='admission_receipt_ordinal')]
+
+
+class CheckIn(ScopedModel):
+    credential = models.ForeignKey(EntradaQR, on_delete=models.PROTECT, related_name='checkins')
+    credential_code = models.UUIDField()
+    occurred_at = models.DateTimeField(default=timezone.now)
+    day = models.DateField()
+    actor = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
+    result = models.CharField(max_length=24)
+    request_key = models.UUIDField(default=uuid.uuid4, unique=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['credential', 'day'], condition=models.Q(result='SUCCESS'),
+                                               name='checkin_once_per_day')]
+
+
+class EventRefund(ScopedModel):
+    receipt = models.ForeignKey(ReciboEvento, on_delete=models.PROTECT, related_name='refund_records')
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    reference = models.CharField(max_length=120, unique=True)
+    reason = models.CharField(max_length=255)
+    actor = models.ForeignKey(User, on_delete=models.PROTECT)
+    created_at = models.DateTimeField(auto_now_add=True)

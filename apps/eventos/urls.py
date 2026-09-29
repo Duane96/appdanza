@@ -5,6 +5,10 @@ from . import views
 app_name = 'eventos'
 
 urlpatterns = [
+    path('<slug:slug_academia>/eventos/<slug:evento_slug>/recibos/<int:recibo_id>/devolucion/', views.RecordEventRefundView.as_view(), name='record_refund'),
+    path('<slug:slug_academia>/eventos/<slug:evento_slug>/credenciales/<int:ticket_id>/reemitir/', views.ReissueEventTicketView.as_view(), name='reissue_ticket'),
+    path('<slug:slug_academia>/eventos/<slug:evento_slug>/cotizacion/', views.EventQuoteView.as_view(), name='quote'),
+    path('<slug:slug_academia>/eventos/<slug:evento_slug>/recibos/<int:recibo_id>/confirmar/', views.ConfirmEventPaymentView.as_view(), name='confirm_payment'),
     # 🌍 Gestión de Eventos general (Ahora lee slug_academia)
     path('<slug:slug_academia>/eventos/', views.EventoListView.as_view(), name='admin_lista'),
     path('<slug:slug_academia>/eventos/crear/', views.EventoCreateView.as_view(), name='admin_crear'),
