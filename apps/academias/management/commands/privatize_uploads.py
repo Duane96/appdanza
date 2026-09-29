@@ -32,7 +32,16 @@ class Command(BaseCommand):
         for label, field in PRIVATE_FIELDS:
             names.update(name for name in apps.get_model(label)._base_manager.exclude(**{field: ''})
                 .exclude(**{field: None}).values_list(field, flat=True))
-        counters = {'referenced': len(names), 'copied': 0, 'already_private': 0, 'missing': 0}
+        referenced = len(names)
+        # Replaced/deleted legacy records may leave sensitive files behind.
+        # These directories contain only private fields, never public branding.
+        for folder in ('comprobantes_eventos', 'qrs_eventos', 'qrs_estudiantes',
+                       'soportes_gastos', 'saas_comprobantes', 'saas/gastos_comprobantes'):
+            directory = public / folder
+            if directory.exists():
+                names.update(path.relative_to(public).as_posix() for path in directory.rglob('*') if path.is_file())
+        counters = {'referenced': referenced, 'orphaned_private_files': len(names)-referenced,
+                    'copied': 0, 'already_private': 0, 'missing': 0}
         manifest = []
         for name in sorted(names):
             source, target = (public / name).resolve(), (private / name).resolve()

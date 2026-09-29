@@ -40,6 +40,28 @@ class TenantAuthorizationTests(TestCase):
     def tearDown(self):
         clear_current_tenant()
 
+    def test_private_migration_also_protects_orphans_and_preserves_public_branding(self):
+        from tempfile import TemporaryDirectory
+        from pathlib import Path
+        from io import StringIO
+        from django.core.management import call_command
+        with TemporaryDirectory() as directory:
+            public, private = Path(directory)/'public', Path(directory)/'private'
+            (public/'comprobantes_eventos').mkdir(parents=True)
+            (public/'branding').mkdir()
+            orphan = public/'comprobantes_eventos'/'old.pdf'
+            orphan.write_bytes(b'%PDF-legacy')
+            (public/'branding'/'logo.png').write_bytes(b'public-logo')
+            with self.settings(MEDIA_ROOT=public, PRIVATE_MEDIA_ROOT=private):
+                call_command('privatize_uploads', stdout=StringIO())
+                self.assertTrue(orphan.exists())
+                call_command('privatize_uploads', apply=True, stdout=StringIO())
+                self.assertFalse(orphan.exists())
+                self.assertEqual((private/'comprobantes_eventos'/'old.pdf').read_bytes(), b'%PDF-legacy')
+                self.assertTrue((public/'branding'/'logo.png').exists())
+                call_command('privatize_uploads', apply=True, stdout=StringIO())
+                self.assertEqual(len((private/'relocation-manifest.jsonl').read_text().splitlines()), 1)
+
     def test_role_matrix_deny_by_default(self):
         for user in (AnonymousUser(), self.outsider, self.staff, self.users['TEACHER'], self.users['STUDENT']):
             with self.subTest(user=str(user)):
