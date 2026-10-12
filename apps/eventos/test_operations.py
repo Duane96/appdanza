@@ -203,12 +203,12 @@ class EventOperationsTests(TestCase):
         self.assertIn('Tus entradas', mail.outbox[0].subject)
         self.assertEqual(len(mail.outbox[0].attachments), 2)
         self.assertEqual(DurableJob.objects.filter(
-            dedupe_key__startswith=f'event-ticket-email:{receipt.pk}:RECOVERED:',
+            dedupe_key__startswith=f'event-ticket-email:{receipt.pk}:REISSUED:',
             state='DONE',
         ).count(), 1)
         confirm(receipt, self.owner, 'Sin segunda operación')
         self.assertEqual(DurableJob.objects.filter(
-            dedupe_key__startswith=f'event-ticket-email:{receipt.pk}:RECOVERED:',
+            dedupe_key__startswith=f'event-ticket-email:{receipt.pk}:REISSUED:',
         ).count(), 1)
 
     @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')

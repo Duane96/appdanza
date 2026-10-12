@@ -72,8 +72,8 @@ def deliver_event_tickets(receipt_id, tenant_id, stage):
             'y los códigos NO autorizan ingreso hasta que el organizador lo confirme.'
         )
     elif stage == 'REISSUED':
-        subject = f'Tus nuevos QR - {event.nombre}'
-        instruction = 'Se actualizó una credencial. Usa únicamente estos códigos vigentes.'
+        subject = f'Tus entradas para {event.nombre}'
+        instruction = 'Adjuntamos tus QR vigentes. Conserva estos códigos para ingresar al evento.'
     elif stage == 'RECOVERED':
         subject = f'Tus entradas para {event.nombre}'
         instruction = 'Te reenviamos tus QR de acceso. Son válidos para ingresar al evento.'
