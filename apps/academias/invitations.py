@@ -27,10 +27,13 @@ def invite_new_account(user, tenant, *, base_url, actor=None):
     invitation = AccountInvitation.objects.create(user=user, academia=tenant,
         token_hash=hashlib.sha256(token.encode()).hexdigest(), expires_at=timezone.now()+timedelta(days=3))
     url = base_url.rstrip('/') + reverse('academias:accept_invitation', args=[tenant.slug, token])
-    enqueue('EMAIL', {'subject': 'Configura tu acceso a AppDanza', 'to': [user.email],
+    job = enqueue('EMAIL', {'subject': 'Configura tu acceso a AppDanza', 'to': [user.email],
         'html': str(format_html('<p>Te invitamos a {}.</p><p><a href="{}">Crear mi contraseña</a></p>'
                                '<p>Este enlace vence en tres días y sólo se puede usar una vez.</p>', tenant.nombre, url))},
         tenant=tenant, key=f'invitation:{invitation.pk}')
+    # Entrega inmediata, sin perder reintentos si SMTP falla.
+    from apps.saas_core.jobs import run_now
+    transaction.on_commit(lambda job_id=job.pk: run_now(job_id))
     record(tenant, actor, 'identity.invitation.created', invitation.pk)
     return invitation
 
