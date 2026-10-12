@@ -35,7 +35,7 @@ class ActiveRecoveryTests(TestCase):
             comprador_nombre='Asistente original',
             comprador_correo=email,
             comprador_telefono='3000000000',
-            cantidad_entradas=1, tipo_pase=self.pass_,
+            cantidad_entradas=1, tipo_pase=self.pass_ if event is None else None,
             precio_unitario_aplicado=Decimal('100'),
             monto_total=Decimal('100'),
             revisado_por_admin=reviewed,
