@@ -51,7 +51,7 @@ def queue_ticket_email(receipt, stage, *, version='first'):
 
 def deliver_event_tickets(receipt_id, tenant_id, stage):
     """Mail the actual scan-ready PNG codes even if branded images are not ready."""
-    receipt = ReciboEvento.unfiltered_objects.select_related(
+    receipt = ReciboEvento.objects.select_related(
         'evento__academia',
     ).get(pk=receipt_id, evento__academia_id=tenant_id)
     if not receipt.comprador_correo or receipt.anulado:
