@@ -197,6 +197,10 @@ def complete_door_sale(event, values, *, key, pass_input, actor):
     """One checkout: paid sale, QR handover, first-day attendance for every attendee."""
     receipt = register(event, values, key=key, pass_input=pass_input, actor=actor, door=True)
     confirm(receipt, actor, 'Pago recibido y verificado en taquilla')
+    receipt.refresh_from_db()
+    # A duplicated POST must never consume another event day.
+    if receipt.ingresado_puerta:
+        return receipt
     for ticket in receipt.boletas_qr.filter(revoked_at=None):
         check_in(event, actor, ticket.codigo_unico)
     ReciboEvento.objects.filter(pk=receipt.pk).update(ingresado_puerta=True)
