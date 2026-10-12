@@ -136,11 +136,10 @@ class StudentAccessRepairTests(TestCase):
         "apps.academias.management.commands.reparar_acceso_estudiantes.getpass",
         side_effect=["EntirelyNumericValue987", "EntirelyNumericValue987"],
     )
-    @patch(
-        "apps.academias.management.commands.reparar_acceso_estudiantes.sys.stdin.isatty",
-        return_value=True,
-    )
-    def test_manual_password_is_never_echoed_to_command_output(self, tty, prompt):
+    @patch("apps.academias.management.commands.reparar_acceso_estudiantes.sys.stdin")
+    def test_manual_password_is_validated_without_logging(self, stdin, prompt):
         from apps.academias.management.commands.reparar_acceso_estudiantes import _prompt_password
+        stdin.isatty.return_value = True
         secret = _prompt_password(self.missing)
         self.assertEqual(secret, "EntirelyNumericValue987")
+        self.assertEqual(prompt.call_count, 2)
