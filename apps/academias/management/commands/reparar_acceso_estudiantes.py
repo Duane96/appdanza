@@ -76,8 +76,8 @@ class Command(BaseCommand):
         parser.add_argument("--usuarios", nargs="+", required=True, help="Usuarios a revisar")
         parser.add_argument("--apply", action="store_true", help="Aplicar exclusivamente las cuentas aptas")
         parser.add_argument(
-            "--modo", choices=("manual", "invitacion"), default="manual",
-            help="manual: contraseña elegida en consola; invitacion: enlace de configuración por correo",
+            "--modo", choices=("manual", "invitacion", "documento"), default="manual",
+            help="manual: clave interactiva; invitacion: enlace por correo; documento: contraseña temporal basada en la identificación registrada",
         )
         parser.add_argument(
             "--base-url", default="", help="URL pública HTTPS obligatoria en modo invitacion"
@@ -126,7 +126,22 @@ class Command(BaseCommand):
                         self.stdout.write(f"{name}: {reason}.")
                         summary["omitidos"] += 1
                         continue
-                    if mode == "manual":
+                    if mode == "documento":
+                        student = Estudiante.unfiltered_objects.get(user=locked, academia=tenant)
+                        candidate = (student.identificacion or "").strip()
+                        if not candidate or len(candidate) < 5:
+                            raise CommandError("Documento ausente o demasiado corto; cuenta sin cambios.")
+                        locked.set_password(candidate)
+                        locked.save(update_fields=["password"])
+                        AccountInvitation.objects.filter(
+                            user=locked, consumed_at__isnull=True
+                        ).update(consumed_at=timezone.now())
+                        record(
+                            tenant, None, "identity.student_password.initialized", locked.pk,
+                            reason="Recuperación de credencial inicial por documento",
+                        )
+                        summary["configurados"] += 1
+                    elif mode == "manual":
                         locked.set_password(password)
                         locked.save(update_fields=["password"])
                         active_invitations = list(
