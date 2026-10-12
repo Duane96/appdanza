@@ -74,6 +74,9 @@ def deliver_event_tickets(receipt_id, tenant_id, stage):
     elif stage == 'REISSUED':
         subject = f'Tus nuevos QR - {event.nombre}'
         instruction = 'Se actualizó una credencial. Usa únicamente estos códigos vigentes.'
+    elif stage == 'RECOVERED':
+        subject = f'Tus entradas para {event.nombre}'
+        instruction = 'Te reenviamos tus QR de acceso. Son válidos para ingresar al evento.'
     else:
         subject = f'Pago confirmado: tus QR activos - {event.nombre}'
         instruction = 'Tu pago ya está confirmado y estos QR pueden utilizarse para entrar.'

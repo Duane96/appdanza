@@ -1097,17 +1097,4 @@ class ResendEventTicketsView(EventPermissionMixin, View):
         return redirect('eventos:admin_detalle', slug_academia=slug_academia, evento_slug=evento_slug)
 
 
-class ConfirmEventPaymentView(EventPermissionMixin, View):
-    permission_action = 'events.manage'
 
-    def post(self, request, slug_academia, evento_slug, recibo_id):
-        receipt = get_object_or_404(ReciboEvento, pk=recibo_id, evento=request.authorized_event)
-        try:
-            operations.confirm(receipt, request.user, request.POST.get('reason', ''))
-            if receipt.comprador_correo:
-                messages.success(request, 'Pago confirmado. Los QR están activos y se intentará entregar una copia por correo inmediatamente.')
-            else:
-                messages.success(request, 'Pago confirmado. Los QR están activos; no hay correo registrado para enviarlos.')
-        except ValidationError as exc:
-            messages.error(request, '; '.join(exc.messages))
-        return redirect('eventos:admin_detalle', slug_academia=slug_academia, evento_slug=evento_slug)

@@ -348,10 +348,6 @@
                                     </button>
                                 </form>
                                 {% endif %}
-{% if recibo.payment_status == 'PENDING' or recibo.payment_status == 'REVIEW' %}
-<form method="post" action="{% url 'eventos:confirm_payment' request.tenant.slug evento.slug recibo.pk %}" class="mt-2">
-{% csrf_token %}<input name="reason" class="form-control form-control-sm" required maxlength="200" placeholder="Referencia o evidencia del pago verificado">
-<button class="btn btn-sm btn-success mt-1">Confirmar pago recibido</button></form>{% endif %}
 {% if recibo.payment_status == 'CONFIRMED' %}
 <details class="mt-2 text-start"><summary class="small">Registrar devolución real</summary>
 <p class="small">Sólo después de devolver {{ recibo.monto_total }} al comprador. Este formulario no envía dinero.</p>
