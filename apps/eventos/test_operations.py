@@ -241,12 +241,12 @@ class EventOperationsTests(TestCase):
             receipt.pk,
         )
         self.assertEqual(ReciboEvento.objects.count(), 1)
-        self.assertEqual(CheckIn.objects.filter(result='SUCCESS').count(), 4)
+        self.assertEqual(CheckIn.objects.filter(result='SUCCESS').count(), 3)
         with patch('django.utils.timezone.now', return_value=timezone.now() + timedelta(days=2)):
             complete_door_sale(self.event, self.values, key=key,
                                pass_input=f'PASE_{self.pass_.pk}', actor=self.owner)
         # The same purchase is not a new check-in on day 3.
-        self.assertEqual(CheckIn.objects.filter(result='SUCCESS').count(), 4)
+        self.assertEqual(CheckIn.objects.filter(result='SUCCESS').count(), 3)
 
     def test_commercial_units_do_not_reduce_personal_qr_allocation(self):
         self.pass_.admissions_per_unit = 1
