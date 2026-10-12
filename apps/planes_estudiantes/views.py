@@ -91,8 +91,8 @@ class CrearEstudianteView(TenantAdminRequiredMixin, CreateView):
         if email:
             messages.success(
                 self.request,
-                f"Estudiante {nombres} registrado. Se envió la invitación para configurar "
-                "su contraseña; el acceso quedará disponible cuando complete ese paso."
+                f"Estudiante {nombres} registrado. Se programó el correo de invitación "
+                "para configurar su contraseña. Si falla el envío, se reintentará."
             )
         else:
             messages.warning(
