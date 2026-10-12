@@ -72,9 +72,15 @@ def normalize_receipt(receipt):
         ReciboEvento.objects.filter(pk=receipt.pk).update(revisado_por_admin=True)
         receipt.refresh_from_db()
 
-    # Deterministic key makes repeated --apply safe (does not send again).
+    # Do not resend to recent buyers who already received the normal email.
     has_email = bool(receipt.comprador_correo)
-    if has_email and receipt.payment_status in ('CONFIRMED', 'LEGACY'):
+    already_queued = False
+    if has_email:
+        from apps.saas_core.models import DurableJob
+        already_queued = DurableJob.objects.filter(
+            dedupe_key=f'event-ticket-email:{receipt.pk}:CONFIRMED:first',
+        ).exclude(state='FAILED').exists()
+    if has_email and not already_queued and receipt.payment_status in ('CONFIRMED', 'LEGACY'):
         queue_ticket_email(receipt, 'RECOVERED', version='active-events-recovery-v1')
     return (accepted, created, has_email)
 
