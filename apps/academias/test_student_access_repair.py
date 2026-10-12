@@ -122,6 +122,32 @@ class StudentAccessRepairTests(TestCase):
         self.assertEqual(mail.outbox[0].to, [self.missing.email])
         self.assertIn("Crear mi contraseña", mail.outbox[0].alternatives[0][0])
 
+    def test_document_mode_only_initializes_missing_password_and_keeps_existing_ones(self):
+        linked = Estudiante.unfiltered_objects.get(user=self.missing, academia=self.tenant)
+        linked.identificacion = "TESTDOCUMENT2026"
+        linked.save(update_fields=["identificacion"])
+        preview = self.command("yeissonparra", "edwinlozano", mode="documento")
+        self.assertIn("apto para documento", preview)
+        self.assertFalse(self.missing.has_usable_password())
+
+        result = self.command(
+            "yeissonparra", "edwinlozano", "karengonzalez",
+            "profesorprueba", apply=True, mode="documento",
+        )
+        self.missing.refresh_from_db()
+        self.existing.refresh_from_db()
+        self.foreign.refresh_from_db()
+        self.teacher.refresh_from_db()
+        self.assertTrue(self.missing.check_password("TESTDOCUMENT2026"))
+        self.assertTrue(self.existing.check_password("Existing-Strong-93!"))
+        self.assertFalse(self.foreign.has_usable_password())
+        self.assertFalse(self.teacher.has_usable_password())
+        self.assertIn("'configurados': 1", result)
+        self.assertNotIn("TESTDOCUMENT2026", result)
+
+        repeated = self.command("yeissonparra", apply=True, mode="documento")
+        self.assertIn("contraseña existente: sin cambios", repeated)
+
     def test_wrong_academy_name_fails_without_changes(self):
         with self.assertRaises(CommandError):
             call_command(
