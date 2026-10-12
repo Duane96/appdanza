@@ -195,7 +195,7 @@ def render_ticket_image(sender, instance, created, **kwargs):
         canvas.line([(40, linea_y), (ancho_tarjeta - 40, linea_y)], fill="#e9ecef", width=2)
 
         canvas.text((ancho_tarjeta / 2, linea_y + 30), f"ID: {str(instance.codigo_unico)}", fill="#6c757d", font=fuente_footer_id, anchor="mm")
-        canvas.text((ancho_tarjeta / 2, linea_y + 65), "Entrada válida para un solo ingreso", fill="#495057", font=fuente_footer_txt, anchor="mm")
+        canvas.text((ancho_tarjeta / 2, linea_y + 65), f"Accesos: {instance.asistencias_permitidas} (maximo 1 por dia)", fill="#495057", font=fuente_footer_txt, anchor="mm")
 
         # ----------------------------------------------------
         # 5. Volcar y guardar el archivo final

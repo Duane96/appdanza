@@ -88,7 +88,18 @@ class CrearEstudianteView(TenantAdminRequiredMixin, CreateView):
             from apps.academias.invitations import invite_new_account
             invite_new_account(user, academia_actual, base_url=self.request.build_absolute_uri("/"), actor=self.request.user)
 
-        messages.success(self.request, f"Estudiante {nombres} registrado con éxito.")
+        if email:
+            messages.success(
+                self.request,
+                f"Estudiante {nombres} registrado. Se programó el correo de invitación "
+                "para configurar su contraseña. Si falla el envío, se reintentará."
+            )
+        else:
+            messages.warning(
+                self.request,
+                f"Estudiante {nombres} registrado sin correo. La cuenta requiere "
+                "configurar una contraseña antes de iniciar sesión."
+            )
         return HttpResponseRedirect(self.get_success_url())
 
     def get_success_url(self):

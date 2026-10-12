@@ -93,6 +93,11 @@ class GastoEventoForm(forms.ModelForm):
 
 
 class RegistroOnlineEventoForm(forms.ModelForm):
+    comprador_correo = forms.EmailField(
+        required=True, widget=forms.EmailInput(
+            attrs={'class': 'form-control', 'placeholder': 'correo@ejemplo.com'}
+        ),
+    )
     registration_key = forms.UUIDField(widget=forms.HiddenInput)
     cantidad_entradas = forms.IntegerField(min_value=1, max_value=25,
         widget=forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'max': 25, 'value': 1}))
@@ -117,12 +122,17 @@ class RegistroOnlineEventoForm(forms.ModelForm):
 
 
 class VentaPuertaForm(forms.ModelForm):
+    comprador_correo = forms.EmailField(
+        required=False, widget=forms.EmailInput(
+            attrs={'class': 'form-control', 'placeholder': 'Correo para recibir QR (opcional)'}
+        ),
+    )
     cantidad_entradas = forms.IntegerField(min_value=1, max_value=25)
 
     """El formulario para que Duane/Aleja registren ventas manuales en la taquilla física."""
     class Meta:
         model = ReciboEvento
-        fields = ['comprador_nombre', 'comprador_telefono', 'cantidad_entradas', 'precio_unitario_aplicado', 'medio_pago']
+        fields = ['comprador_nombre', 'comprador_correo', 'comprador_telefono', 'cantidad_entradas', 'precio_unitario_aplicado', 'medio_pago']
         widgets = {
             'comprador_nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre del asistente'}),
             'comprador_telefono': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Celular (Opcional)'}),

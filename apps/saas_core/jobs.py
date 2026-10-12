@@ -6,7 +6,7 @@ from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.db.models import F, Q
 from django.utils import timezone
-from gestoracademia.tenants import set_current_tenant, clear_current_tenant
+from gestoracademia.tenants import set_current_tenant, clear_current_tenant, get_current_tenant
 from .models import DurableJob
 
 
@@ -47,6 +47,9 @@ def handle(job):
             recibo__evento__academia_id=job.academia_id)
         if not ticket.imagen_qr:
             render_ticket_image(EntradaQR, ticket, True)
+    elif job.kind == 'EVENT_TICKET_EMAIL':
+        from apps.eventos.tickets import deliver_event_tickets
+        deliver_event_tickets(data['receipt_id'], job.academia_id, data['stage'])
     elif job.kind == 'BILLING_WEBHOOK':
         from .epayco import process_provider_event
         process_provider_event(data['event_id'])
@@ -57,10 +60,8 @@ def handle(job):
         raise ValueError('unsupported_job_kind')
 
 
-def run_one():
-    job = claim()
-    if job is None:
-        return False
+def _execute(job):
+    previous_tenant = get_current_tenant()
     try:
         set_current_tenant(job.academia)
         handle(job)
@@ -74,5 +75,30 @@ def run_one():
         DurableJob.objects.filter(pk=job.pk, lease_token=job.lease_token).update(
             state='DONE', completed_at=timezone.now(), lease_until=None, last_error='', payload={})
     finally:
-        clear_current_tenant()
+        if previous_tenant is None:
+            clear_current_tenant()
+        else:
+            set_current_tenant(previous_tenant)
     return True
+
+
+
+def run_one():
+    job = claim()
+    return _execute(job) if job is not None else False
+
+
+def run_now(job_id):
+    """Claim one durable job immediately, without racing the background worker."""
+    now = timezone.now()
+    token = uuid.uuid4()
+    changed = DurableJob.objects.filter(
+        pk=job_id, state='PENDING', available_at__lte=now, attempts__lt=5,
+    ).update(
+        state='PROCESSING', lease_token=token,
+        lease_until=now + timedelta(minutes=5), attempts=F('attempts') + 1,
+    )
+    if not changed:
+        return False
+    job = DurableJob.objects.select_related('academia').get(pk=job_id, lease_token=token)
+    return _execute(job)

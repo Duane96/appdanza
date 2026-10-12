@@ -47,6 +47,29 @@
 </div>
 
 <div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm bg-white p-3 h-100 border-start border-4 border-info">
+            <span class="text-secondary small fw-bold d-block font-monospace">PERSONAS INSCRITAS</span>
+            <h2 class="fw-bold text-dark m-0">{{ personas_registradas }}</h2>
+            <div class="small text-muted mt-2">
+                {{ total_registros }} inscripciones sin anular · {{ total_entradas_vendidas }} personas con pago confirmado.
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm bg-white p-3 h-100 border-start border-4 border-warning">
+            <span class="text-secondary small fw-bold d-block font-monospace">REGISTROS ANTERIORES POR NORMALIZAR</span>
+            <h2 class="fw-bold text-dark m-0">{{ personas_pendientes }}</h2>
+            <div class="small text-muted mt-2">
+                {{ inscripciones_pendientes }} inscripciones · Valor a verificar:
+                {{ monto_pendiente|floatformat:0 }} {{ request.tenant.divisa }}.
+                No se incluye en el recaudo hasta completar la normalización.
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
     <div class="col-md-6 col-xl-3">
         <div class="card border-0 shadow-sm bg-white p-3 h-100 border-start border-4 border-primary">
             <span class="text-secondary small fw-bold d-block font-monospace">RECAUDO ONLINE (WEB)</span>
@@ -59,7 +82,7 @@
     
     <div class="col-md-6 col-xl-3">
         <div class="card border-0 shadow-sm bg-white p-3 h-100 border-start border-4 border-info">
-            <span class="text-secondary small fw-bold d-block font-monospace">ASISTENCIA / AFORO</span>
+            <span class="text-secondary small fw-bold d-block font-monospace">ASISTENCIA / AFORO CONFIRMADO</span>
             <h2 class="fw-bold text-dark m-0">
                 <span id="aforo-ingresados">{{ total_personas_ingresadas }}</span> 
                 <span class="fs-6 fw-normal text-muted">/ <span id="aforo-vendidos">{{ total_entradas_vendidas }}</span> ing.</span>
@@ -68,7 +91,7 @@
                 <div id="aforo-barra" 
                      class="progress-bar bg-warning transition-all" 
                      role="progressbar" 
-                     style="width: {% if total_entradas_vendidas > 0 %}{{ total_personas_ingresadas|stringformat:'d' }}00{% else %}0{% endif %}%">
+                     style="width: {% if total_entradas_vendidas > 0 %}{% widthratio total_personas_ingresadas total_entradas_vendidas 100 %}{% else %}0{% endif %}%">
                 </div>
             </div>
         </div>
@@ -116,29 +139,29 @@
                     <thead class="table-light text-secondary extra-small text-uppercase">
                         <tr>
                             <th>Pase / Ítem</th>
-                            <th class="text-center">Vendidos</th>
-                            <th class="text-end">Recaudo Bruto</th>
+                            <th class="text-center">Inscritos</th>
+                            <th class="text-center">Pendientes</th>
+                            <th class="text-center">Confirmados</th>
+                            <th class="text-end">Recaudo verificado</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <!-- Fila para la Entrada General Real -->
-                        {% if general_vendidos > 0 or not evento.tiene_pases_personalizados %}
+                        {% if general_registrados > 0 or not evento.tiene_pases_personalizados %}
                         <tr>
-                            <td class="fw-semibold text-dark small">
-                                Entrada General Base 
-                                <span class="badge bg-secondary-subtle text-secondary extra-small ms-1" title="Tickets vendidos por defecto">Defecto</span>
-                            </td>
-                            <td class="text-center"><span class="badge bg-light text-dark border">{{ general_vendidos }} unds</span></td>
-                            <td class="text-end text-success fw-bold small">${{ general_recaudado|floatformat:0 }}</td>
+                            <td class="fw-semibold text-dark small">Entrada General Base</td>
+                            <td class="text-center">{{ general_registrados }}</td>
+                            <td class="text-center">{{ general_pendientes }}</td>
+                            <td class="text-center">{{ general_vendidos }}</td>
+                            <td class="text-end text-success fw-bold small">{{ general_recaudado|floatformat:0 }} {{ request.tenant.divisa }}</td>
                         </tr>
                         {% endif %}
-
-                        <!-- Iteración de los Pases Personalizados Creados -->
                         {% for pase_m in metricas_pases %}
                         <tr>
                             <td class="fw-semibold text-dark small">{{ pase_m.nombre }}</td>
-                            <td class="text-center"><span class="badge bg-light text-dark border">{{ pase_m.total_vendidos }} unds</span></td>
-                            <td class="text-end text-success fw-bold small">${{ pase_m.total_recaudado|floatformat:0 }}</td>
+                            <td class="text-center">{{ pase_m.total_registrados }}</td>
+                            <td class="text-center">{{ pase_m.total_pendientes }}</td>
+                            <td class="text-center">{{ pase_m.total_vendidos }}</td>
+                            <td class="text-end text-success fw-bold small">{{ pase_m.total_recaudado|floatformat:0 }} {{ request.tenant.divisa }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -158,6 +181,7 @@
                     <div>
                         <strong class="text-dark d-block">{{ fase_m.nombre_fase }}</strong>
                         <span class="text-muted extra-small">Venció: {{ fase_m.fecha_limite|date:"d M, Y" }}</span>
+                        <span class="text-muted extra-small d-block">{{ fase_m.personas_registradas }} inscritas · {{ fase_m.personas_pendientes }} pendientes</span>
                     </div>
                     <span class="text-dark fw-bold">${{ fase_m.total_recaudado|floatformat:0 }}</span>
                 </li>
@@ -276,16 +300,12 @@
                             <td class="text-center">
                                 {% if recibo.origen == 'PUERTA' %}
                                     {% if recibo.ingresado_puerta %}
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill py-1.5 px-2.5">
-                                            <i class="bi bi-check-circle-fill me-1"></i> Ingresado
-                                        </span>
+                                        <span class="badge bg-success-subtle text-success border rounded-pill mb-2">Primer ingreso registrado</span>
                                     {% else %}
-                                        <span class="badge bg-secondary-subtle text-secondary rounded-pill py-1.5 px-2.5">
-                                            No Ingresado
-                                        </span>
+                                        <span class="badge bg-secondary-subtle text-secondary rounded-pill mb-2">Ingreso pendiente</span>
                                     {% endif %}
-                                {% else %}
-                                    <div class="d-flex flex-column gap-2 align-items-center">
+                                {% endif %}
+                                <div class="d-flex flex-column gap-2 align-items-center">
                                         {% for boleta in recibo.boletas_qr.all %}
                                         <div class="w-100 p-2 border rounded bg-white shadow-sm transition-all" id="fila-boleta-{{ boleta.codigo_unico }}" data-permitidas="{{ boleta.asistencias_permitidas }}">
                                             <div class="d-flex justify-content-between align-items-center mb-1">
@@ -312,15 +332,22 @@
                                             </details>{% endif %}
                                         </div>
                                         {% endfor %}
-                                    </div>
+                                </div>
+                                {% if not recibo.anulado %}
+                                <a href="{{ recibo.enlace_entradas }}" target="_blank" rel="noopener"
+                                   class="btn btn-sm btn-outline-primary mt-2">Ver y entregar QR</a>
                                 {% endif %}
                             </td>
                             <td class="text-end">
                                 <span class="badge bg-light text-dark">{{ recibo.get_payment_status_display }}</span>
-{% if recibo.payment_status == 'PENDING' or recibo.payment_status == 'REVIEW' %}
-<form method="post" action="{% url 'eventos:confirm_payment' request.tenant.slug evento.slug recibo.pk %}" class="mt-2">
-{% csrf_token %}<input name="reason" class="form-control form-control-sm" required maxlength="200" placeholder="Referencia o evidencia del pago verificado">
-<button class="btn btn-sm btn-success mt-1">Confirmar pago recibido</button></form>{% endif %}
+                                {% if not recibo.anulado and recibo.comprador_correo %}
+                                <form method="post" action="{% url 'eventos:resend_tickets' request.tenant.slug evento.slug recibo.pk %}" class="mt-2">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-envelope-arrow-up me-1"></i>Reenviar QR al correo
+                                    </button>
+                                </form>
+                                {% endif %}
 {% if recibo.payment_status == 'CONFIRMED' %}
 <details class="mt-2 text-start"><summary class="small">Registrar devolución real</summary>
 <p class="small">Sólo después de devolver {{ recibo.monto_total }} al comprador. Este formulario no envía dinero.</p>
@@ -453,6 +480,10 @@
                     <div class="mb-3">
                         <label class="form-label small fw-semibold text-secondary">Teléfono de Contacto (Opcional)</label>
                         {{ form_puerta.comprador_telefono }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-secondary">Correo para enviar QR (Opcional)</label>
+                        {{ form_puerta.comprador_correo }}
                     </div>
 
                     {% if pases_disponibles_taquilla or evento.es_multidias %}

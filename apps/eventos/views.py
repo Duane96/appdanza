@@ -3,7 +3,7 @@ from apps.saas_core.entitlement_guards import creation_guard
 from datetime import timedelta
 from pyexpat.errors import messages
 from django.db import transaction
-from django.db.models import F, DecimalField
+from django.db.models import F, DecimalField, IntegerField
 
 from django.http import JsonResponse
 from django.views.generic import ListView, CreateView, DetailView, View
@@ -18,7 +18,7 @@ import uuid
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.text import slugify
-from django.db.models import Sum, Q
+from django.db.models import Sum, Q, Count
 
 from .models import Evento, CodigoDescuento, FasePreventa, ReciboEvento, GastoEvento, TipoPase
 from .forms import EventoForm, CodigoDescuentoForm, FasePreventaForm, GastoEventoForm, TipoPaseForm, VentaPuertaForm
@@ -44,6 +44,29 @@ from django.db.models import Sum, DecimalField
 from django.db.models.functions import Coalesce
 from django.contrib import messages
 
+def _personas_por_recibo(prefix=''):
+    """Multiplica unidades por asistentes de cada pase (pareja/grupo)."""
+    return F(f'{prefix}cantidad_entradas') * Coalesce(
+        f'{prefix}tipo_pase__qrs_por_pase', 1, output_field=IntegerField()
+    )
+
+
+def _resumen_inscripciones(evento):
+    """Inscritos y solicitudes sin anular; los pendientes no son ingresos."""
+    return ReciboEvento.objects.filter(evento=evento, anulado=False).aggregate(
+        total_registros=Count('pk'),
+        personas_registradas=Coalesce(Sum(_personas_por_recibo()), 0),
+        inscripciones_pendientes=Count('pk', filter=Q(revisado_por_admin=False)),
+        personas_pendientes=Coalesce(
+            Sum(_personas_por_recibo(), filter=Q(revisado_por_admin=False)), 0
+        ),
+        monto_pendiente=Coalesce(
+            Sum('monto_total', filter=Q(revisado_por_admin=False)),
+            0, output_field=DecimalField(),
+        ),
+    )
+
+
 class EventoListView(EventPermissionMixin, ListView):
     permission_action = 'events.view'
     """Lista todos los eventos de la academia separando activos de finalizados."""
@@ -52,15 +75,35 @@ class EventoListView(EventPermissionMixin, ListView):
     context_object_name = "eventos"
 
     def get_queryset(self):
-        # 🚀 FIX SENIOR 1: Calculamos el dinero real y boletas reales sumando los recibos pagados
         queryset = Evento.objects.filter(academia=self.request.tenant)
         if not can(self.request.user, self.request.tenant, 'events.manage'):
             queryset = queryset.filter(colaboradores__usuario=self.request.user)
         return queryset.annotate(
-            ingresos_totales=Coalesce(Sum('recibos_evento__monto_total', filter=Q(recibos_evento__anulado=False, recibos_evento__revisado_por_admin=True)), 0, output_field=DecimalField()),
-            boletas_vendidas=Coalesce(Sum('recibos_evento__cantidad_entradas', filter=Q(recibos_evento__anulado=False, recibos_evento__revisado_por_admin=True)), 0)
+            ingresos_totales=Coalesce(
+                Sum('recibos_evento__monto_total', filter=Q(
+                    recibos_evento__anulado=False, recibos_evento__revisado_por_admin=True,
+                )), 0, output_field=DecimalField()
+            ),
+            boletas_vendidas=Coalesce(
+                Sum(_personas_por_recibo('recibos_evento__'), filter=Q(
+                    recibos_evento__anulado=False, recibos_evento__revisado_por_admin=True,
+                )), 0
+            ),
+            personas_registradas=Coalesce(
+                Sum(_personas_por_recibo('recibos_evento__'), filter=Q(
+                    recibos_evento__anulado=False,
+                )), 0
+            ),
+            personas_pendientes=Coalesce(
+                Sum(_personas_por_recibo('recibos_evento__'), filter=Q(
+                    recibos_evento__anulado=False, recibos_evento__revisado_por_admin=False,
+                )), 0
+            ),
+            inscripciones_pendientes=Count('recibos_evento', filter=Q(
+                recibos_evento__anulado=False, recibos_evento__revisado_por_admin=False,
+            ), distinct=True),
         ).order_by('-fecha')
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['form'] = EventoForm(tenant=self.request.tenant)
@@ -357,11 +400,15 @@ class EventoDetailAdminView(EventPermissionMixin, DetailView):
         if not can(request.user, request.tenant, 'events.manage', event):
             metrics = can(request.user, request.tenant, 'events.metrics', event)
             rows = event.recibos_evento.filter(anulado=False, revisado_por_admin=True)
+            resumen = _resumen_inscripciones(event) if metrics else {}
             return render(request, 'eventos/collaborator.html', {'evento': event,
                 'can_metrics': metrics, 'can_checkin': can(request.user, request.tenant, 'events.checkin', event),
                 'can_sell': can(request.user, request.tenant, 'events.sell', event),
                 'total': rows.aggregate(total=Sum('monto_total'))['total'] if metrics else None,
-                'count': rows.count() if metrics else None, 'registration_key': uuid.uuid4(),
+                'count': rows.count() if metrics else None,
+                'personas_registradas': resumen.get('personas_registradas'),
+                'personas_pendientes': resumen.get('personas_pendientes'),
+                'registration_key': uuid.uuid4(),
                 'pases': event.pases_personalizados.filter(activo=True)})
         return super().get(request, *args, **kwargs)
 
@@ -401,16 +448,18 @@ class EventoDetailAdminView(EventPermissionMixin, DetailView):
                 Q(numero_recibo__icontains=query) |
                 Q(comprador_telefono__icontains=query)
             )
+        recibos = list(recibos)
+        for recibo in recibos:
+            recibo.enlace_entradas = receipt_url(recibo)
         context['recibos'] = recibos
         context['q'] = query or ''
+        context.update(_resumen_inscripciones(evento))
 
-        # 🚀 FIX SENIOR: Aforo real = (cantidad_entradas X multiplicador de personas)
-        context['total_entradas_vendidas'] = ReciboEvento.objects.filter(evento=evento, anulado=False, revisado_por_admin=True).annotate(
-            multiplicador=Coalesce('tipo_pase__qrs_por_pase', 1)
-        ).aggregate(
-            total=Coalesce(Sum(F('cantidad_entradas') * F('multiplicador')), 0)
-        )['total']
-        
+        # Aforo confirmado: no se confunden las solicitudes con ventas verificadas.
+        context['total_entradas_vendidas'] = ReciboEvento.objects.filter(
+            evento=evento, anulado=False, revisado_por_admin=True,
+        ).aggregate(total=Coalesce(Sum(_personas_por_recibo()), 0))['total']
+
         context['dinero_efectivo'] = ReciboEvento.objects.filter(evento=evento, medio_pago='EFECTIVO', anulado=False, revisado_por_admin=True).aggregate(
             total=Coalesce(Sum('monto_total'), 0, output_field=DecimalField())
         )['total']
@@ -499,36 +548,65 @@ class EventoDetailAdminView(EventPermissionMixin, DetailView):
         # Enviamos los códigos al template para que la tarjeta de cupones funcione
         context['codigos'] = CodigoDescuento.objects.filter(evento=evento).order_by('-id')
 
-        # 9. MÉTRICAS AVANZADAS POR PASE Y FASE
-        # 🚀 AUTO-DETECCIÓN SENIOR: Si existen pases en la base de datos, forzamos el modo pases a True en memoria.
-        # Así evitamos que el panel se rompa si el organizador olvidó activar el switch de "tiene pases".
+        # 9. Rendimiento por pase y fase, conservando estado de pago.
         if TipoPase.objects.filter(evento=evento).exists():
             evento.tiene_pases_personalizados = True
 
         if evento.tiene_pases_personalizados:
             context['metricas_pases'] = TipoPase.objects.filter(evento=evento).annotate(
-                # 🚀 FIX SENIOR: Extraemos la suma base SIN cruzar multiplicaciones dentro del Sum
-                # Esto soluciona el bug de SQLite y garantiza que los anulados NO se cuenten.
-                ventas_reales=Coalesce(Sum('recibos__cantidad_entradas', filter=Q(recibos__anulado=False, recibos__revisado_por_admin=True)), 0),
-                total_recaudado=Coalesce(Sum('recibos__monto_total', filter=Q(recibos__anulado=False, recibos__revisado_por_admin=True)), 0, output_field=DecimalField())
+                ventas_reales=Coalesce(Sum('recibos__cantidad_entradas', filter=Q(
+                    recibos__anulado=False, recibos__revisado_por_admin=True,
+                )), 0),
+                registros_reales=Coalesce(Sum('recibos__cantidad_entradas', filter=Q(
+                    recibos__anulado=False,
+                )), 0),
+                pendientes_reales=Coalesce(Sum('recibos__cantidad_entradas', filter=Q(
+                    recibos__anulado=False, recibos__revisado_por_admin=False,
+                )), 0),
+                total_recaudado=Coalesce(Sum('recibos__monto_total', filter=Q(
+                    recibos__anulado=False, recibos__revisado_por_admin=True,
+                )), 0, output_field=DecimalField()),
             ).annotate(
-                # En un segundo paso, multiplicamos por las personas (ej: Pareja x2)
-                total_vendidos=F('ventas_reales') * F('qrs_por_pase')
+                total_vendidos=F('ventas_reales') * F('qrs_por_pase'),
+                total_registrados=F('registros_reales') * F('qrs_por_pase'),
+                total_pendientes=F('pendientes_reales') * F('qrs_por_pase'),
             )
 
-        # 🚀 OPTIMIZACIÓN SENIOR: Calculamos cantidad y recaudo de las "Entradas Generales"
         metricas_general = ReciboEvento.objects.filter(
-            evento=evento, tipo_pase__isnull=True, anulado=False, revisado_por_admin=True
+            evento=evento, tipo_pase__isnull=True, anulado=False,
         ).aggregate(
-            total_vendidos=Coalesce(Sum('cantidad_entradas'), 0),
-            total_recaudado=Coalesce(Sum('monto_total', output_field=DecimalField()), 0, output_field=DecimalField())
+            total_registrados=Coalesce(Sum('cantidad_entradas'), 0),
+            total_pendientes=Coalesce(Sum(
+                'cantidad_entradas', filter=Q(revisado_por_admin=False)
+            ), 0),
+            total_vendidos=Coalesce(Sum(
+                'cantidad_entradas', filter=Q(revisado_por_admin=True)
+            ), 0),
+            total_recaudado=Coalesce(Sum(
+                'monto_total', filter=Q(revisado_por_admin=True),
+                output_field=DecimalField(),
+            ), 0, output_field=DecimalField()),
         )
+        context['general_registrados'] = metricas_general['total_registrados']
+        context['general_pendientes'] = metricas_general['total_pendientes']
         context['general_vendidos'] = metricas_general['total_vendidos']
         context['general_recaudado'] = metricas_general['total_recaudado']
 
         if evento.tiene_fases_fechas:
             context['metricas_fases'] = FasePreventa.objects.filter(evento=evento).annotate(
-                total_recaudado=Coalesce(Sum('recibos__monto_total', filter=Q(recibos__anulado=False, recibos__revisado_por_admin=True)), 0, output_field=DecimalField())
+                personas_registradas=Coalesce(Sum(
+                    _personas_por_recibo('recibos__'),
+                    filter=Q(recibos__anulado=False),
+                ), 0),
+                personas_pendientes=Coalesce(Sum(
+                    _personas_por_recibo('recibos__'),
+                    filter=Q(recibos__anulado=False, recibos__revisado_por_admin=False),
+                ), 0),
+                total_recaudado=Coalesce(Sum(
+                    'recibos__monto_total', filter=Q(
+                        recibos__anulado=False, recibos__revisado_por_admin=True,
+                    ),
+                ), 0, output_field=DecimalField()),
             )
 
         # 🚀 10. NUEVO: ALIMENTAR MODAL DE TAQUILLA CON PASES Y PRECIOS DINÁMICOS
@@ -605,11 +683,14 @@ class RegistrarVentaPuertaView(EventPermissionMixin, View):
         form = VentaPuertaForm(request.POST)
         if form.is_valid():
             try:
-                receipt = operations.register(event, form.cleaned_data,
-                    key=request.POST.get('registration_key'), pass_input=request.POST.get('tipo_pase', 'FULL'),
-                    actor=request.user, door=True)
-                operations.confirm(receipt, request.user, 'Pago recibido y verificado en taquilla')
-                messages.success(request, 'Pago registrado y acceso emitido una sola vez.')
+                receipt = operations.complete_door_sale(
+                    event, form.cleaned_data,
+                    key=request.POST.get('registration_key'),
+                    pass_input=request.POST.get('tipo_pase', 'FULL'),
+                    actor=request.user,
+                )
+                messages.success(request, 'Pago registrado. Primer ingreso marcado; conserva los QR para los demás días.')
+                return redirect(receipt_url(receipt))
             except ValidationError as exc:
                 messages.error(request, '; '.join(exc.messages))
         else:
@@ -749,8 +830,14 @@ class RegistroExitoView(TemplateView):
         context['receipt_access_token'] = receipt_token(recibo)
         context['recibo'] = recibo
         context['evento'] = recibo.evento
-        # Traemos las boletas guardadas en la base de datos con sus URLs de imagen QR listas
-        context['boletas'] = recibo.boletas_qr.filter(revoked_at=None).order_by('id') if not recibo.anulado else recibo.boletas_qr.none()
+        # Entrega inmediata: el QR básico se dibuja incluso antes del worker PNG.
+        from .tickets import qr_data_uri
+        boletas = list(recibo.boletas_qr.filter(revoked_at=None).order_by('id')) if not recibo.anulado else []
+        for boleta in boletas:
+            if not boleta.imagen_qr:
+                boleta.qr_fallback = qr_data_uri(boleta.codigo_unico)
+        context['boletas'] = boletas
+        context['can_sell'] = can(self.request.user, recibo.evento.academia, 'events.sell', recibo.evento)
         return context
     
 
@@ -772,7 +859,7 @@ class ValidarIngresoQRAPIView(EventPermissionMixin, View):
         ticket = result.credential
         ticket.refresh_from_db()
         labels = {'SUCCESS': 'Ingreso autorizado.', 'ALREADY_USED_TODAY': 'Esta entrada ya ingresó hoy.',
-                  'REVOKED': 'Acceso revocado o pago pendiente.', 'EXHAUSTED': 'Accesos agotados.'}
+                  'REVOKED': 'Acceso revocado o anulado.', 'PENDING_PAYMENT': 'QR registrado, pero el pago aún no está confirmado.', 'EXHAUSTED': 'Accesos agotados.'}
         return JsonResponse({'status': 'success' if result.result == 'SUCCESS' else 'fraud',
             'message': labels[result.result], 'comprador': ticket.recibo.comprador_nombre,
             'recibo': ticket.recibo.numero_recibo, 'asistencias_consumidas': ticket.asistencias_consumidas})
@@ -997,14 +1084,17 @@ class EventQuoteView(View):
         return JsonResponse(result['snapshot'])
 
 
-class ConfirmEventPaymentView(EventPermissionMixin, View):
+class ResendEventTicketsView(EventPermissionMixin, View):
     permission_action = 'events.manage'
 
     def post(self, request, slug_academia, evento_slug, recibo_id):
         receipt = get_object_or_404(ReciboEvento, pk=recibo_id, evento=request.authorized_event)
         try:
-            operations.confirm(receipt, request.user, request.POST.get('reason', ''))
-            messages.success(request, 'Pago confirmado. Las credenciales se están preparando.')
+            operations.resend_tickets(receipt, request.user)
+            messages.success(request, 'Se intentará enviar inmediatamente el correo con los QR; si el servidor de correo falla, quedará en la cola de reintentos.')
         except ValidationError as exc:
             messages.error(request, '; '.join(exc.messages))
         return redirect('eventos:admin_detalle', slug_academia=slug_academia, evento_slug=evento_slug)
+
+
+
