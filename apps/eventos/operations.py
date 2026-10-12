@@ -3,7 +3,7 @@ import uuid
 from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import F
+from django.db.models import F, Q
 from django.utils import timezone
 from apps.academias.authorization import authorize
 from apps.saas_core.audit import record
@@ -52,7 +52,9 @@ def quote(event, pass_input, quantity, coupon_text='', *, door=False):
         access_units = selected_pass.qrs_por_pase
         commercial_units = selected_pass.admissions_per_unit
     else:
-        if (event.tiene_pases_personalizados and event.pases_personalizados.filter(activo=True).exists()) or pass_input not in ('FULL', 'DIA'):
+        if pass_input not in ('FULL', 'DIA') or event.pases_personalizados.filter(activo=True).filter(
+            Q(precio__gt=0) | Q(precios_fases__precio__gt=0)
+        ).exists():
             raise ValidationError('Selecciona un pase activo del evento.')
         # Read compatibility for events which genuinely have no pass catalog.
         price = event.precio_por_dia if pass_input == 'DIA' else (event.precio_puerta if door else event.precio_preventa)
@@ -62,6 +64,10 @@ def quote(event, pass_input, quantity, coupon_text='', *, door=False):
         raise ValidationError('La configuración del pase requiere revisión administrativa.')
     if commercial_units is not None and not 1 <= commercial_units <= 10:
         raise ValidationError('Las admisiones comerciales por pase deben estar entre 1 y 10.')
+    if commercial_units is not None and commercial_units > access_units:
+        raise ValidationError(
+            'Las unidades comerciales por pase no pueden superar las personas con QR; revisa el catálogo.'
+        )
     price = Decimal(str(price or 0))
     base_price = price
     coupon = None
