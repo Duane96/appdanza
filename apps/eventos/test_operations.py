@@ -7,6 +7,7 @@ from unittest.mock import patch
 from PIL import Image
 from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -16,8 +17,8 @@ from apps.academias.private_media import validate_private_upload
 from apps.saas_core.models import AuditEvent, DurableJob
 from apps.saas_core.jobs import claim, run_one
 from .models import Evento, TipoPase, CodigoDescuento, ReciboEvento, Admission, EntradaQR, CheckIn, EventRefund
-from .operations import register, confirm, cancel, check_in, reissue, record_refund, quote
-from .receipt_access import receipt_token
+from .operations import register, confirm, cancel, check_in, reissue, record_refund, quote, complete_door_sale, resend_tickets
+from .receipt_access import receipt_token, receipt_url
 
 
 class EventOperationsTests(TestCase):
@@ -136,7 +137,10 @@ class EventOperationsTests(TestCase):
         self.assertEqual(receipt.monto_total, Decimal('100'))
         self.assertFalse(receipt.revisado_por_admin)
         self.assertEqual(receipt.payment_status, 'PENDING')
-        self.assertEqual(EntradaQR.objects.count(), 0)
+        self.assertEqual(Admission.objects.count(), 2)
+        self.assertEqual(EntradaQR.objects.count(), 2)
+        code = receipt.boletas_qr.first().codigo_unico
+        self.assertEqual(check_in(self.event, self.owner, code).result, 'PENDING_PAYMENT')
         self.assertEqual(self.sale(key=key).pk, receipt.pk)
         confirm(receipt, self.owner, 'Comprobante validado')
         confirm(receipt, self.owner, 'Reintento')
@@ -145,6 +149,136 @@ class EventOperationsTests(TestCase):
         self.assertEqual(EntradaQR.objects.count(), 2)
         self.assertEqual(DurableJob.objects.filter(kind='EVENT_QR').count(), 2)
         self.assertEqual(AuditEvent.objects.filter(action='event.payment.confirmed').count(), 1)
+
+    def test_public_success_displays_pending_qr_immediately_without_a_worker(self):
+        receipt = self.sale()
+        self.assertFalse(receipt.boletas_qr.first().imagen_qr)
+        response = self.client.get(receipt_url(receipt))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data:image/png;base64,')
+        self.assertContains(response, 'aún no autorizan la entrada')
+        self.assertEqual(
+            self.client.get(reverse('eventos:registro_exito', args=[self.tenant.slug, receipt.pk])).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.client.get(receipt_url(receipt).split('?')[0] + '?token=forged').status_code,
+            403,
+        )
+
+    @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+    def test_registration_delivers_qrs_by_email_even_before_confirmation(self):
+        self.values['comprador_correo'] = 'comprador@example.com'
+        with self.captureOnCommitCallbacks(execute=True):
+            receipt = self.sale()
+        job = DurableJob.objects.get(dedupe_key=f'event-ticket-email:{receipt.pk}:REGISTERED:first')
+        self.assertEqual(job.state, 'DONE')
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ['comprador@example.com'])
+        self.assertIn('NO autorizan ingreso', mail.outbox[0].body)
+        self.assertEqual(len(mail.outbox[0].attachments), 2)
+        self.assertEqual(mail.outbox[0].attachments[0][2], 'image/png')
+        self.assertEqual(receipt.payment_status, 'PENDING')
+
+    @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+    def test_confirmation_repairs_missing_qrs_and_emails_without_waiting_for_images(self):
+        receipt = self.sale()
+        receipt.comprador_correo = 'comprador@example.com'
+        receipt.save(update_fields=['comprador_correo'])
+        receipt.boletas_qr.all().delete()
+        self.assertFalse(receipt.boletas_qr.exists())
+        with self.captureOnCommitCallbacks(execute=True):
+            confirm(receipt, self.owner, 'Comprobante verificado')
+        receipt.refresh_from_db()
+        self.assertEqual(receipt.payment_status, 'CONFIRMED')
+        self.assertEqual(receipt.boletas_qr.count(), 2)
+        self.assertTrue(all(not ticket.imagen_qr for ticket in receipt.boletas_qr.all()))
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('QR activos', mail.outbox[0].subject)
+        self.assertEqual(len(mail.outbox[0].attachments), 2)
+        self.assertEqual(DurableJob.objects.filter(
+            dedupe_key=f'event-ticket-email:{receipt.pk}:CONFIRMED:first',
+            state='DONE',
+        ).count(), 1)
+        confirm(receipt, self.owner, 'Confirmación repetida')
+        self.assertEqual(DurableJob.objects.filter(
+            dedupe_key=f'event-ticket-email:{receipt.pk}:CONFIRMED:first',
+        ).count(), 1)
+
+    @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+    def test_failed_immediate_email_remains_in_durable_retry_queue(self):
+        self.values['comprador_correo'] = 'comprador@example.com'
+        with patch('apps.eventos.tickets.EmailMultiAlternatives.send', side_effect=OSError('SMTP unavailable')):
+            with self.captureOnCommitCallbacks(execute=True):
+                receipt = self.sale()
+        job = DurableJob.objects.get(dedupe_key=f'event-ticket-email:{receipt.pk}:REGISTERED:first')
+        self.assertEqual(job.state, 'PENDING')
+        self.assertEqual(job.attempts, 1)
+        self.assertEqual(job.last_error, 'OSError')
+        self.assertGreater(job.available_at, timezone.now())
+
+    def test_door_sale_registers_first_entry_and_preserves_next_day_access(self):
+        key = uuid.uuid4()
+        receipt = complete_door_sale(
+            self.event, self.values, key=key,
+            pass_input=f'PASE_{self.pass_.pk}', actor=self.owner,
+        )
+        receipt.refresh_from_db()
+        self.assertEqual(receipt.payment_status, 'CONFIRMED')
+        self.assertTrue(receipt.ingresado_puerta)
+        self.assertEqual(receipt.boletas_qr.count(), 2)
+        self.assertEqual(
+            list(receipt.boletas_qr.values_list('asistencias_consumidas', flat=True)), [1, 1],
+        )
+        self.assertEqual(CheckIn.objects.filter(result='SUCCESS').count(), 2)
+        first = receipt.boletas_qr.order_by('pk').first()
+        self.assertEqual(check_in(self.event, self.owner, first.codigo_unico).result, 'ALREADY_USED_TODAY')
+        with patch('django.utils.timezone.now', return_value=timezone.now() + timedelta(days=1)):
+            self.assertEqual(check_in(self.event, self.owner, first.codigo_unico).result, 'SUCCESS')
+        self.assertEqual(
+            complete_door_sale(self.event, self.values, key=key,
+                               pass_input=f'PASE_{self.pass_.pk}', actor=self.owner).pk,
+            receipt.pk,
+        )
+        self.assertEqual(ReciboEvento.objects.count(), 1)
+
+    def test_commercial_units_do_not_reduce_personal_qr_allocation(self):
+        self.pass_.admissions_per_unit = 1
+        self.pass_.save(update_fields=['admissions_per_unit'])
+        snapshot = quote(self.event, f'PASE_{self.pass_.pk}', 1)['snapshot']
+        self.assertEqual(snapshot['access_units'], 2)
+        self.assertEqual(snapshot['commercial_units'], 1)
+        receipt = self.sale()
+        self.assertEqual(receipt.boletas_qr.count(), 2)
+        self.assertEqual(
+            receipt.admissions.filter(commercial_unit=True).count(), 1,
+        )
+
+    def test_inactive_default_pass_does_not_block_general_registration(self):
+        self.event.tiene_pases_personalizados = False
+        self.event.precio_preventa = Decimal('50')
+        self.event.save()
+        self.pass_.activo = False
+        self.pass_.save(update_fields=['activo'])
+        self.assertEqual(quote(self.event, 'FULL', 1)['snapshot']['total'], '50.00')
+
+    @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+    def test_manual_resend_repairs_existing_credential_and_sends_again(self):
+        receipt = self.sale()
+        confirm(receipt, self.owner, 'Verified')
+        receipt.comprador_correo = 'comprador@example.com'
+        receipt.save(update_fields=['comprador_correo'])
+        qr = receipt.boletas_qr.first()
+        original_code = qr.codigo_unico
+        qr.admission = None
+        qr.save(update_fields=['admission'])
+        with self.captureOnCommitCallbacks(execute=True):
+            resend_tickets(receipt, self.owner)
+        qr.refresh_from_db()
+        self.assertEqual(qr.codigo_unico, original_code)
+        self.assertIsNotNone(qr.admission_id)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(len(mail.outbox[0].attachments), 2)
 
     def test_quote_is_server_authoritative_and_snapshot_does_not_change(self):
         receipt = self.sale()
