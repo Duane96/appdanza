@@ -55,6 +55,73 @@ class EventOperationsTests(TestCase):
         response = self.client.get(reverse('eventos:admin_detalle', args=[self.tenant.slug, self.event.slug]))
         self.assertEqual(response.context['ingresos_totales'], Decimal('100'))
 
+    def test_event_metrics_keep_pending_registrations_visible_without_inflating_revenue(self):
+        pending = self.sale()
+        cancelled = self.sale()
+        self.client.force_login(self.owner)
+        url = reverse('eventos:admin_detalle', args=[self.tenant.slug, self.event.slug])
+        listing_url = reverse('eventos:admin_lista', args=[self.tenant.slug])
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['total_registros'], 2)
+        self.assertEqual(response.context['personas_registradas'], 4)
+        self.assertEqual(response.context['inscripciones_pendientes'], 2)
+        self.assertEqual(response.context['personas_pendientes'], 4)
+        self.assertEqual(response.context['monto_pendiente'], Decimal('200'))
+        self.assertEqual(response.context['total_entradas_vendidas'], 0)
+        self.assertEqual(response.context['ingresos_totales'], 0)
+        pass_metrics = response.context['metricas_pases'].get(pk=self.pass_.pk)
+        self.assertEqual(pass_metrics.total_registrados, 4)
+        self.assertEqual(pass_metrics.total_pendientes, 4)
+        self.assertEqual(pass_metrics.total_vendidos, 0)
+        listing = self.client.get(listing_url)
+        summary = listing.context['eventos_activos'].get(pk=self.event.pk)
+        self.assertEqual(summary.personas_registradas, 4)
+        self.assertEqual(summary.personas_pendientes, 4)
+        self.assertEqual(summary.boletas_vendidas, 0)
+
+        confirm(pending, self.owner, 'Comprobante revisado')
+        response = self.client.get(url)
+        self.assertEqual(response.context['personas_registradas'], 4)
+        self.assertEqual(response.context['personas_pendientes'], 2)
+        self.assertEqual(response.context['total_entradas_vendidas'], 2)
+        self.assertEqual(response.context['ingresos_totales'], Decimal('100'))
+        self.assertEqual(response.context['monto_pendiente'], Decimal('100'))
+        pass_metrics = response.context['metricas_pases'].get(pk=self.pass_.pk)
+        self.assertEqual(pass_metrics.total_registrados, 4)
+        self.assertEqual(pass_metrics.total_pendientes, 2)
+        self.assertEqual(pass_metrics.total_vendidos, 2)
+
+        cancel(cancelled, self.owner, 'Registro duplicado')
+        response = self.client.get(url)
+        self.assertEqual(response.context['total_registros'], 1)
+        self.assertEqual(response.context['personas_registradas'], 2)
+        self.assertEqual(response.context['personas_pendientes'], 0)
+        self.assertEqual(response.context['total_entradas_vendidas'], 2)
+        self.assertEqual(response.context['ingresos_totales'], Decimal('100'))
+
+    def test_event_metrics_include_general_registrations_without_pass(self):
+        general = Evento.unfiltered_objects.create(
+            academia=self.tenant, nombre='General', fecha=timezone.now()
+        )
+        ReciboEvento.objects.create(
+            evento=general, comprador_nombre='Registro sin pase',
+            comprador_telefono='123', cantidad_entradas=3,
+            precio_unitario_aplicado=Decimal('20'), monto_total=Decimal('60'),
+            revisado_por_admin=False, payment_status='PENDING',
+        )
+        self.client.force_login(self.owner)
+        response = self.client.get(reverse(
+            'eventos:admin_detalle', args=[self.tenant.slug, general.slug]
+        ))
+        self.assertEqual(response.context['personas_registradas'], 3)
+        self.assertEqual(response.context['personas_pendientes'], 3)
+        self.assertEqual(response.context['general_registrados'], 3)
+        self.assertEqual(response.context['general_pendientes'], 3)
+        self.assertEqual(response.context['general_vendidos'], 0)
+        self.assertEqual(response.context['ingresos_totales'], 0)
+
     def test_pending_does_not_emit_access_and_confirmation_is_idempotent(self):
         key = uuid.uuid4()
         receipt = self.sale(key=key)
