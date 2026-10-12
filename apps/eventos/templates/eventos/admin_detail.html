@@ -300,16 +300,12 @@
                             <td class="text-center">
                                 {% if recibo.origen == 'PUERTA' %}
                                     {% if recibo.ingresado_puerta %}
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill py-1.5 px-2.5">
-                                            <i class="bi bi-check-circle-fill me-1"></i> Ingresado
-                                        </span>
+                                        <span class="badge bg-success-subtle text-success border rounded-pill mb-2">Primer ingreso registrado</span>
                                     {% else %}
-                                        <span class="badge bg-secondary-subtle text-secondary rounded-pill py-1.5 px-2.5">
-                                            No Ingresado
-                                        </span>
+                                        <span class="badge bg-secondary-subtle text-secondary rounded-pill mb-2">Ingreso pendiente</span>
                                     {% endif %}
-                                {% else %}
-                                    <div class="d-flex flex-column gap-2 align-items-center">
+                                {% endif %}
+                                <div class="d-flex flex-column gap-2 align-items-center">
                                         {% for boleta in recibo.boletas_qr.all %}
                                         <div class="w-100 p-2 border rounded bg-white shadow-sm transition-all" id="fila-boleta-{{ boleta.codigo_unico }}" data-permitidas="{{ boleta.asistencias_permitidas }}">
                                             <div class="d-flex justify-content-between align-items-center mb-1">
@@ -336,7 +332,10 @@
                                             </details>{% endif %}
                                         </div>
                                         {% endfor %}
-                                    </div>
+                                </div>
+                                {% if not recibo.anulado %}
+                                <a href="{{ recibo.enlace_entradas }}" target="_blank" rel="noopener"
+                                   class="btn btn-sm btn-outline-primary mt-2">Ver y entregar QR</a>
                                 {% endif %}
                             </td>
                             <td class="text-end">
@@ -477,6 +476,10 @@
                     <div class="mb-3">
                         <label class="form-label small fw-semibold text-secondary">Teléfono de Contacto (Opcional)</label>
                         {{ form_puerta.comprador_telefono }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-secondary">Correo para enviar QR (Opcional)</label>
+                        {{ form_puerta.comprador_correo }}
                     </div>
 
                     {% if pases_disponibles_taquilla or evento.es_multidias %}

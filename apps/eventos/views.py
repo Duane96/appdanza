@@ -448,6 +448,9 @@ class EventoDetailAdminView(EventPermissionMixin, DetailView):
                 Q(numero_recibo__icontains=query) |
                 Q(comprador_telefono__icontains=query)
             )
+        recibos = list(recibos)
+        for recibo in recibos:
+            recibo.enlace_entradas = receipt_url(recibo)
         context['recibos'] = recibos
         context['q'] = query or ''
         context.update(_resumen_inscripciones(evento))
@@ -680,11 +683,14 @@ class RegistrarVentaPuertaView(EventPermissionMixin, View):
         form = VentaPuertaForm(request.POST)
         if form.is_valid():
             try:
-                receipt = operations.register(event, form.cleaned_data,
-                    key=request.POST.get('registration_key'), pass_input=request.POST.get('tipo_pase', 'FULL'),
-                    actor=request.user, door=True)
-                operations.confirm(receipt, request.user, 'Pago recibido y verificado en taquilla')
-                messages.success(request, 'Pago registrado y acceso emitido una sola vez.')
+                receipt = operations.complete_door_sale(
+                    event, form.cleaned_data,
+                    key=request.POST.get('registration_key'),
+                    pass_input=request.POST.get('tipo_pase', 'FULL'),
+                    actor=request.user,
+                )
+                messages.success(request, 'Pago registrado. Primer ingreso marcado; conserva los QR para los demás días.')
+                return redirect(receipt_url(receipt))
             except ValidationError as exc:
                 messages.error(request, '; '.join(exc.messages))
         else:
@@ -824,8 +830,14 @@ class RegistroExitoView(TemplateView):
         context['receipt_access_token'] = receipt_token(recibo)
         context['recibo'] = recibo
         context['evento'] = recibo.evento
-        # Traemos las boletas guardadas en la base de datos con sus URLs de imagen QR listas
-        context['boletas'] = recibo.boletas_qr.filter(revoked_at=None).order_by('id') if not recibo.anulado else recibo.boletas_qr.none()
+        # Entrega inmediata: el QR básico se dibuja incluso antes del worker PNG.
+        from .tickets import qr_data_uri
+        boletas = list(recibo.boletas_qr.filter(revoked_at=None).order_by('id')) if not recibo.anulado else []
+        for boleta in boletas:
+            if not boleta.imagen_qr:
+                boleta.qr_fallback = qr_data_uri(boleta.codigo_unico)
+        context['boletas'] = boletas
+        context['can_sell'] = can(self.request.user, recibo.evento.academia, 'events.sell', recibo.evento)
         return context
     
 
@@ -847,7 +859,7 @@ class ValidarIngresoQRAPIView(EventPermissionMixin, View):
         ticket = result.credential
         ticket.refresh_from_db()
         labels = {'SUCCESS': 'Ingreso autorizado.', 'ALREADY_USED_TODAY': 'Esta entrada ya ingresó hoy.',
-                  'REVOKED': 'Acceso revocado o pago pendiente.', 'EXHAUSTED': 'Accesos agotados.'}
+                  'REVOKED': 'Acceso revocado o anulado.', 'PENDING_PAYMENT': 'QR registrado, pero el pago aún no está confirmado.', 'EXHAUSTED': 'Accesos agotados.'}
         return JsonResponse({'status': 'success' if result.result == 'SUCCESS' else 'fraud',
             'message': labels[result.result], 'comprador': ticket.recibo.comprador_nombre,
             'recibo': ticket.recibo.numero_recibo, 'asistencias_consumidas': ticket.asistencias_consumidas})
@@ -1079,7 +1091,10 @@ class ConfirmEventPaymentView(EventPermissionMixin, View):
         receipt = get_object_or_404(ReciboEvento, pk=recibo_id, evento=request.authorized_event)
         try:
             operations.confirm(receipt, request.user, request.POST.get('reason', ''))
-            messages.success(request, 'Pago confirmado. Las credenciales se están preparando.')
+            if receipt.comprador_correo:
+                messages.success(request, 'Pago confirmado. Los QR están activos y se intentará entregar una copia por correo inmediatamente.')
+            else:
+                messages.success(request, 'Pago confirmado. Los QR están activos; no hay correo registrado para enviarlos.')
         except ValidationError as exc:
             messages.error(request, '; '.join(exc.messages))
         return redirect('eventos:admin_detalle', slug_academia=slug_academia, evento_slug=evento_slug)

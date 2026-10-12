@@ -31,7 +31,7 @@
 
             <div class="alert {% if recibo.payment_status == 'CONFIRMED' %}alert-success{% else %}alert-info{% endif %}">
 <strong>{{ recibo.get_payment_status_display }}</strong>
-{% if recibo.payment_status == 'PENDING' or recibo.payment_status == 'REVIEW' %}<p class="mb-0">Tu registro está recibido. Las entradas estarán disponibles después de que la administración verifique el pago. Guarda este enlace para consultar el estado.</p>{% endif %}
+{% if recibo.payment_status == 'PENDING' or recibo.payment_status == 'REVIEW' %}<p class="mb-0">Tus QR ya están disponibles, pero aún no autorizan la entrada. Podrás usarlos cuando el organizador confirme tu pago. Te enviaremos los QR también al correo registrado.</p>{% endif %}
 {% if recibo.anulado %}<p class="mb-0">Este registro no habilita acceso al evento.</p>{% endif %}
 </div>
 <h5 class="fw-bold text-dark mb-3"><i class="bi bi-qr-code-scan me-2"></i>Tus Entradas de Acceso</h5>
@@ -43,17 +43,16 @@
                     {% if boleta.imagen_qr %}
                         <img src="{{ boleta.imagen_qr.url }}?token={{ receipt_access_token|urlencode }}" alt="Tu Boleta de Acceso" class="tarjeta-renderizada" />
                     {% else %}
-                        <div class="alert alert-danger">La imagen de la entrada se está preparando. Actualiza esta página en unos momentos.</div>
+                        <img src="{{ boleta.qr_fallback }}" alt="Tu código QR" class="tarjeta-renderizada" />
                     {% endif %}
+                    <p class="small text-muted mt-2">{{ boleta.asistencias_consumidas }} de {{ boleta.asistencias_permitidas }} accesos utilizados · máximo uno por día</p>
                 </div>
 
-                {% if boleta.imagen_qr %}
-                    <a href="{{ boleta.imagen_qr.url }}?token={{ receipt_access_token|urlencode }}"
-                       download="Boleto_{{ forloop.counter }}_{{ evento.nombre|slugify }}.png"
-                       class="btn btn-dark fw-bold rounded-pill shadow px-4 py-2 w-100 dynamic-dl-btn">
-                        <i class="bi bi-cloud-arrow-down-fill me-2"></i> Descargar Esta Boleta
-                    </a>
-                {% endif %}
+                <a href="{% if boleta.imagen_qr %}{{ boleta.imagen_qr.url }}?token={{ receipt_access_token|urlencode }}{% else %}{{ boleta.qr_fallback }}{% endif %}"
+                   download="Boleto_{{ forloop.counter }}_{{ evento.nombre|slugify }}.png"
+                   class="btn btn-dark fw-bold rounded-pill shadow px-4 py-2 w-100 dynamic-dl-btn">
+                    <i class="bi bi-cloud-arrow-down-fill me-2"></i> Descargar Esta Boleta
+                </a>
 
             </div>
             {% endfor %}
@@ -63,6 +62,11 @@
                 <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center">
                     {# Asumiendo que tienes una url llamada 'academia_landing' o similar en tus urls globales #}
                     {# Si no la tienes aún, podemos usar un enlace genérico '/' o la ruta que uses para el index del tenant #}
+                    {% if can_sell %}
+                    <a href="{% url 'eventos:admin_detalle' evento.academia.slug evento.slug %}" class="btn btn-dark fw-bold rounded-pill px-4 py-2">
+                        Volver al control del evento
+                    </a>
+                    {% endif %}
                     <a href="/" class="btn btn-outline-dark fw-bold rounded-pill px-4 py-2">
                         <i class="bi bi-house-door me-2"></i> Volver al Inicio
                     </a>
