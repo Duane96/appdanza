@@ -52,7 +52,7 @@ def quote(event, pass_input, quantity, coupon_text='', *, door=False):
         access_units = selected_pass.qrs_por_pase
         commercial_units = selected_pass.admissions_per_unit
     else:
-        if event.pases_personalizados.exists() or pass_input not in ('FULL', 'DIA'):
+        if (event.tiene_pases_personalizados and event.pases_personalizados.filter(activo=True).exists()) or pass_input not in ('FULL', 'DIA'):
             raise ValidationError('Selecciona un pase activo del evento.')
         # Read compatibility for events which genuinely have no pass catalog.
         price = event.precio_por_dia if pass_input == 'DIA' else (event.precio_puerta if door else event.precio_preventa)
@@ -195,6 +195,29 @@ def complete_door_sale(event, values, *, key, pass_input, actor):
         check_in(event, actor, ticket.codigo_unico)
     ReciboEvento.objects.filter(pk=receipt.pk).update(ingresado_puerta=True)
     receipt.refresh_from_db()
+    return receipt
+
+
+@transaction.atomic
+def resend_tickets(receipt, actor):
+    """Repair missing QR credentials and resend without touching payment or usage."""
+    authorize(actor, receipt.evento.academia, 'events.manage', receipt.evento)
+    _write_lock(receipt.evento_id)
+    receipt.refresh_from_db()
+    if receipt.anulado or receipt.payment_status not in ('PENDING', 'REVIEW', 'CONFIRMED', 'LEGACY'):
+        raise ValidationError('No se pueden reenviar entradas anuladas o devueltas.')
+    if not receipt.comprador_correo:
+        raise ValidationError('Agrega un correo electrónico al registro antes de enviar el QR.')
+    snapshot = receipt.price_snapshot
+    if snapshot and snapshot.get('access_units'):
+        _ensure_credentials(receipt, snapshot)
+    if not receipt.boletas_qr.filter(revoked_at=None).exists():
+        raise ValidationError('No existen credenciales para este registro.')
+    from .tickets import queue_ticket_email
+    stage = 'REGISTERED' if receipt.payment_status in ('PENDING', 'REVIEW') else 'REISSUED'
+    queue_ticket_email(receipt, stage, version=uuid.uuid4().hex)
+    record(receipt.evento.academia, actor, 'event.ticket_email.requested', receipt.pk,
+           reason='Reenvío manual de credenciales')
     return receipt
 
 

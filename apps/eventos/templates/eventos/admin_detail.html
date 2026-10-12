@@ -340,6 +340,14 @@
                             </td>
                             <td class="text-end">
                                 <span class="badge bg-light text-dark">{{ recibo.get_payment_status_display }}</span>
+                                {% if not recibo.anulado and recibo.comprador_correo %}
+                                <form method="post" action="{% url 'eventos:resend_tickets' request.tenant.slug evento.slug recibo.pk %}" class="mt-2">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-envelope-arrow-up me-1"></i>Reenviar QR al correo
+                                    </button>
+                                </form>
+                                {% endif %}
 {% if recibo.payment_status == 'PENDING' or recibo.payment_status == 'REVIEW' %}
 <form method="post" action="{% url 'eventos:confirm_payment' request.tenant.slug evento.slug recibo.pk %}" class="mt-2">
 {% csrf_token %}<input name="reason" class="form-control form-control-sm" required maxlength="200" placeholder="Referencia o evidencia del pago verificado">

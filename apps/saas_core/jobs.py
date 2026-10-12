@@ -6,7 +6,7 @@ from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.db.models import F, Q
 from django.utils import timezone
-from gestoracademia.tenants import set_current_tenant, clear_current_tenant
+from gestoracademia.tenants import set_current_tenant, clear_current_tenant, get_current_tenant
 from .models import DurableJob
 
 
@@ -61,6 +61,7 @@ def handle(job):
 
 
 def _execute(job):
+    previous_tenant = get_current_tenant()
     try:
         set_current_tenant(job.academia)
         handle(job)
@@ -74,7 +75,10 @@ def _execute(job):
         DurableJob.objects.filter(pk=job.pk, lease_token=job.lease_token).update(
             state='DONE', completed_at=timezone.now(), lease_until=None, last_error='', payload={})
     finally:
-        clear_current_tenant()
+        if previous_tenant is None:
+            clear_current_tenant()
+        else:
+            set_current_tenant(previous_tenant)
     return True
 
 

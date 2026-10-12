@@ -1084,6 +1084,19 @@ class EventQuoteView(View):
         return JsonResponse(result['snapshot'])
 
 
+class ResendEventTicketsView(EventPermissionMixin, View):
+    permission_action = 'events.manage'
+
+    def post(self, request, slug_academia, evento_slug, recibo_id):
+        receipt = get_object_or_404(ReciboEvento, pk=recibo_id, evento=request.authorized_event)
+        try:
+            operations.resend_tickets(receipt, request.user)
+            messages.success(request, 'Se intentará enviar inmediatamente el correo con los QR; si el servidor de correo falla, quedará en la cola de reintentos.')
+        except ValidationError as exc:
+            messages.error(request, '; '.join(exc.messages))
+        return redirect('eventos:admin_detalle', slug_academia=slug_academia, evento_slug=evento_slug)
+
+
 class ConfirmEventPaymentView(EventPermissionMixin, View):
     permission_action = 'events.manage'
 
