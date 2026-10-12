@@ -77,11 +77,41 @@ def quote(event, pass_input, quantity, coupon_text='', *, door=False):
     return {'pass': selected_pass, 'phase': phase, 'coupon': coupon,
             'snapshot': {'quantity': quantity, 'unit_price': str(price), 'base_unit_price': str(base_price),
                 'total': str((quantity * price).quantize(Decimal('0.01'))), 'currency': event.academia.divisa,
-                'access_units': quantity * (commercial_units if commercial_units is not None else access_units), 'access_limit': accesses,
+                'access_units': quantity * access_units, 'access_limit': accesses,
                 'commercial_units': quantity * commercial_units if commercial_units is not None else None,
                 'pass_id': selected_pass.pk if selected_pass else None, 'phase_id': phase.pk if phase else None,
                 'coupon_id': coupon.pk if coupon else None,
                 'pricing_source': 'CATALOG' if selected_pass else 'LEGACY_CATALOG'}}
+
+
+def _ensure_credentials(receipt, snapshot):
+    """Create stable QR credentials without authorizing payment or charging SaaS."""
+    expected = int(snapshot['access_units'])
+    limit = int(snapshot['access_limit'])
+    commercial = snapshot.get('commercial_units')
+    # Preserve legacy unlinked credentials where possible; never rotate existing codes.
+    orphans = iter(EntradaQR.objects.filter(
+        recibo=receipt, admission__isnull=True, revoked_at=None,
+    ).order_by('pk'))
+    admissions = []
+    for ordinal in range(1, expected + 1):
+        admission, _ = Admission.objects.get_or_create(
+            receipt=receipt, ordinal=ordinal,
+            defaults={'access_limit': limit,
+                      'commercial_unit': commercial is not None and ordinal <= commercial},
+        )
+        admissions.append(admission)
+        if not EntradaQR.objects.filter(admission=admission).exists():
+            legacy = next(orphans, None)
+            if legacy is not None:
+                legacy.admission = admission
+                legacy.save(update_fields=['admission'])
+            else:
+                EntradaQR.objects.create(
+                    receipt=receipt, admission=admission,
+                    asistencias_permitidas=admission.access_limit,
+                )
+    return admissions
 
 
 @transaction.atomic
@@ -114,6 +144,10 @@ def register(event, values, *, key, pass_input, coupon_text='', actor=None, door
         fase_preventa=priced['phase'], codigo_descuento_usado=coupon, revisado_por_admin=False,
         payment_status='PENDING', origen='PUERTA' if door else 'ONLINE',
         medio_pago=values.get('medio_pago', 'TRANSFERENCIA') if door else 'TRANSFERENCIA')
+    _ensure_credentials(receipt, snapshot)
+    if not door:
+        from .tickets import queue_ticket_email
+        queue_ticket_email(receipt, 'REGISTERED')
     record(event.academia, actor, 'event.registration.created', receipt.pk,
            after={'payment_status': 'PENDING', 'total': receipt.monto_total, 'quantity': receipt.cantidad_entradas})
     return receipt
@@ -126,29 +160,40 @@ def confirm(receipt, actor, reason):
         raise ValidationError('Indica la evidencia o motivo de aprobación.')
     _write_lock(receipt.evento_id)
     receipt.refresh_from_db()
+    snapshot = receipt.price_snapshot
     if receipt.payment_status == 'CONFIRMED':
+        if snapshot and snapshot.get('access_units'):
+            _ensure_credentials(receipt, snapshot)
         return receipt
     if receipt.payment_status not in ('PENDING', 'REVIEW') or receipt.anulado:
         raise ValidationError('Esta operación no puede confirmarse desde su estado actual.')
-    snapshot = receipt.price_snapshot
     if not snapshot or not snapshot.get('access_units'):
         raise ValidationError('El registro requiere una cotización válida antes de confirmar.')
-    ReciboEvento.objects.filter(pk=receipt.pk).update(payment_status='CONFIRMED', revisado_por_admin=True,
-                                                    confirmed_at=timezone.now())
+    admissions = _ensure_credentials(receipt, snapshot)
+    ReciboEvento.objects.filter(pk=receipt.pk).update(
+        payment_status='CONFIRMED', revisado_por_admin=True, confirmed_at=timezone.now(),
+    )
     prior_status = receipt.payment_status
     receipt.refresh_from_db()
-    commercial = snapshot.get('commercial_units')
-    # Operational legacy QR multipliers do not define a SaaS commercial unit.
-    for ordinal in range(1, snapshot['access_units'] + 1):
-        admission, _ = Admission.objects.get_or_create(receipt=receipt, ordinal=ordinal,
-            defaults={'access_limit': snapshot['access_limit'],
-                      'commercial_unit': commercial is not None and ordinal <= commercial})
-        EntradaQR.objects.get_or_create(admission=admission, defaults={'recibo': receipt,
-                                       'asistencias_permitidas': admission.access_limit})
-        from apps.saas_core.billing import meter_admission
+    from apps.saas_core.billing import meter_admission
+    for admission in admissions:
         meter_admission(admission)
+    from .tickets import queue_ticket_email
+    queue_ticket_email(receipt, 'CONFIRMED')
     record(receipt.evento.academia, actor, 'event.payment.confirmed', receipt.pk,
            before={'payment_status': prior_status}, after={'payment_status': 'CONFIRMED'}, reason=reason)
+    receipt.refresh_from_db()
+    return receipt
+
+
+@transaction.atomic
+def complete_door_sale(event, values, *, key, pass_input, actor):
+    """One checkout: paid sale, QR handover, first-day attendance for every attendee."""
+    receipt = register(event, values, key=key, pass_input=pass_input, actor=actor, door=True)
+    confirm(receipt, actor, 'Pago recibido y verificado en taquilla')
+    for ticket in receipt.boletas_qr.filter(revoked_at=None):
+        check_in(event, actor, ticket.codigo_unico)
+    ReciboEvento.objects.filter(pk=receipt.pk).update(ingresado_puerta=True)
     receipt.refresh_from_db()
     return receipt
 
@@ -219,8 +264,10 @@ def check_in(event, actor, code, *, request_key=None):
         raise ValidationError('Entrada no válida para este evento.')
     today = timezone.localdate()
     result = 'SUCCESS'
-    if ticket.revoked_at or ticket.recibo.anulado or ticket.recibo.payment_status not in ('LEGACY', 'CONFIRMED'):
+    if ticket.revoked_at or ticket.recibo.anulado or ticket.recibo.payment_status in ('CANCELLED', 'REFUNDED'):
         result = 'REVOKED'
+    elif ticket.recibo.payment_status not in ('LEGACY', 'CONFIRMED'):
+        result = 'PENDING_PAYMENT'
     elif ticket.fecha_ultimo_ingreso and timezone.localdate(ticket.fecha_ultimo_ingreso) == today:
         result = 'ALREADY_USED_TODAY'
     elif ticket.asistencias_consumidas >= ticket.asistencias_permitidas:
@@ -247,5 +294,8 @@ def reissue(ticket, actor, reason):
     ticket.save(update_fields=['codigo_unico', 'imagen_qr'])
     enqueue('EVENT_QR', {'ticket_id': ticket.pk}, tenant=ticket.recibo.evento.academia,
             key=f'qr:{ticket.pk}:{ticket.codigo_unico}')
+    if ticket.recibo.payment_status == 'CONFIRMED':
+        from .tickets import queue_ticket_email
+        queue_ticket_email(ticket.recibo, 'REISSUED', version=str(ticket.codigo_unico))
     record(ticket.recibo.evento.academia, actor, 'event.credential.reissued', ticket.pk, reason=reason)
     return ticket
