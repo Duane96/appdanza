@@ -280,6 +280,42 @@ class EventOperationsTests(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(len(mail.outbox[0].attachments), 2)
 
+    @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+    def test_verified_historical_registration_without_qrs_can_be_recovered_safely(self):
+        legacy = ReciboEvento.objects.create(
+            evento=self.event, comprador_nombre='Venta antigua',
+            comprador_correo='historico@example.com', comprador_telefono='123',
+            cantidad_entradas=1, precio_unitario_aplicado=Decimal('100'),
+            monto_total=Decimal('100'), tipo_pase=self.pass_,
+            payment_status='LEGACY', revisado_por_admin=True,
+        )
+        self.assertFalse(legacy.boletas_qr.exists())
+        with self.captureOnCommitCallbacks(execute=True):
+            resend_tickets(legacy, self.owner)
+        self.assertEqual(legacy.boletas_qr.count(), 2)
+        self.assertEqual(legacy.admissions.filter(commercial_unit=True).count(), 0)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(len(mail.outbox[0].attachments), 2)
+        self.assertEqual(legacy.payment_status, 'LEGACY')
+
+    def test_unverified_historical_qr_is_not_accepted_at_the_door(self):
+        legacy = ReciboEvento.objects.create(
+            evento=self.event, comprador_nombre='Sin verificar', comprador_telefono='123',
+            precio_unitario_aplicado=Decimal('100'), monto_total=Decimal('100'),
+            payment_status='LEGACY', revisado_por_admin=False,
+        )
+        ticket = EntradaQR.objects.create(recibo=legacy)
+        self.assertEqual(check_in(self.event, self.owner, ticket.codigo_unico).result, 'PENDING_PAYMENT')
+        legacy.revisado_por_admin = True
+        legacy.save(update_fields=['revisado_por_admin'])
+        self.assertEqual(check_in(self.event, self.owner, ticket.codigo_unico).result, 'SUCCESS')
+
+    def test_invalid_commercial_configuration_cannot_undercount_saas_units(self):
+        self.pass_.admissions_per_unit = 3
+        self.pass_.save(update_fields=['admissions_per_unit'])
+        with self.assertRaises(ValidationError):
+            quote(self.event, f'PASE_{self.pass_.pk}', 1)
+
     def test_quote_is_server_authoritative_and_snapshot_does_not_change(self):
         receipt = self.sale()
         TipoPase.objects.filter(pk=self.pass_.pk).update(precio=999)
