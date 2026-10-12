@@ -129,9 +129,23 @@ class Command(BaseCommand):
                     if mode == "manual":
                         locked.set_password(password)
                         locked.save(update_fields=["password"])
+                        active_invitations = list(
+                            AccountInvitation.objects.filter(
+                                user=locked, consumed_at__isnull=True
+                            ).values_list("pk", flat=True)
+                        )
                         AccountInvitation.objects.filter(
-                            user=locked, consumed_at__isnull=True
+                            pk__in=active_invitations
                         ).update(consumed_at=timezone.now())
+                        # Prevent queued setup links from being sent after manual setup.
+                        from apps.saas_core.models import DurableJob
+                        DurableJob.objects.filter(
+                            dedupe_key__in=[f"invitation:{pk}" for pk in active_invitations],
+                            state="PENDING",
+                        ).update(
+                            state="FAILED", attempts=5,
+                            last_error="SupersededByManualSetup", payload={},
+                        )
                         record(
                             tenant, None, "identity.student_password.initialized", locked.pk,
                             reason="Configuración de acceso solicitada por administrador",

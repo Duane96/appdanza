@@ -94,6 +94,10 @@ class StudentAccessRepairTests(TestCase):
         self.assertFalse(self.foreign.has_usable_password())
         self.assertFalse(self.teacher.has_usable_password())
         self.assertIsNotNone(invitation.consumed_at)
+        self.assertEqual(
+            DurableJob.objects.get(dedupe_key=f"invitation:{invitation.pk}").last_error,
+            "SupersededByManualSetup",
+        )
         self.assertEqual(prompt.call_count, 1)
         self.assertNotIn("New-Temporary-94!Safe", result)
         self.assertIn("'configurados': 1", result)
