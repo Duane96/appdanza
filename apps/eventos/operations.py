@@ -147,15 +147,19 @@ def register(event, values, *, key, pass_input, coupon_text='', actor=None, door
         comprador_telefono=values.get('comprador_telefono', ''), cantidad_entradas=snapshot['quantity'],
         comprobante_pago=values.get('comprobante_pago'), precio_unitario_aplicado=Decimal(snapshot['unit_price']),
         monto_total=Decimal(snapshot['total']), price_snapshot=snapshot, tipo_pase=priced['pass'],
-        fase_preventa=priced['phase'], codigo_descuento_usado=coupon, revisado_por_admin=False,
-        payment_status='PENDING', origen='PUERTA' if door else 'ONLINE',
+        fase_preventa=priced['phase'], codigo_descuento_usado=coupon, revisado_por_admin=True,
+        payment_status='CONFIRMED', confirmed_at=timezone.now(), origen='PUERTA' if door else 'ONLINE',
         medio_pago=values.get('medio_pago', 'TRANSFERENCIA') if door else 'TRANSFERENCIA')
-    _ensure_credentials(receipt, snapshot)
-    if not door:
-        from .tickets import queue_ticket_email
-        queue_ticket_email(receipt, 'REGISTERED')
-    record(event.academia, actor, 'event.registration.created', receipt.pk,
-           after={'payment_status': 'PENDING', 'total': receipt.monto_total, 'quantity': receipt.cantidad_entradas})
+    admissions = _ensure_credentials(receipt, snapshot)
+    from apps.saas_core.billing import meter_admission
+    for admission in admissions:
+        meter_admission(admission)
+    from .tickets import queue_ticket_email
+    queue_ticket_email(receipt, 'CONFIRMED')
+    record(event.academia, actor, 'event.registration.auto_accepted', receipt.pk,
+           reason='Cobro en puerta' if door else 'Comprobante adjuntado al registro',
+           after={'payment_status': 'CONFIRMED', 'total': str(receipt.monto_total),
+                  'quantity': receipt.cantidad_entradas})
     return receipt
 
 
