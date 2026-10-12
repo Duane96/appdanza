@@ -31,6 +31,7 @@
 
             <div class="alert {% if recibo.payment_status == 'CONFIRMED' %}alert-success{% else %}alert-info{% endif %}">
 <strong>{{ recibo.get_payment_status_display }}</strong>
+{% if recibo.payment_status == 'CONFIRMED' %}<p class="mb-0">Tu inscripción quedó aprobada automáticamente. Tus códigos QR ya están activos y también se enviarán al correo registrado.</p>{% endif %}
 {% if recibo.payment_status == 'PENDING' or recibo.payment_status == 'REVIEW' %}<p class="mb-0">Tus QR ya están disponibles, pero aún no autorizan la entrada. Podrás usarlos cuando el organizador confirme tu pago. Te enviaremos los QR también al correo registrado.</p>{% endif %}
 {% if recibo.anulado %}<p class="mb-0">Este registro no habilita acceso al evento.</p>{% endif %}
 </div>

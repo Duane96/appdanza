@@ -58,12 +58,12 @@
     </div>
     <div class="col-md-6">
         <div class="card border-0 shadow-sm bg-white p-3 h-100 border-start border-4 border-warning">
-            <span class="text-secondary small fw-bold d-block font-monospace">PENDIENTES DE VERIFICACIÓN</span>
+            <span class="text-secondary small fw-bold d-block font-monospace">REGISTROS ANTERIORES POR NORMALIZAR</span>
             <h2 class="fw-bold text-dark m-0">{{ personas_pendientes }}</h2>
             <div class="small text-muted mt-2">
                 {{ inscripciones_pendientes }} inscripciones · Valor a verificar:
                 {{ monto_pendiente|floatformat:0 }} {{ request.tenant.divisa }}.
-                No está incluido en el recaudo.
+                No se incluye en el recaudo hasta completar la normalización.
             </div>
         </div>
     </div>

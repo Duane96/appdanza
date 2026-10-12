@@ -44,8 +44,8 @@ if (window.Html5QrcodeScanner) new Html5QrcodeScanner('reader', {fps: 5, qrbox: 
 <label class="form-label">Cantidad<input type="number" name="cantidad_entradas" min="1" max="25" value="1" class="form-control" required></label>
 <input type="hidden" name="precio_unitario_aplicado" value="0">
 <label class="form-label">Medio<select name="medio_pago" class="form-select"><option value="EFECTIVO">Efectivo</option><option value="TRANSFERENCIA">Transferencia verificada</option></select></label>
-<p class="small">Confirma únicamente cuando hayas verificado el pago. El precio se calcula desde el catálogo del evento.</p>
-<button class="btn btn-primary" {% if evento.estado == 'FINALIZADO' %}disabled{% endif %}>Confirmar pago recibido</button>
+<p class="small">Al registrar la venta en puerta, se activa el QR y se marca el primer ingreso automáticamente.</p>
+<button class="btn btn-primary" {% if evento.estado == 'FINALIZADO' %}disabled{% endif %}>Registrar venta e ingreso</button>
 </form>
 {% endif %}
 {% endblock %}
