@@ -156,6 +156,31 @@ class EventOperationsTests(TestCase):
         self.assertEqual(DurableJob.objects.filter(kind='EVENT_QR').count(), 2)
         self.assertEqual(AuditEvent.objects.filter(action='event.registration.auto_accepted').count(), 1)
 
+    @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+    def test_public_signup_with_receipt_activates_qr_without_admin_review(self):
+        url = reverse('eventos:registro_publico', args=[self.tenant.slug, self.event.slug])
+        first_page = self.client.get(url)
+        self.assertEqual(first_page.status_code, 200)
+        key = self.client.session[f'event-registration:{self.event.pk}']
+        png = BytesIO()
+        Image.new('RGB', (3, 3)).save(png, format='PNG')
+        upload = SimpleUploadedFile('transferencia.png', png.getvalue(), 'image/png')
+        payload = {
+            'registration_key': key, 'comprador_nombre': 'Comprador online',
+            'comprador_correo': 'comprador-online@example.com',
+            'comprador_telefono': '3000000000', 'cantidad_entradas': '1',
+            'tipo_pase': f'PASE_{self.pass_.pk}', 'comprobante_pago': upload,
+        }
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(url, payload)
+        self.assertEqual(response.status_code, 302)
+        receipt = ReciboEvento.objects.get(comprador_correo='comprador-online@example.com')
+        self.assertTrue(receipt.revisado_por_admin)
+        self.assertEqual(receipt.payment_status, 'CONFIRMED')
+        self.assertEqual(receipt.boletas_qr.count(), 2)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(len(mail.outbox[0].attachments), 2)
+
     def test_public_success_displays_pending_qr_immediately_without_a_worker(self):
         receipt = self.sale()
         self.assertFalse(receipt.boletas_qr.first().imagen_qr)
