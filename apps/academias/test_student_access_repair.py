@@ -1,12 +1,14 @@
 """Regression tests for restoring access without altering existing credentials."""
 from io import StringIO
 from unittest.mock import patch
+from tempfile import TemporaryDirectory
 
 from django.contrib.auth.models import User
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.core import mail
 from django.test import TestCase, override_settings
+from django.urls import reverse
 
 from apps.planes_estudiantes.models import Estudiante
 from apps.saas_core.models import DurableJob
@@ -135,6 +137,40 @@ class StudentAccessRepairTests(TestCase):
             result = self.command("edwinlozano", apply=True, mode="invitacion")
         self.assertIn("'invitados': 0", result)
         self.assertEqual(AccountInvitation.objects.filter(user=self.existing).count(), 0)
+
+    def test_new_student_gets_immediate_setup_email_and_a_valid_link(self):
+        from .models import TenantMembership
+        admin = User.objects.create_user(
+            username="organizador-acceso", password="Owner-Safe-53!"
+        )
+        TenantMembership.objects.create(
+            user=admin, academia=self.tenant, role="OWNER",
+        )
+        self.client.force_login(admin)
+        url = reverse("planes_estudiantes:crear_estudiante", args=[self.tenant.slug])
+        with TemporaryDirectory() as private_media:
+            with override_settings(PRIVATE_MEDIA_ROOT=private_media):
+                with self.captureOnCommitCallbacks(execute=True):
+                    response = self.client.post(url, {
+                        "nombres": "Sofia",
+                        "apellidos": "Ejemplo",
+                        "identificacion": "test-student-2026",
+                        "email": "sofia@example.test",
+                        "telefono": "3000000000",
+                    })
+        self.assertEqual(response.status_code, 302)
+        record = Estudiante.unfiltered_objects.get(
+            academia=self.tenant, identificacion="test-student-2026",
+        )
+        self.assertIsNotNone(record.user_id)
+        self.assertFalse(record.user.has_usable_password())
+        invitation = AccountInvitation.objects.get(user=record.user)
+        self.assertEqual(
+            DurableJob.objects.get(dedupe_key=f"invitation:{invitation.pk}").state,
+            "DONE",
+        )
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ["sofia@example.test"])
 
     @patch(
         "apps.academias.management.commands.reparar_acceso_estudiantes.getpass",
