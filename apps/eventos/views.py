@@ -3,7 +3,7 @@ from apps.saas_core.entitlement_guards import creation_guard
 from datetime import timedelta
 from pyexpat.errors import messages
 from django.db import transaction
-from django.db.models import F, DecimalField
+from django.db.models import F, DecimalField, IntegerField
 
 from django.http import JsonResponse
 from django.views.generic import ListView, CreateView, DetailView, View
@@ -46,7 +46,9 @@ from django.contrib import messages
 
 def _personas_por_recibo(prefix=''):
     """Multiplica unidades por asistentes de cada pase (pareja/grupo)."""
-    return F(f'{prefix}cantidad_entradas') * Coalesce(f'{prefix}tipo_pase__qrs_por_pase', 1)
+    return F(f'{prefix}cantidad_entradas') * Coalesce(
+        f'{prefix}tipo_pase__qrs_por_pase', 1, output_field=IntegerField()
+    )
 
 
 def _resumen_inscripciones(evento):
@@ -590,11 +592,11 @@ class EventoDetailAdminView(EventPermissionMixin, DetailView):
         if evento.tiene_fases_fechas:
             context['metricas_fases'] = FasePreventa.objects.filter(evento=evento).annotate(
                 personas_registradas=Coalesce(Sum(
-                    F('recibos__cantidad_entradas') * Coalesce('recibos__tipo_pase__qrs_por_pase', 1),
+                    _personas_por_recibo('recibos__'),
                     filter=Q(recibos__anulado=False),
                 ), 0),
                 personas_pendientes=Coalesce(Sum(
-                    F('recibos__cantidad_entradas') * Coalesce('recibos__tipo_pase__qrs_por_pase', 1),
+                    _personas_por_recibo('recibos__'),
                     filter=Q(recibos__anulado=False, recibos__revisado_por_admin=False),
                 ), 0),
                 total_recaudado=Coalesce(Sum(
