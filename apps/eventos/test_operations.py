@@ -75,6 +75,14 @@ class EventOperationsTests(TestCase):
         self.assertEqual(pass_metrics.total_registrados, 4)
         self.assertEqual(pass_metrics.total_pendientes, 4)
         self.assertEqual(pass_metrics.total_vendidos, 0)
+        # El listado espera una suscripción SaaS; la creamos solo para esta prueba.
+        from apps.saas_core.models import SuscripcionAcademia
+        today = timezone.localdate()
+        SuscripcionAcademia.objects.get_or_create(
+            academia=self.tenant,
+            defaults={'fecha_inicio': today, 'fecha_vencimiento': today,
+                      'es_cuenta_partner_gratis': True},
+        )
         listing = self.client.get(listing_url)
         summary = listing.context['eventos_activos'].get(pk=self.event.pk)
         self.assertEqual(summary.personas_registradas, 4)
