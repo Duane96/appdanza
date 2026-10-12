@@ -41,16 +41,16 @@ class EventOperationsTests(TestCase):
         return register(self.event, self.values, key=kwargs.pop('key', uuid.uuid4()),
                         pass_input='PASE_' + str(self.pass_.pk), **kwargs)
 
-    def test_admin_dashboard_excludes_pending_and_mutations_require_csrf(self):
+    def test_admin_dashboard_counts_auto_accepted_receipts_and_rejects_missing_csrf(self):
         from django.test import Client
         pending = self.sale()
         self.client.force_login(self.owner)
         response = self.client.get(reverse('eventos:admin_detalle', args=[self.tenant.slug, self.event.slug]))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context['ingresos_totales'], 0)
+        self.assertEqual(response.context['ingresos_totales'], Decimal('100'))
         strict = Client(enforce_csrf_checks=True)
         strict.force_login(self.owner)
-        url = reverse('eventos:confirm_payment', args=[self.tenant.slug, self.event.slug, pending.pk])
+        url = reverse('eventos:resend_tickets', args=[self.tenant.slug, self.event.slug, pending.pk])
         self.assertEqual(strict.post(url, {'reason': 'test'}).status_code, 403)
         confirm(pending, self.owner, 'Verificado')
         response = self.client.get(reverse('eventos:admin_detalle', args=[self.tenant.slug, self.event.slug]))
@@ -59,6 +59,12 @@ class EventOperationsTests(TestCase):
     def test_event_metrics_keep_pending_registrations_visible_without_inflating_revenue(self):
         pending = self.sale()
         cancelled = self.sale()
+        # Simula los comprobantes pendientes creados por la versión anterior.
+        ReciboEvento.objects.filter(pk__in=[pending.pk, cancelled.pk]).update(
+            payment_status='PENDING', revisado_por_admin=False, confirmed_at=None,
+        )
+        pending.refresh_from_db()
+        cancelled.refresh_from_db()
         self.client.force_login(self.owner)
         url = reverse('eventos:admin_detalle', args=[self.tenant.slug, self.event.slug])
         listing_url = reverse('eventos:admin_lista', args=[self.tenant.slug])
@@ -131,16 +137,16 @@ class EventOperationsTests(TestCase):
         self.assertEqual(response.context['general_vendidos'], 0)
         self.assertEqual(response.context['ingresos_totales'], 0)
 
-    def test_pending_does_not_emit_access_and_confirmation_is_idempotent(self):
+    def test_registration_activates_access_and_is_idempotent(self):
         key = uuid.uuid4()
         receipt = self.sale(key=key)
         self.assertEqual(receipt.monto_total, Decimal('100'))
-        self.assertFalse(receipt.revisado_por_admin)
-        self.assertEqual(receipt.payment_status, 'PENDING')
+        self.assertTrue(receipt.revisado_por_admin)
+        self.assertEqual(receipt.payment_status, 'CONFIRMED')
         self.assertEqual(Admission.objects.count(), 2)
         self.assertEqual(EntradaQR.objects.count(), 2)
         code = receipt.boletas_qr.first().codigo_unico
-        self.assertEqual(check_in(self.event, self.owner, code).result, 'PENDING_PAYMENT')
+        self.assertEqual(check_in(self.event, self.owner, code).result, 'SUCCESS')
         self.assertEqual(self.sale(key=key).pk, receipt.pk)
         confirm(receipt, self.owner, 'Comprobante validado')
         confirm(receipt, self.owner, 'Reintento')
@@ -148,7 +154,7 @@ class EventOperationsTests(TestCase):
         self.assertEqual(Admission.objects.count(), 2)
         self.assertEqual(EntradaQR.objects.count(), 2)
         self.assertEqual(DurableJob.objects.filter(kind='EVENT_QR').count(), 2)
-        self.assertEqual(AuditEvent.objects.filter(action='event.payment.confirmed').count(), 1)
+        self.assertEqual(AuditEvent.objects.filter(action='event.registration.auto_accepted').count(), 1)
 
     def test_public_success_displays_pending_qr_immediately_without_a_worker(self):
         receipt = self.sale()
@@ -156,7 +162,7 @@ class EventOperationsTests(TestCase):
         response = self.client.get(receipt_url(receipt))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'data:image/png;base64,')
-        self.assertContains(response, 'aún no autorizan la entrada')
+        self.assertContains(response, 'Tus códigos QR ya están activos')
         self.assertEqual(
             self.client.get(reverse('eventos:registro_exito', args=[self.tenant.slug, receipt.pk])).status_code,
             403,
@@ -167,42 +173,42 @@ class EventOperationsTests(TestCase):
         )
 
     @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
-    def test_registration_delivers_qrs_by_email_even_before_confirmation(self):
+    def test_registration_delivers_active_qrs_by_email_without_manual_confirmation(self):
         self.values['comprador_correo'] = 'comprador@example.com'
         with self.captureOnCommitCallbacks(execute=True):
             receipt = self.sale()
-        job = DurableJob.objects.get(dedupe_key=f'event-ticket-email:{receipt.pk}:REGISTERED:first')
+        job = DurableJob.objects.get(dedupe_key=f'event-ticket-email:{receipt.pk}:CONFIRMED:first')
         self.assertEqual(job.state, 'DONE')
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].to, ['comprador@example.com'])
-        self.assertIn('NO autorizan ingreso', mail.outbox[0].body)
+        self.assertIn('Tu pago ya está confirmado', mail.outbox[0].body)
         self.assertEqual(len(mail.outbox[0].attachments), 2)
         self.assertEqual(mail.outbox[0].attachments[0][2], 'image/png')
-        self.assertEqual(receipt.payment_status, 'PENDING')
+        self.assertEqual(receipt.payment_status, 'CONFIRMED')
 
     @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
-    def test_confirmation_repairs_missing_qrs_and_emails_without_waiting_for_images(self):
+    def test_resend_repairs_missing_qrs_and_emails_without_waiting_for_images(self):
         receipt = self.sale()
         receipt.comprador_correo = 'comprador@example.com'
         receipt.save(update_fields=['comprador_correo'])
         receipt.boletas_qr.all().delete()
         self.assertFalse(receipt.boletas_qr.exists())
         with self.captureOnCommitCallbacks(execute=True):
-            confirm(receipt, self.owner, 'Comprobante verificado')
+            resend_tickets(receipt, self.owner)
         receipt.refresh_from_db()
         self.assertEqual(receipt.payment_status, 'CONFIRMED')
         self.assertEqual(receipt.boletas_qr.count(), 2)
         self.assertTrue(all(not ticket.imagen_qr for ticket in receipt.boletas_qr.all()))
         self.assertEqual(len(mail.outbox), 1)
-        self.assertIn('QR activos', mail.outbox[0].subject)
+        self.assertIn('Tus entradas', mail.outbox[0].subject)
         self.assertEqual(len(mail.outbox[0].attachments), 2)
         self.assertEqual(DurableJob.objects.filter(
-            dedupe_key=f'event-ticket-email:{receipt.pk}:CONFIRMED:first',
+            dedupe_key__startswith=f'event-ticket-email:{receipt.pk}:RECOVERED:',
             state='DONE',
         ).count(), 1)
-        confirm(receipt, self.owner, 'Confirmación repetida')
+        confirm(receipt, self.owner, 'Sin segunda operación')
         self.assertEqual(DurableJob.objects.filter(
-            dedupe_key=f'event-ticket-email:{receipt.pk}:CONFIRMED:first',
+            dedupe_key__startswith=f'event-ticket-email:{receipt.pk}:RECOVERED:',
         ).count(), 1)
 
     @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
@@ -211,7 +217,7 @@ class EventOperationsTests(TestCase):
         with patch('apps.eventos.tickets.EmailMultiAlternatives.send', side_effect=OSError('SMTP unavailable')):
             with self.captureOnCommitCallbacks(execute=True):
                 receipt = self.sale()
-        job = DurableJob.objects.get(dedupe_key=f'event-ticket-email:{receipt.pk}:REGISTERED:first')
+        job = DurableJob.objects.get(dedupe_key=f'event-ticket-email:{receipt.pk}:CONFIRMED:first')
         self.assertEqual(job.state, 'PENDING')
         self.assertEqual(job.attempts, 1)
         self.assertEqual(job.last_error, 'OSError')
@@ -339,7 +345,7 @@ class EventOperationsTests(TestCase):
             self.sale()
         self.assertFalse(ReciboEvento.objects.exists())
 
-    def test_coupon_last_slot_and_cancel_release_once(self):
+    def test_confirmed_coupon_remains_consumed_when_cancelled_without_refund(self):
         coupon = CodigoDescuento.objects.create(evento=self.event, nombre_codigo='ULTIMO', precio_especial=50,
             limite_usos=1, fecha_caducidad=timezone.now() + timedelta(days=1))
         receipt = self.sale(coupon_text='ULTIMO')
@@ -348,7 +354,7 @@ class EventOperationsTests(TestCase):
         cancel(receipt, self.owner, 'Duplicado solicitado')
         cancel(receipt, self.owner, 'Reintento')
         coupon.refresh_from_db()
-        self.assertEqual(coupon.usos_actuales, 0)
+        self.assertEqual(coupon.usos_actuales, 1)
         self.assertEqual(EventRefund.objects.count(), 0)
 
     def test_checkin_repeat_same_day_then_next_day_and_reissue(self):
