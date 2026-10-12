@@ -114,7 +114,7 @@ def _ensure_credentials(receipt, snapshot):
                 legacy.save(update_fields=['admission'])
             else:
                 EntradaQR.objects.create(
-                    receipt=receipt, admission=admission,
+                    recibo=receipt, admission=admission,
                     asistencias_permitidas=admission.access_limit,
                 )
     return admissions
