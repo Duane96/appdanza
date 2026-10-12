@@ -214,7 +214,20 @@ def resend_tickets(receipt, actor):
         raise ValidationError('No se pueden reenviar entradas anuladas o devueltas.')
     if not receipt.comprador_correo:
         raise ValidationError('Agrega un correo electrónico al registro antes de enviar el QR.')
+    if receipt.payment_status == 'LEGACY' and not receipt.revisado_por_admin:
+        raise ValidationError('Este recibo histórico requiere revisar el pago antes de emitir acceso.')
     snapshot = receipt.price_snapshot
+    if not snapshot and receipt.payment_status == 'LEGACY':
+        # A conservative read-only reconstruction for verified historical sales.
+        # Never meter historical admissions or assume a multi-day pass without evidence.
+        legacy_pass = receipt.tipo_pase
+        snapshot = {
+            'access_units': receipt.cantidad_entradas * (
+                legacy_pass.qrs_por_pase if legacy_pass else 1
+            ),
+            'access_limit': legacy_pass.accesos_permitidos if legacy_pass else 1,
+            'commercial_units': None,
+        }
     if snapshot and snapshot.get('access_units'):
         _ensure_credentials(receipt, snapshot)
     if not receipt.boletas_qr.filter(revoked_at=None).exists():
@@ -295,7 +308,9 @@ def check_in(event, actor, code, *, request_key=None):
     result = 'SUCCESS'
     if ticket.revoked_at or ticket.recibo.anulado or ticket.recibo.payment_status in ('CANCELLED', 'REFUNDED'):
         result = 'REVOKED'
-    elif ticket.recibo.payment_status not in ('LEGACY', 'CONFIRMED'):
+    elif ticket.recibo.payment_status not in ('LEGACY', 'CONFIRMED') or (
+        ticket.recibo.payment_status == 'LEGACY' and not ticket.recibo.revisado_por_admin
+    ):
         result = 'PENDING_PAYMENT'
     elif ticket.fecha_ultimo_ingreso and timezone.localdate(ticket.fecha_ultimo_ingreso) == today:
         result = 'ALREADY_USED_TODAY'
