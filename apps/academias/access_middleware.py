@@ -19,6 +19,8 @@ PUBLIC_ROUTES = {
     'eventos:registro_exito', 'eventos:quote',
     'saas_core:saas_index_global', 'saas_core:procesar_lead_landing',
     'dya_events', 'dya_event', 'private_media',
+    # Token-authenticated public agenda (only data already shown on academy pages).
+    'dya_public_agenda',
 }
 TENANT_ACTIONS = {
     'saas_core:billing_mandate': 'billing.manage',

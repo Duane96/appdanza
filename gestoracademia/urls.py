@@ -21,12 +21,14 @@ from django.conf.urls.static import static
 
 
 from apps.eventos.dya_api import events as dya_events
+from apps.eventos.public_events_api import public_events
 
 from apps.academias.private_media import download as private_download
 
 urlpatterns = [
     path('private-media/<path:name>', private_download, name='private_media'),
     path('api/integrations/dya/events/', dya_events, name='dya_events'),
+    path('api/integrations/dya/agenda/', public_events, name='dya_public_agenda'),
     path('api/integrations/dya/events/<int:external_id>/', dya_events, name='dya_event'),
     
     
